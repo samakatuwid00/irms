@@ -2,20 +2,64 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Model;
+use Illuminate\Foundation\Auth\User as Authenticatable;
+use Illuminate\Notifications\Notifiable;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
-class User extends Model
+class User extends Authenticatable
 {
+    use Notifiable;
+
     public $incrementing = false;
     protected $keyType = 'string';
+
     protected $fillable = [
-        'id', 'firstname', 'middlename', 'lastname', 'extension_name', 'gender', 'birthday',
-        'username', 'password', 'email', 'contact_number', 'photo', 'usertype_id',
-        'station_id', 'status', 'approved_by', 'created_at', 'updated_at'
+        'id',
+        'firstname',
+        'middlename',
+        'lastname',
+        'extension_name',
+        'gender',
+        'birthday',
+        'username',
+        'password',
+        'email',
+        'contact_number',
+        'photo',
+        'usertype_id',
+        'station_id',
+        'status',
+        'approved_by',
+        'created_at',
+        'updated_at'
     ];
 
+    protected $hidden = [
+        'password',
+        'remember_token'
+    ];
+
+    protected $casts = [
+        'birthday' => 'date',
+    ];
+
+    protected $appends = [
+        'usertype_name',
+        'usertype_level'
+    ];
+
+
+    public function getUsertypeNameAttribute(): ?string
+    {
+        return $this->userType?->type_name;
+    }
+
+    public function getUsertypeLevelAttribute(): ?int
+    {
+        return $this->userType?->level;
+    }
+    /* ================= RELATIONSHIPS ================= */
     public function userType(): BelongsTo
     {
         return $this->belongsTo(UserType::class, 'usertype_id');

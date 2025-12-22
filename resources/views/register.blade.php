@@ -4,37 +4,82 @@
 
 @section('content')
 <div class="w-full flex justify-center px-4">
+    <div id="flashContainer" class="fixed top-4 right-4 z-50 space-y-4 max-w-md w-full pointer-events-none">
+        @if(session('success'))
+            <div id="successMessage" class="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded-lg shadow-lg flex items-center justify-between pointer-events-auto animate-fade-in">
+                <span>{{ session('success') }}</span>
+                <button type="button" onclick="closeFlash('successMessage')" class="ml-4 text-green-800 hover:text-green-900 font-bold text-xl">&times;</button>
+            </div>
+        @endif
+
+        @if(session('error'))
+            <div id="errorMessage" class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-lg shadow-lg flex items-center justify-between pointer-events-auto animate-fade-in">
+                <span>{{ session('error') }}</span>
+                <button type="button" onclick="closeFlash('errorMessage')" class="ml-4 text-red-800 hover:text-red-900 font-bold text-xl">&times;</button>
+            </div>
+        @endif
+
+        @if($errors->any())
+            <div id="validationErrors" class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-lg shadow-lg pointer-events-auto animate-fade-in">
+                <div class="flex items-center justify-between mb-2">
+                    <strong>Please fix the following errors:</strong>
+                    <button type="button" onclick="closeFlash('validationErrors')" class="text-red-800 hover:text-red-900 font-bold text-xl">&times;</button>
+                </div>
+                <ul class="list-disc pl-6 text-sm space-y-1">
+                    @foreach($errors->all() as $error)
+                        <li>{{ $error }}</li>
+                    @endforeach
+                </ul>
+            </div>
+        @endif
+    </div>
     <div class="bg-white border-2 border-custom-teal rounded-lg p-8 shadow-lg w-full max-w-5xl">
+        <div class="flex justify-end">
+            <a href="{{ route('index') }}"
+            class="inline-flex items-center text-custom-teal hover:text-custom-dark transition">
+                <svg xmlns="http://www.w3.org/2000/svg"
+                    class="h-5 w-5 mr-1"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor">
+                    <path stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2"
+                        d="M15 19l-7-7 7-7" />
+                </svg>
+                <span class="text-sm font-medium">Back</span>
+            </a>
+        </div>
+
         <h2 class="text-2xl font-bold text-center mb-6 text-custom-dark">Create Account</h2>
 
-        <form method="POST" action="{{ route('register') }}" id="registerForm">
+        <form method="POST" action="{{ route('register.submit') }}" id="registerForm">
             @csrf
-
             <!-- Row 1: First | Last | Middle | Extension -->
             <div class="grid grid-cols-1 sm:grid-cols-4 gap-4 mb-4">
                 <div>
                     <label class="block text-sm font-medium mb-1">First Name</label>
-                    <input type="text" name="firstname" required class="input-field">
+                    <input type="text" value="{{ old('firstname') }}" name="firstname" required class="input-field">
                 </div>
                 <div>
                     <label class="block text-sm font-medium mb-1">Last Name</label>
-                    <input type="text" name="lastname" required class="input-field">
+                    <input type="text" value="{{ old('lastname') }}" name="lastname" required class="input-field">
                 </div>
                 <div>
                     <label class="block text-sm font-medium mb-1">Middle Name</label>
-                    <input type="text" name="middlename" class="input-field">
+                    <input type="text" value="{{ old('middlename') }}" name="middlename" class="input-field">
                 </div>
                 <div>
                     <label class="block text-sm font-medium mb-1">Extension</label>
                     <select name="extension_name" class="input-field">
-                        <option value="" selected disabled>Select</option>
-                        <option value="Jr">Jr.</option>
-                        <option value="Sr">Sr.</option>
-                        <option value="II">II</option>
-                        <option value="III">III</option>
-                        <option value="IV">IV</option>
-                        <option value="V">V</option>
-                        <option value="VI">VI</option>
+                        <option value="" {{ old('extension_name') == '' ? 'selected' : '' }}>N/A</option>
+                        <option value="Jr" {{ old('extension_name') == 'Jr' ? 'selected' : '' }}>Jr.</option>
+                        <option value="Sr" {{ old('extension_name') == 'Sr' ? 'selected' : '' }}>Sr.</option>
+                        <option value="II" {{ old('extension_name') == 'II' ? 'selected' : '' }}>II</option>
+                        <option value="III" {{ old('extension_name') == 'III' ? 'selected' : '' }}>III</option>
+                        <option value="IV" {{ old('extension_name') == 'IV' ? 'selected' : '' }}>IV</option>
+                        <option value="V" {{ old('extension_name') == 'V' ? 'selected' : '' }}>V</option>
+                        <option value="VI" {{ old('extension_name') == 'VI' ? 'selected' : '' }}>VI</option>
                     </select>
                 </div>
             </div>
@@ -43,21 +88,15 @@
             <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4">
                 <div>
                     <label class="block text-sm font-medium mb-1">Gender</label>
-                    <div class="flex items-center space-x-4">
-                        <label class="flex items-center">
-                            <input type="radio" name="gender" value="male" class="mr-1"> Male
-                        </label>
-                        <label class="flex items-center">
-                            <input type="radio" name="gender" value="female" class="mr-1"> Female
-                        </label>
-                        <label class="flex items-center">
-                            <input type="radio" name="gender" value="other" class="mr-1"> Other
-                        </label>
+                        <div class="flex items-center space-x-4">
+                        <label class="flex items-center"><input type="radio" name="gender" value="male" {{ old('gender') == 'male' ? 'checked' : '' }} class="mr-2"> Male</label>
+                        <label class="flex items-center"><input type="radio" name="gender" value="female" {{ old('gender') == 'female' ? 'checked' : '' }} class="mr-2"> Female</label>
+                        <label class="flex items-center"><input type="radio" name="gender" value="other" {{ old('gender') == 'other' ? 'checked' : '' }} class="mr-2"> Other</label>
                     </div>
                 </div>
                 <div>
                     <label class="block text-sm font-medium mb-1">Birthday</label>
-                    <input type="date" name="birthday" required class="input-field">
+                    <input type="date" value="{{ old('birthday') }}" name="birthday" class="input-field">
                 </div>
                 <div>
                     <label class="block text-sm font-medium mb-1">Contact Number</label>
@@ -66,6 +105,7 @@
                         id="contact_number"
                         placeholder="09xx-xxx-xxxx"
                         required
+                        value = "{{ old('contact_number') }}"
                         class="input-field"
                         maxlength="13"
                         pattern="09\d{2}-\d{3}-\d{4}"
@@ -76,13 +116,13 @@
             <!-- Row 3: Username -->
             <div class="mb-4">
                 <label class="block text-sm font-medium mb-1">Username</label>
-                <input type="text" name="username" required placeholder="Username" class="input-field w-full">
+                <input type="text" name="username" value="{{ old('username') }}" required placeholder="Username" class="input-field w-full">
             </div>
 
             <!-- Row 4: Email -->
             <div class="mb-4">
                 <label class="block text-sm font-medium mb-1">Email</label>
-                <input type="email" name="email" required placeholder="Email" class="input-field w-full">
+                <input type="email" name="email" value="{{ old('email') }}" required placeholder="Email" class="input-field w-full">
             </div>
 
             <!-- Row 5: Password | Confirm Password with eye -->
@@ -109,20 +149,16 @@
                     <label class="block text-sm font-medium mb-1">Authority Level</label>
                     <select name="authority_level" id="authority_level" class="input-field">
                         <option value="" selected disabled>Select Authority Level</option>
-                        <option value="regional">Regional Account</option>
-                        <option value="division">Division Account</option>
-                        <option value="district">District Account</option>
-                        <option value="school">School Account</option>
+                        <option value="4" {{ old('authority_level') == '4' ? 'selected' : '' }}>Regional Account</option>
+                        <option value="3" {{ old('authority_level') == '3' ? 'selected' : '' }}>Division Account</option>
+                        <option value="2" {{ old('authority_level') == '2' ? 'selected' : '' }}>District Account</option>
+                        <option value="1" {{ old('authority_level') == '1' ? 'selected' : '' }}>School Account</option>
                     </select>
                 </div>
                 <div>
                     <label class="block text-sm font-medium mb-1">User Type</label>
                     <select name="usertype" class="input-field">
-                        <option value="">Select User Type</option>
-                        <option value="admin">Admin</option>
-                        <option value="staff">Staff</option>
-                        <option value="teacher">Teacher</option>
-                        <option value="student">Student</option>
+                        <option selected disabled>Select User Type</option>
                     </select>
                 </div>
             </div>
@@ -132,33 +168,30 @@
                 <div id="regionWrapper" class="hidden">
                     <label class="block text-sm font-medium mb-1">Region</label>
                     <select name="region" id="region" class="input-field">
-                        <option value="">Select Region</option>
-                        <option value="region1">Region 1</option>
-                        <option value="region2">Region 2</option>
+                        <option selected disabled>Select Region</option>
+                            @foreach ($regions as $region)
+                            <option value="{{ $region->id }}" {{ old('region') == $region->id ? 'selected' : '' }}>
+                                {{ $region->region_name }}
+                            </option>
+                            @endforeach
                     </select>
                 </div>
                 <div id="divisionWrapper" class="hidden">
                     <label class="block text-sm font-medium mb-1">Division</label>
                     <select name="division" id="division" class="input-field">
-                        <option value="">Select Division</option>
-                        <option value="division1">Division 1</option>
-                        <option value="division2">Division 2</option>
+                        <option selected disabled>Select Division</option>
                     </select>
                 </div>
                 <div id="districtWrapper" class="hidden">
                     <label class="block text-sm font-medium mb-1">District</label>
                     <select name="district" id="district" class="input-field">
-                        <option value="">Select District</option>
-                        <option value="district1">District 1</option>
-                        <option value="district2">District 2</option>
+                        <option selected disabled>Select District</option>
                     </select>
                 </div>
                 <div id="schoolWrapper" class="hidden">
                     <label class="block text-sm font-medium mb-1">School</label>
                     <select name="school" id="school" class="input-field">
-                        <option value="">Select School</option>
-                        <option value="school1">School 1</option>
-                        <option value="school2">School 2</option>
+                        <option selected disabled>Select School</option>
                     </select>
                 </div>
             </div>
@@ -176,7 +209,7 @@
 
             <!-- Buttons -->
             <div class="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-4">
-                <button type="submit" class="w-full sm:w-1/2 bg-custom-yellow text-custom-dark py-2 rounded-md font-semibold hover:bg-custom-yellow-hover transition">Submit</button>
+                <button type="submit" id="submitBtn" class="w-full sm:w-1/2 bg-custom-yellow text-custom-dark py-2 rounded-md font-semibold hover:bg-custom-yellow-hover transition">Submit</button>
                 <button type="reset" class="w-full sm:w-1/2 bg-gray-300 text-custom-dark py-2 rounded-md font-semibold hover:bg-gray-400 transition">Clear</button>
             </div>
 
@@ -193,76 +226,8 @@
     </div>
 </div>
 
-<!-- Privacy & Terms Modal -->
-<div id="privacyModal" class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden flex items-center justify-center px-4">
-    <div class="bg-white rounded-xl shadow-2xl max-w-3xl w-full max-h-[90vh] flex flex-col">
-        <!-- Modal Header -->
-        <div class="flex justify-between items-center p-6 border-b">
-            <h3 class="text-2xl font-bold text-custom-dark">Terms and Data Privacy</h3>
-            <button id="closePrivacyModal" class="text-gray-500 hover:text-gray-700 text-3xl leading-none">
-                &times;
-            </button>
-        </div>
+@include('public-components.privacy-and-policy-modal')
 
-        <!-- Tabs -->
-        <div class="flex border-b">
-            <button id="privacyTab" class="flex-1 py-4 text-center font-medium text-custom-teal border-b-4 border-custom-teal">
-                Privacy Policy
-            </button>
-            <button id="termsTab" class="flex-1 py-4 text-center font-medium text-gray-600 hover:text-custom-teal transition">
-                Terms of Service
-            </button>
-        </div>
-
-        <!-- Modal Body (Scrollable) -->
-        <div class="p-6 overflow-y-auto flex-1">
-            <!-- Privacy Policy Content -->
-            <div id="privacyContent">
-                <h4 class="text-xl font-semibold mb-4">Privacy Policy</h4>
-                <p class="text-sm text-gray-700 mb-4">
-                    Your privacy is important to us. This Privacy Policy explains how the Learning Resource Management System collects, uses, and protects your personal information.
-                </p>
-                <h5 class="font-semibold mb-2">Information We Collect</h5>
-                <ul class="list-disc pl-6 text-sm text-gray-700 mb-4 space-y-1">
-                    <li>Personal details (name, email, contact number, etc.)</li>
-                    <li>Account credentials</li>
-                    <li>Usage data and activity logs</li>
-                </ul>
-                <h5 class="font-semibold mb-2">How We Use Your Information</h5>
-                <p class="text-sm text-gray-700 mb-4">
-                    We use your information to provide and improve our services, communicate with you, and ensure system security.
-                </p>
-                <p class="text-sm text-gray-700 mb-4">
-                    We do not sell your personal data to third parties. Data is stored securely and access is restricted to authorized personnel only.
-                </p>
-            </div>
-
-            <!-- Terms of Service Content -->
-            <div id="termsContent" class="hidden">
-                <h4 class="text-xl font-semibold mb-4">Terms of Service</h4>
-                <p class="text-sm text-gray-700 mb-4">
-                    By creating an account, you agree to abide by the following terms:
-                </p>
-                <ul class="list-disc pl-6 text-sm text-gray-700 mb-4 space-y-1">
-                    <li>Use the system responsibly and for educational purposes only.</li>
-                    <li>Do not share your account credentials.</li>
-                    <li>Respect intellectual property rights of shared resources.</li>
-                    <li>We reserve the right to suspend accounts violating these terms.</li>
-                </ul>
-                <p class="text-sm text-gray-700">
-                    These terms may be updated periodically. Continued use constitutes acceptance of changes.
-                </p>
-            </div>
-        </div>
-
-        <!-- Modal Footer -->
-        <div class="p-6 border-t text-center">
-            <button id="closePrivacyModalBottom" class="bg-custom-yellow text-custom-dark px-8 py-3 rounded-md font-semibold hover:bg-custom-yellow-hover transition">
-                Close
-            </button>
-        </div>
-    </div>
-</div>
 @endsection
 
 @push('styles')
@@ -284,122 +249,232 @@
 @endpush
 
 @push('scripts')
-<script>
-    const passwordToggle = document.getElementById('passwordToggle');
-    const passwordField = document.getElementById('password');
-    if (passwordToggle && passwordField) {
-        passwordToggle.addEventListener('click', () => {
-            passwordField.type = passwordField.type === 'password' ? 'text' : 'password';
-            passwordToggle.classList.toggle('fa-eye');
-            passwordToggle.classList.toggle('fa-eye-slash');
-        });
-    }
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
 
-    const confirmPasswordToggle = document.getElementById('confirmPasswordToggle');
-    const confirmPasswordField = document.getElementById('confirmPassword');
-    if (confirmPasswordToggle && confirmPasswordField) {
-        confirmPasswordToggle.addEventListener('click', () => {
-            confirmPasswordField.type = confirmPasswordField.type === 'password' ? 'text' : 'password';
-            confirmPasswordToggle.classList.toggle('fa-eye');
-            confirmPasswordToggle.classList.toggle('fa-eye-slash');
-        });
-    }
+            /* ================= FLASH MESSAGES ================= */
+            window.closeFlash = function (id) {
+                const el = document.getElementById(id);
+                if (!el) return;
+                el.style.transition = 'all 0.4s ease';
+                el.style.opacity = '0';
+                el.style.transform = 'translateY(-10px)';
+                setTimeout(() => el.remove(), 400);
+            };
 
-    const authorityLevel = document.getElementById('authority_level');
-    const regionWrapper = document.getElementById('regionWrapper');
-    const divisionWrapper = document.getElementById('divisionWrapper');
-    const districtWrapper = document.getElementById('districtWrapper');
-    const schoolWrapper = document.getElementById('schoolWrapper');
+            const successMsg = document.getElementById('successMessage');
+            if (successMsg) {
+                setTimeout(() => closeFlash('successMessage'), 6000);
+            }
 
-    if (authorityLevel) {
-        authorityLevel.addEventListener('change', function () {
-            const value = this.value;
-            [regionWrapper, divisionWrapper, districtWrapper, schoolWrapper].forEach(el => {
-                if (el) el.classList.add('hidden');
+            /* ================= PASSWORD TOGGLE ================= */
+            const togglePassword = (fieldId, toggleId) => {
+                const field = document.getElementById(fieldId);
+                const toggle = document.getElementById(toggleId);
+                if (!field || !toggle) return;
+
+                toggle.addEventListener('click', () => {
+                    field.type = field.type === 'password' ? 'text' : 'password';
+                    toggle.classList.toggle('fa-eye');
+                    toggle.classList.toggle('fa-eye-slash');
+                });
+            };
+
+            togglePassword('password', 'passwordToggle');
+            togglePassword('confirmPassword', 'confirmPasswordToggle');
+
+            /* ================= ELEMENTS ================= */
+            const form = document.getElementById('registerForm');
+            const submitBtn = document.getElementById('submitBtn');
+
+            const authorityLevel = document.getElementById('authority_level');
+            const usertypeSelect = document.querySelector('select[name="usertype"]');
+
+            const regionWrapper   = document.getElementById('regionWrapper');
+            const divisionWrapper = document.getElementById('divisionWrapper');
+            const districtWrapper = document.getElementById('districtWrapper');
+            const schoolWrapper   = document.getElementById('schoolWrapper');
+
+            const regionSelect   = document.getElementById('region');
+            const divisionSelect = document.getElementById('division');
+            const districtSelect = document.getElementById('district');
+            const schoolSelect   = document.getElementById('school');
+
+            const contactField = document.getElementById('contact_number');
+
+            /* ================= DATA FROM BLADE ================= */
+            const divisions = @json($divisions);
+            const districts = @json($districts);
+            const schools   = @json($schools);
+            const usertypes = @json($usertypes);
+
+            const oldData = {
+                authority_level: "{{ old('authority_level') }}",
+                region: "{{ old('region') }}",
+                division: "{{ old('division') }}",
+                district: "{{ old('district') }}",
+                school: "{{ old('school') }}",
+                usertype: "{{ old('usertype') }}"
+            };
+
+            /* ================= HELPERS ================= */
+            const hideAllWrappers = () => {
+                [regionWrapper, divisionWrapper, districtWrapper, schoolWrapper]
+                    .forEach(el => el && el.classList.add('hidden'));
+            };
+
+            const populateSelect = (select, items, textKey, valueKey) => {
+                if (!select) return;
+                const label = select.name.charAt(0).toUpperCase() + select.name.slice(1);
+                select.innerHTML = `<option selected disabled>Select ${label}</option>`;
+                items.forEach(item => {
+                    const opt = document.createElement('option');
+                    opt.value = item[valueKey];
+                    opt.textContent = item[textKey];
+                    select.appendChild(opt);
+                });
+            };
+
+            const filterUserTypesByLevel = (level) => {
+                const filtered = usertypes.filter(u => u.level == level);
+                populateSelect(usertypeSelect, filtered, 'type_name', 'id');
+            };
+
+            const applyAuthorityLevel = (level) => {
+                hideAllWrappers();
+
+                if (level === '4') regionWrapper.classList.remove('hidden');
+                if (level === '3') {
+                    regionWrapper.classList.remove('hidden');
+                    divisionWrapper.classList.remove('hidden');
+                }
+                if (level === '2') {
+                    regionWrapper.classList.remove('hidden');
+                    divisionWrapper.classList.remove('hidden');
+                    districtWrapper.classList.remove('hidden');
+                }
+                if (level === '1') {
+                    regionWrapper.classList.remove('hidden');
+                    divisionWrapper.classList.remove('hidden');
+                    districtWrapper.classList.remove('hidden');
+                    schoolWrapper.classList.remove('hidden');
+                }
+
+                filterUserTypesByLevel(level);
+            };
+
+            /* ================= CONTACT NUMBER ================= */
+            const formatContactNumber = (value) => {
+                value = value.replace(/\D/g, '').slice(0, 11);
+
+                if (value.length > 6) {
+                    return value.replace(/(\d{4})(\d{3})(\d{0,4})/, '$1-$2-$3');
+                }
+                if (value.length > 3) {
+                    return value.replace(/(\d{4})(\d{0,3})/, '$1-$2');
+                }
+                return value;
+            };
+
+            contactField?.addEventListener('input', function () {
+                this.value = formatContactNumber(this.value);
             });
 
-            if (value === 'regional' && regionWrapper) regionWrapper.classList.remove('hidden');
-            if (value === 'division') {
-                if (regionWrapper) regionWrapper.classList.remove('hidden');
-                if (divisionWrapper) divisionWrapper.classList.remove('hidden');
+            /* ================= EVENTS ================= */
+            authorityLevel?.addEventListener('change', function () {
+                applyAuthorityLevel(this.value);
+            });
+
+            regionSelect?.addEventListener('change', () => {
+                const filtered = divisions.filter(d => d.region_id == regionSelect.value);
+                populateSelect(divisionSelect, filtered, 'division_name', 'id');
+                districtSelect.innerHTML = '<option selected disabled>Select District</option>';
+                schoolSelect.innerHTML = '<option selected disabled>Select School</option>';
+            });
+
+            divisionSelect?.addEventListener('change', () => {
+                const filtered = districts.filter(d => d.division_id == divisionSelect.value);
+                populateSelect(districtSelect, filtered, 'district_name', 'id');
+                schoolSelect.innerHTML = '<option selected disabled>Select School</option>';
+            });
+
+            districtSelect?.addEventListener('change', () => {
+                const filtered = schools.filter(s => s.district_id == districtSelect.value);
+                populateSelect(schoolSelect, filtered, 'school_name', 'id');
+            });
+
+            /* ================= RESTORE OLD INPUT ================= */
+            if (oldData.authority_level) {
+                authorityLevel.value = oldData.authority_level;
+                applyAuthorityLevel(oldData.authority_level);
             }
-            if (value === 'district') {
-                if (regionWrapper) regionWrapper.classList.remove('hidden');
-                if (divisionWrapper) divisionWrapper.classList.remove('hidden');
-                if (districtWrapper) districtWrapper.classList.remove('hidden');
+
+            if (oldData.region) {
+                regionSelect.value = oldData.region;
+                populateSelect(
+                    divisionSelect,
+                    divisions.filter(d => d.region_id == oldData.region),
+                    'division_name',
+                    'id'
+                );
             }
-            if (value === 'school') {
-                if (regionWrapper) regionWrapper.classList.remove('hidden');
-                if (divisionWrapper) divisionWrapper.classList.remove('hidden');
-                if (districtWrapper) districtWrapper.classList.remove('hidden');
-                if (schoolWrapper) schoolWrapper.classList.remove('hidden');
+
+            if (oldData.division) {
+                divisionSelect.value = oldData.division;
+                populateSelect(
+                    districtSelect,
+                    districts.filter(d => d.division_id == oldData.division),
+                    'district_name',
+                    'id'
+                );
             }
-        });
-    }
 
-    const contactField = document.getElementById('contact_number');
-    if (contactField) {
-        contactField.addEventListener('input', function () {
-            let value = this.value.replace(/\D/g, '');
-            if (value.length > 11) value = value.slice(0, 11);
-
-            if (value.length > 6) {
-                value = value.replace(/(\d{4})(\d{3})(\d{0,4})/, '$1-$2-$3');
-            } else if (value.length > 3) {
-                value = value.replace(/(\d{4})(\d{0,3})/, '$1-$2');
+            if (oldData.district) {
+                districtSelect.value = oldData.district;
+                populateSelect(
+                    schoolSelect,
+                    schools.filter(s => s.district_id == oldData.district),
+                    'school_name',
+                    'id'
+                );
             }
-            this.value = value;
+
+            if (oldData.school) {
+                schoolSelect.value = oldData.school;
+            }
+
+            if (oldData.usertype) {
+                usertypeSelect.value = oldData.usertype;
+            }
+
+            // Restore formatted contact number after validation error
+            if (contactField && contactField.value) {
+                contactField.value = formatContactNumber(contactField.value);
+            }
+
+            /* ================= SUBMIT ================= */
+            form?.addEventListener('submit', function (e) {
+
+                if (!document.querySelector('input[name="agree"]').checked) {
+                    e.preventDefault();
+                    alert('You must agree to the Privacy and Terms to register.');
+                    return;
+                }
+
+                if (!confirm('Are you sure you want to submit the registration?')) {
+                    e.preventDefault();
+                    return;
+                }
+
+                // 🔒 FORCE CLEAN NUMBER (NO DASHES)
+                if (contactField) {
+                    contactField.value = contactField.value.replace(/\D/g, '');
+                }
+
+                submitBtn.disabled = true;
+                submitBtn.textContent = 'Submitting...';
+            });
+
         });
-
-        document.getElementById('registerForm').addEventListener('submit', function () {
-            contactField.value = contactField.value.replace(/\D/g, '');
-        });
-    }
-
-    const openModalBtn = document.getElementById('openPrivacyModal');
-    const modal = document.getElementById('privacyModal');
-    const closeBtns = document.querySelectorAll('#closePrivacyModal, #closePrivacyModalBottom');
-    const privacyTab = document.getElementById('privacyTab');
-    const termsTab = document.getElementById('termsTab');
-    const privacyContent = document.getElementById('privacyContent');
-    const termsContent = document.getElementById('termsContent');
-
-    if (openModalBtn) {
-        openModalBtn.addEventListener('click', () => {
-            modal.classList.remove('hidden');
-        });
-    }
-
-    closeBtns.forEach(btn => {
-        btn.addEventListener('click', () => {
-            modal.classList.add('hidden');
-        });
-    });
-
-    modal.addEventListener('click', (e) => {
-        if (e.target === modal) {
-            modal.classList.add('hidden');
-        }
-    });
-
-    if (privacyTab && termsTab) {
-        privacyTab.addEventListener('click', () => {
-            privacyTab.classList.add('text-custom-teal', 'border-custom-teal');
-            privacyTab.classList.remove('text-gray-600');
-            termsTab.classList.remove('text-custom-teal', 'border-custom-teal');
-            termsTab.classList.add('text-gray-600');
-            privacyContent.classList.remove('hidden');
-            termsContent.classList.add('hidden');
-        });
-
-        termsTab.addEventListener('click', () => {
-            termsTab.classList.add('text-custom-teal', 'border-custom-teal');
-            termsTab.classList.remove('text-gray-600');
-            privacyTab.classList.remove('text-custom-teal', 'border-custom-teal');
-            privacyTab.classList.add('text-gray-600');
-            termsContent.classList.remove('hidden');
-            privacyContent.classList.add('hidden');
-        });
-    }
-</script>
+    </script>
 @endpush

@@ -11,6 +11,7 @@ return new class extends Migration
         Schema::create('regions', function (Blueprint $table) {
             $table->uuid('id')->primary();
             $table->string('region_name');
+            $table->string('shortname');
             $table->string('address');
             $table->string('contact_number');
             $table->string('email');

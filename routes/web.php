@@ -1,46 +1,43 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\{
+    RegisterController,
+    LoginController,
+    DashboardController,
+    ManageResourceController,
+    PrintResourceController,
+    NonPrintResourceController,
+    ManageUserController,
+    ManageStationController,
+    ProfileController,
+    SchoolController,
+    DistrictController,
+    DivisionController,
+    RegionController
+};
+//Index
+Route::get('/', [LoginController::class, 'showLoginForm'])->name('index');
 
-Route::get('/', function () {
-    return view('index');
-})->name('index');
+//Register
+Route::get('/register', [RegisterController::class, 'showRegisterForm'])->name('register');
+Route::post('/register', [RegisterController::class, 'submitRegistration'])->name('register.submit');
 
-Route::get('/register', function () {
-    return view('register');
-})->name('register');
+// Auth routes
+Route::post('/login', [LoginController::class, 'login'])->name('login');
+Route::post('/logout', [LoginController::class, 'logout'])->name('logout');
 
-Route::get('/dashboard', function () {
-    return view('pages.dashboard');
-})->name('dashboard');
+// Protected routes
+Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
+Route::get('/add-resources', [ManageResourceController::class, 'index'])->name('add-resources');
+Route::get('/print-resources', [PrintResourceController::class, 'index'])->name('print-resources');
+Route::get('/nonprint-resources', [NonPrintResourceController::class, 'index'])->name('nonprint-resources');
+Route::get('/users', [ManageUserController::class, 'index'])->name('users');
+Route::get('/stations', [ManageStationController::class, 'index'])->name('stations');
+Route::get('/profile', [ProfileController::class, 'index'])->name('profile');
+Route::get('/school-profile', [SchoolController::class, 'index'])->name('school-profile');
+Route::get('/district-profile', [DistrictController::class, 'index'])->name('district-profile');
+Route::get('/division-profile', [DivisionController::class, 'index'])->name('division-profile');
+Route::get('/region-profile', [RegionController::class, 'index'])->name('region-profile');
 
-Route::get('/add-resources', function () {
-    return view('pages.add-resources');
-})->name('add-resources');
-Route::get('/print-resources', function () {
-    return view('pages.print-resources');
-})->name('print-resources');
-Route::get('/nonprint-resources', function () {
-    return view('pages.nonprint-resources');
-})->name('nonprint-resources');
-Route::get('/users', function () {
-    return view('pages.users');
-})->name('users');
-Route::get('/stations', function () {
-    return view('pages.stations');
-})->name('stations');
-Route::get('/profile', function () {
-    return view('pages.profile');
-})->name('profile');
-Route::get('/school-profile', function () {
-    return view('pages.school-profile');
-})->name('school-profile');
-Route::get('/district-profile', function () {
-    return view('pages.district-profile');
-})->name('district-profile');
-Route::get('/division-profile', function () {
-    return view('pages.division-profile');
-})->name('division-profile');
-Route::get('/region-profile', function () {
-    return view('pages.region-profile');
-})->name('region-profile');
+

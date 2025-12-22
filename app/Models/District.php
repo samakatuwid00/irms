@@ -5,13 +5,14 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Http\JsonResponse;
 
 class District extends Model
 {
     public $incrementing = false;
     protected $keyType = 'string';
     protected $fillable = [
-        'id', 'district_name', 'address', 'contact_number', 'email', 'date_establish',
+        'id', 'district_name', 'shortname', 'address', 'contact_number', 'email', 'date_establish',
         'legislative_district', 'division_id', 'created_at', 'updated_at'
     ];
 
@@ -23,5 +24,15 @@ class District extends Model
     public function schools(): HasMany
     {
         return $this->hasMany(School::class, 'district_id');
+    }
+
+    //Registration Block
+    public static function getDistricts(): JsonResponse
+    {
+        $districts = self::select('id', 'district_name', 'shortname', 'division_id')
+            ->orderBy('district_name')
+            ->get();
+
+        return response()->json($districts);
     }
 }

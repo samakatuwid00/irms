@@ -5,13 +5,14 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Http\JsonResponse;
 
 class School extends Model
 {
     public $incrementing = false;
     protected $keyType = 'string';
     protected $fillable = [
-        'id', 'school_name', 'address', 'contact_number', 'email', 'date_establish',
+        'id', 'school_name', 'shortname', 'address', 'contact_number', 'email', 'date_establish',
         'school_id', 'legislative_district', 'district_id', 'created_at', 'updated_at'
     ];
 
@@ -23,5 +24,15 @@ class School extends Model
     public function schoolLibraries(): HasMany
     {
         return $this->hasMany(SchoolLibrary::class, 'school_id');
+    }
+
+    //Registration Block
+    public static function getSchools(): JsonResponse
+    {
+        $schools = self::select('id', 'school_name', 'shortname', 'district_id')
+            ->orderBy('school_name')
+            ->get();
+
+        return response()->json($schools);
     }
 }
