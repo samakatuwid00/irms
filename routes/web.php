@@ -14,7 +14,8 @@ use App\Http\Controllers\{
     SchoolController,
     DistrictController,
     DivisionController,
-    RegionController
+    RegionController,
+    GenerateReportController
 };
 //Index
 Route::get('/', [LoginController::class, 'showLoginForm'])->name('index');
@@ -39,5 +40,13 @@ Route::get('/school-profile', [SchoolController::class, 'index'])->name('school-
 Route::get('/district-profile', [DistrictController::class, 'index'])->name('district-profile');
 Route::get('/division-profile', [DivisionController::class, 'index'])->name('division-profile');
 Route::get('/region-profile', [RegionController::class, 'index'])->name('region-profile');
+Route::get('/generate-report', [GenerateReportController::class, 'index'])->name('generate-report');
 
+//MANAGE DIVISION
+Route::post('/divisions', [ManageStationController::class, 'addDivision'])->name('divisions.store');
+Route::put('/divisions/{division}', [ManageStationController::class, 'updateDivision'])->name('divisions.update');
+Route::delete('/divisions/{division}', [ManageStationController::class, 'destroyDivision'])->name('divisions.destroy');
+//MANAGE USER
+Route::get('/{user}', [ManageUserController::class, 'show'])->name('show');
+Route::patch('/{user}/status', [ManageUserController::class, 'updateStatus'])->name('users.updateStatus');
 

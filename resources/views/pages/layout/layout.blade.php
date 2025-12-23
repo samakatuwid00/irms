@@ -155,18 +155,85 @@
                         </div>
                     </li>
 
-                    <!-- Users -->
+                    @if (Auth::check() && in_array(Auth::user()?->userType?->level, [1, 2, 3, 4]))
+                        @php
+                            $level = Auth::user()->userType?->level;
+
+                            $routeName = match ($level) {
+                                1 => 'users',
+                                2 => 'users',
+                                3 => 'users',
+                                4 => 'users',
+                            };
+
+                            $label = match ($level) {
+                                1 => 'School Users',
+                                2 => 'District Users',
+                                3 => 'Division Users',
+                                4 => 'Region Users',
+                            };
+                        @endphp
+
+                        <!-- Users -->
+                        <li class="rounded-lg transition-colors">
+                            <a href="{{ $routeName }}"
+                            class="flex items-center gap-x-3.5 py-2 px-2.5 text-sm text-gray-800 rounded-lg
+                                    {{ request()->routeIs('users') ? 'bg-blue-100 text-blue-600' : 'hover:bg-gray-100' }}">
+                                <svg class="size-4" xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                    <circle cx="9" cy="7" r="4"/>
+                                    <path d="M2 21v-2a4 4 0 0 1 4-4h6a4 4 0 0 1 4 4v2"/>
+                                    <circle cx="17" cy="7" r="3"/>
+                                    <path d="M22 21v-2a4 4 0 0 0-3-3.87"/>
+                                </svg>
+                                {{ $label }}
+                            </a>
+                        </li>
+
+                    @endif
+
+                    @if (Auth::check() && in_array(Auth::user()?->userType?->level, [2, 3, 4]))
+                        @php
+                            $level = Auth::user()->userType?->level;
+
+                            $routeName = match ($level) {
+                                2 => 'stations',
+                                3 => 'stations',
+                                4 => 'stations',
+                            };
+
+                            $label = match ($level) {
+                                2 => 'Manage School',
+                                3 => 'Manage District and School',
+                                4 => 'Manage Division',
+                            };
+                        @endphp
+
+                        {{-- Stations --}}
+                        <li class="rounded-lg transition-colors">
+                            <a href="{{ $routeName }}"
+                            class="flex items-center gap-x-3.5 py-2 px-2.5 text-sm text-gray-800 rounded-lg
+                                    {{ request()->routeIs($routeName) ? 'bg-blue-100 text-blue-600' : 'hover:bg-gray-100' }}">
+                                <svg class="size-4" xmlns="http://www.w3.org/2000/svg" fill="none"
+                                    stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                    <path d="M12 3l9 6-9 6-9-6z"/>
+                                    <path d="M3 21h18"/>
+                                </svg>
+                                {{ $label }}
+                            </a>
+                        </li>
+                    @endif
                     <li class="rounded-lg transition-colors">
-                        <a href="{{ route('users') }}"
-                           class="flex items-center gap-x-3.5 py-2 px-2.5 text-sm text-gray-800 rounded-lg
-                                  {{ request()->routeIs('users') ? 'bg-blue-100 text-blue-600' : 'hover:bg-gray-100' }}">
-                            <svg class="size-4" xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                                <circle cx="9" cy="7" r="4"/>
-                                <path d="M2 21v-2a4 4 0 0 1 4-4h6a4 4 0 0 1 4 4v2"/>
-                                <circle cx="17" cy="7" r="3"/>
-                                <path d="M22 21v-2a4 4 0 0 0-3-3.87"/>
+                        <a href="{{ route('generate-report') }}"
+                        class="flex items-center gap-x-3.5 py-2 px-2.5 text-sm text-gray-800 rounded-lg
+                                {{ request()->routeIs('generate-report') ? 'bg-blue-100 text-blue-600' : 'hover:bg-gray-100' }}">
+                            <svg class="size-4" xmlns="http://www.w3.org/2000/svg" fill="none"
+                                stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                <path d="M9 17v-6"/>
+                                <path d="M13 17V7"/>
+                                <path d="M17 17v-4"/>
+                                <path d="M3 3h18v18H3z"/>
                             </svg>
-                            Users
+                            Generate Report
                         </a>
                     </li>
                 </ul>

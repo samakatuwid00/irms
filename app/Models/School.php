@@ -12,7 +12,7 @@ class School extends Model
     public $incrementing = false;
     protected $keyType = 'string';
     protected $fillable = [
-        'id', 'school_name', 'shortname', 'address', 'contact_number', 'email', 'date_establish',
+        'id', 'school_name', 'shortname', 'school_type', 'address', 'contact_number', 'email', 'date_establish',
         'school_id', 'legislative_district', 'district_id', 'created_at', 'updated_at'
     ];
 
@@ -29,7 +29,7 @@ class School extends Model
     //Registration Block
     public static function getSchools(): JsonResponse
     {
-        $schools = self::select('id', 'school_name', 'shortname', 'district_id')
+        $schools = self::select('id', 'school_name', 'shortname', 'district_id', 'school_type')
             ->orderBy('school_name')
             ->get();
 

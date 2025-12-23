@@ -12,6 +12,7 @@ return new class extends Migration
             $table->uuid('id')->primary();
             $table->string('school_name');
             $table->string('shortname');
+            $table->string('school_type');
             $table->string('address');
             $table->string('contact_number');
             $table->string('email');
