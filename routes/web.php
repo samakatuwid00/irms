@@ -36,11 +36,23 @@ Route::get('/nonprint-resources', [NonPrintResourceController::class, 'index'])-
 Route::get('/users', [ManageUserController::class, 'index'])->name('users');
 Route::get('/stations', [ManageStationController::class, 'index'])->name('stations');
 Route::get('/profile', [ProfileController::class, 'index'])->name('profile');
-Route::get('/school-profile', [SchoolController::class, 'index'])->name('school-profile');
-Route::get('/district-profile', [DistrictController::class, 'index'])->name('district-profile');
-Route::get('/division-profile', [DivisionController::class, 'index'])->name('division-profile');
-Route::get('/region-profile', [RegionController::class, 'index'])->name('region-profile');
 Route::get('/generate-report', [GenerateReportController::class, 'index'])->name('generate-report');
+
+//MANAGE REGION PROFILE
+Route::get('/region-profile', [RegionController::class, 'index'])->name('region-profile');
+Route::put('/region-profile', [RegionController::class, 'update']) ->name('region.profile.update');
+
+//MANAGE DIVISION PROFILE
+Route::get('/division-profile', [DivisionController::class, 'index'])->name('division-profile');
+Route::put('/division-profile', [DivisionController::class, 'update'])->name('division.profile.update');
+
+//MANAGE DISTRICT PROFILE
+Route::get('/district-profile', [DistrictController::class, 'index'])->name('district-profile');
+Route::put('/district-profile', [DistrictController::class, 'update'])->name('district.profile.update');
+
+//MANAGE SCHOOL PROFILE
+Route::get('/school-profile', [SchoolController::class, 'index'])->name('school-profile');
+Route::put('/school-profile', [SchoolController::class, 'update'])->name('school.profile.update');
 
 //MANAGE DIVISION
 Route::post('/divisions', [ManageStationController::class, 'addDivision'])->name('divisions.store');

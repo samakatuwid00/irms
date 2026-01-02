@@ -20,14 +20,51 @@ class RegionController extends BaseController
 
     public function index()
     {
-        $user = Auth::user();
+        $region = Region::where('id', Auth::user()->station_id)->firstOrFail();
+        return view('pages.region-profile', compact('region'));
+    }
 
-        $region = Region::where('id', $user->station_id)->first();
+    public function update(Request $request)
+    {
+        $region = Region::where('id', Auth::user()->station_id)->firstOrFail();
 
-        if (!$region) {
-            abort(404, 'Region not found.');
+        if ($request->filled('date_establish')) {
+            $request->merge([
+                'date_establish' => date('Y-m-d', strtotime($request->date_establish))
+            ]);
         }
 
-        return view('pages.region-profile', compact('region'));
+        $validated = $request->validate([
+            'region_name' => 'required|string|max:255',
+            'email'       => 'required|email:rfc,dns|max:255',
+
+            'shortname' => 'nullable|string|max:50',
+            'contact_number' => [
+                'nullable',
+                function ($attr, $value, $fail) use ($request) {
+                    $clean = preg_replace('/\s+|-/', '', $value);
+                    if (!preg_match('/^(09\d{9}|\+639\d{9})$/', $clean)) {
+                        $fail('Contact number must be a valid Philippine mobile number.');
+                    }
+                    $request->merge(['contact_number' => $clean]);
+                }
+            ],
+            'date_establish' => 'nullable|date',
+            'address' => 'nullable|string|max:500',
+        ]);
+
+        $region->fill($validated);
+
+        if (!$region->isDirty()) {
+            return redirect()
+                ->route('region-profile')
+                ->with('info', 'No changes were made.');
+        }
+
+
+        $region->save();
+
+        return redirect()->route('region-profile')
+        ->with('success', 'Region information updated successfully.');
     }
 }

@@ -13,7 +13,7 @@ class Division extends Model
     protected $keyType = 'string';
     protected $fillable = [
         'id', 'division_name', 'shortname', 'address', 'contact_number', 'email', 'date_establish',
-        'legislative_district', 'region_id', 'created_at', 'updated_at'
+        'legislative_district', 'region_id', 'logo', 'created_at', 'updated_at'
     ];
 
     public function region(): BelongsTo
