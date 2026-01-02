@@ -12,7 +12,7 @@ class Region extends Model
     protected $keyType = 'string';
     protected $fillable = [
         'id', 'region_name', 'shortname', 'address', 'contact_number', 'email', 'date_establish',
-        'created_at', 'updated_at'
+        'created_at', 'updated_at', 'logo'
     ];
 
     public function divisions(): HasMany

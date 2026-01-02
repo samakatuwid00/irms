@@ -16,6 +16,7 @@ return new class extends Migration
             $table->string('contact_number');
             $table->string('email');
             $table->date('date_establish');
+            $table->string('logo');
             $table->timestamps();
         });
     }

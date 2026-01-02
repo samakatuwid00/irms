@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
+use App\Models\Region;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Foundation\Validation\ValidatesRequests;
@@ -20,9 +21,13 @@ class RegionController extends BaseController
     public function index()
     {
         $user = Auth::user();
-        // if ($user->usertype_id == 1) {
-        //     return redirect()->route('admin.home');
-        // }
-        return view('pages.region-profile', compact('user'));
+
+        $region = Region::where('id', $user->station_id)->first();
+
+        if (!$region) {
+            abort(404, 'Region not found.');
+        }
+
+        return view('pages.region-profile', compact('region'));
     }
 }

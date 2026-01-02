@@ -4,21 +4,14 @@
 
 @section('page-title', 'Dashboard')
 
+@section('header-title', 'Welcome, '.Auth::user()->firstname.' '.Auth::user()->lastname)
+@section('header-subtitle', 'Dashboard overview of your Learning Resource Management System')
+@section('breadcrumb', 'Dashboard')
+
 @section('content')
 <div class="p-6 space-y-6">
     <!-- ================= HEADER ================= -->
-    <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-        <div>
-            <h1 class="text-2xl font-bold text-gray-800">Welcome, Admin</h1>
-            <p class="text-gray-500 text-sm mt-1">Dashboard overview of your Learning Resource Management System</p>
-        </div>
-        <div class="text-sm text-gray-500">
-            <nav class="flex gap-1">
-                <a href="#" class="hover:underline">Home</a> /
-                <span>Dashboard</span>
-            </nav>
-        </div>
-    </div>
+    @include('pages.partials.page-header')
 
     <!-- ================= SUMMARY CARDS ================= -->
     <div class="grid grid-cols-1 md:grid-cols-4 gap-6">

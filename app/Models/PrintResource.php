@@ -12,7 +12,7 @@ class PrintResource extends Model
     protected $keyType = 'string';
     protected $fillable = [
         'id', 'print_title_id', 'print_type_id', 'publisher', 'volume', 'edition',
-        'copyright', 'pages', 'isbn', 'remarks', 'subject_grade_level', 'created_at', 'updated_at'
+        'copyright', 'pages', 'isbn', 'remarks', 'subject_grade_level_ids', 'created_at', 'updated_at'
     ];
 
     public function printTitle(): BelongsTo

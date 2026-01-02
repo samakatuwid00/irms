@@ -18,6 +18,10 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/preline@2.0.3/dist/preline.css">
     <script src="https://cdn.jsdelivr.net/npm/preline@2.0.3/dist/preline.min.js"></script>
 
+
+    <!-- Alphine JS -->
+    <script src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
+
     <!-- Custom Styles -->
     <style>
         .bg-custom-yellow { background-color: #F3C623; }
@@ -351,10 +355,26 @@
                     <i class="fas fa-question-circle text-custom-teal text-xl"></i>
                     <span class="absolute right-16 top-1/2 -translate-y-1/2 bg-gray-800 text-white text-xs px-3 py-1 rounded opacity-0 transition-opacity whitespace-nowrap">Support</span>
                 </a>
-                <a href="#" class="block w-12 h-12 bg-white rounded-full shadow-lg flex items-center justify-center hover:bg-gray-100 transition">
-                    <i class="fas fa-sign-out-alt text-custom-teal text-xl"></i>
-                    <span class="absolute right-16 top-1/2 -translate-y-1/2 bg-gray-800 text-white text-xs px-3 py-1 rounded opacity-0 transition-opacity whitespace-nowrap">Logout</span>
-                </a>
+                <form method="POST" action="{{ route('logout') }}" class="relative">
+                    @csrf
+
+                    <button type="submit"
+                        class="block w-12 h-12 bg-white rounded-full shadow-lg
+                            flex items-center justify-center
+                            hover:bg-gray-100 transition group">
+
+                        <i class="fas fa-sign-out-alt text-custom-teal text-xl"></i>
+
+                        <!-- Tooltip -->
+                        <span
+                            class="absolute right-16 top-1/2 -translate-y-1/2
+                                bg-gray-800 text-white text-xs px-3 py-1 rounded
+                                opacity-0 group-hover:opacity-100
+                                transition-opacity whitespace-nowrap">
+                            Logout
+                        </span>
+                    </button>
+                </form>
             </div>
 
             <!-- Main FAB Button -->

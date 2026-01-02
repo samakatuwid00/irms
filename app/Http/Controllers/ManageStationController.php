@@ -115,6 +115,114 @@ class ManageStationController extends BaseController
         return redirect()->route('stations')->with('success', 'Division deleted successfully!');
     }
 
+    public function addDistrict(Request $request)
+    {
+
+        $request->validate([
+            'district_name' => 'required|string|max:255',
+            'shortname' => 'nullable|string|max:50',
+            'address' => 'nullable|string|max:255',
+            'contact_number' => 'nullable|string|max:20',
+            'email' => 'nullable|email|max:255',
+            'date_establish' => 'nullable|date',
+            'legislative_district' => 'nullable|string|max:255',
+        ]);
+
+        District::create([
+            'id' => Str::uuid(),
+            'district_name' => $request->district_name,
+            'shortname' => $request->shortname,
+            'address' => $request->address,
+            'contact_number' => $request->contact_number,
+            'email' => $request->email,
+            'date_establish' => $request->date_establish,
+            'legislative_district' => $request->legislative_district,
+            'division_id' => Auth::user()->station_id,
+        ]);
+
+        return redirect()->route('stations')->with('success', 'District added successfully!');
+    }
+
+    public function updateDistrict(Request $request, District $district)
+    {
+        $request->validate([
+            'district_name' => 'required|string|max:255',
+            'shortname' => 'nullable|string|max:50',
+            'address' => 'nullable|string|max:255',
+            'contact_number' => 'nullable|string|max:20',
+            'email' => 'nullable|email|max:255',
+            'date_establish' => 'nullable|date',
+            'legislative_district' => 'nullable|string|max:50',
+        ]);
+
+        $district->update($request->all());
+
+        return redirect()->route('stations')->with('success', 'District updated successfully!');
+    }
+
+    public function destroyDistrict(District $district)
+    {
+        $district->delete();
+
+        return redirect()->route('stations')->with('success', 'District deleted successfully!');
+    }
+
+    public function addSchool(Request $request)
+    {
+
+        $request->validate([
+            'school_name' => 'required|string|max:255',
+            'shortname' => 'nullable|string|max:50',
+            'school_id' => 'required|string|max:50',
+            'address' => 'nullable|string|max:255',
+            'contact_number' => 'nullable|string|max:20',
+            'email' => 'nullable|email|max:255',
+            'date_establish' => 'nullable|date',
+            'legislative_school' => 'nullable|string|max:255',
+            'school_type' => 'nullable|in:primary,secondary,junior-high,senior-high',
+        ]);
+
+        School::create([
+            'id' => Str::uuid(),
+            'school_name' => $request->school_name,
+            'shortname' => $request->shortname,
+            'school_id' => $request->school_id,
+            'address' => $request->address,
+            'contact_number' => $request->contact_number,
+            'email' => $request->email,
+            'date_establish' => $request->date_establish,
+            'legislative_school' => $request->legislative_school,
+            'district_id' => Auth::user()->station_id,
+            'school_type' => $request->school_type,
+        ]);
+
+        return redirect()->route('stations')->with('success', 'School added successfully!');
+    }
+
+    public function updateSchool(Request $request, School $school)
+    {
+        $request->validate([
+            'school_name' => 'required|string|max:255',
+            'shortname' => 'nullable|string|max:50',
+            'address' => 'nullable|string|max:255',
+            'contact_number' => 'nullable|string|max:20',
+            'email' => 'nullable|email|max:255',
+            'date_establish' => 'nullable|date',
+            'legislative_school' => 'nullable|string|max:50',
+        ]);
+
+        $school->update($request->all());
+
+        return redirect()->route('stations')->with('success', 'School updated successfully!');
+    }
+
+    public function destroyschool(School $school)
+    {
+        $school->delete();
+
+        return redirect()->route('stations')->with('success', 'School deleted successfully!');
+    }
+
     /* =====================================================
      | REGION → DIVISIONS
      ===================================================== */

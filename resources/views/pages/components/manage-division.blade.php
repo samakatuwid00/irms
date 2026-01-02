@@ -225,38 +225,30 @@
         <form method="POST" id="editDivisionForm">
             @csrf
             @method('PUT')
-            <div class="grid grid-cols-1 gap-5">
-                <div>
+            <div class="space-y-2">
+
                     <label class="block text-sm font-medium text-gray-700 mb-1">Division Name *</label>
                     <input type="text" name="division_name" id="edit_division_name" required class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-blue-500">
-                </div>
-                <!-- Other fields similar to Add modal -->
-                <div>
+
+
                     <label class="block text-sm font-medium text-gray-700 mb-1">Short Name</label>
                     <input type="text" name="shortname" id="edit_shortname" class="w-full border border-gray-300 rounded-lg px-4 py-2.5">
-                </div>
-                <div>
+
                     <label class="block text-sm font-medium text-gray-700 mb-1">Address</label>
                     <input type="text" name="address" id="edit_address" class="w-full border border-gray-300 rounded-lg px-4 py-2.5">
-                </div>
-                <div>
+
                     <label class="block text-sm font-medium text-gray-700 mb-1">Legislative District</label>
                     <input type="text" name="legislative_district" id="edit_legislative_district" class="w-full border border-gray-300 rounded-lg px-4 py-2.5">
-                </div>
-                <div class="grid grid-cols-2 gap-5">
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Contact Number</label>
-                        <input type="text" name="contact_number" id="edit_contact_number" class="w-full border border-gray-300 rounded-lg px-4 py-2.5">
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Email</label>
-                        <input type="email" name="email" id="edit_email" class="w-full border border-gray-300 rounded-lg px-4 py-2.5">
-                    </div>
-                </div>
-                <div>
+
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Contact Number</label>
+                    <input type="text" name="contact_number" id="edit_contact_number" class="w-full border border-gray-300 rounded-lg px-4 py-2.5">
+
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                    <input type="email" name="email" id="edit_email" class="w-full border border-gray-300 rounded-lg px-4 py-2.5">
+
                     <label class="block text-sm font-medium text-gray-700 mb-1">Date Established</label>
                     <input type="date" name="date_establish" id="edit_date_establish" class="w-full border border-gray-300 rounded-lg px-4 py-2.5">
-                </div>
+
             </div>
 
             <div class="mt-8 flex justify-end gap-4">

@@ -18,6 +18,7 @@ return new class extends Migration
             $table->string('copyright');
             $table->integer('pages');
             $table->string('isbn');
+            $table->string('subject_grade_level_ids');
             $table->timestamps();
 
             $table->foreign('print_title_id')->references('id')->on('print_titles');
