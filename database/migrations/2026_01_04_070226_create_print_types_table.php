@@ -8,14 +8,14 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::create('authors', function (Blueprint $table) {
-            $table->uuid('id')->primary();
-            $table->string('author_name');
+        Schema::create('print_types', function (Blueprint $table) {
+             $table->uuid('id')->primary();
+            $table->string('type_name');
+            $table->string('shortname')->nullable();
         });
     }
-
     public function down(): void
     {
-        Schema::dropIfExists('authors');
+        Schema::dropIfExists('print_types');
     }
 };

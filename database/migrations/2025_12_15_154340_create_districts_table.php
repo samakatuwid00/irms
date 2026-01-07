@@ -19,6 +19,7 @@ return new class extends Migration
             $table->string('legislative_district');
             $table->uuid('division_id');
             $table->timestamps();
+            $table->string('logo')->nullable();
 
             $table->foreign('division_id')->references('id')->on('divisions');
         });

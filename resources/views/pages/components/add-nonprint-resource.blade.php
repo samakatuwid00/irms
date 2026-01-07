@@ -425,12 +425,12 @@
                         <td class="border px-2 py-1 font-semibold">${a.total_quantity}</td>
                         <td class="border px-2 py-1 text-center">
                             <div class="flex justify-center gap-2">
-                                <button type="button" onclick="editAcquisition(${index})" class="p-1 rounded hover:bg-blue-100 text-blue-600" title="Edit">
+                                <button type="button" onclick="editNonPrintAcquisition(${index})" class="p-1 rounded hover:bg-blue-100 text-blue-600" title="Edit">
                                     <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                                         <path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.687a1.875 1.875 0 112.652 2.652L7.5 19.153 3 21l1.847-4.5L16.862 4.487z"/>
                                     </svg>
                                 </button>
-                                <button type="button" onclick="deleteAcquisition(${index})" class="p-1 rounded hover:bg-red-100 text-red-600" title="Delete">
+                                <button type="button" onclick="deleteNonPrintAcquisition(${index})" class="p-1 rounded hover:bg-red-100 text-red-600" title="Delete">
                                     <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                                         <path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862 a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6 M9 7h6m2 0H7m3-3h4a1 1 0 011 1v1H9V5a1 1 0 011-1z"/>
                                     </svg>
@@ -479,7 +479,7 @@
             resetAcquisitionForm();
         });
 
-        window.editAcquisition = (index) => {
+        window.editNonPrintAcquisition = (index) => {
             const a = acquisitions[index];
             editIndex = index;
             form.querySelector('[name="source"]').value = a.source;
@@ -496,7 +496,7 @@
             form.querySelector('[name="source"]').scrollIntoView({ behavior: 'smooth' });
         };
 
-        window.deleteAcquisition = (index) => {
+        window.deleteNonPrintAcquisition = (index) => {
             if (confirm('Delete this acquisition?')) {
                 acquisitions.splice(index, 1);
                 renderAcquisitions();

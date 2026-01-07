@@ -9,7 +9,7 @@ class DivisionLibrary extends Model
 {
     public $incrementing = false;
     protected $keyType = 'string';
-    protected $fillable = ['id', 'division_id', 'librarian'];
+    protected $fillable = ['id', 'division_id', 'librarian', 'library_name'];
 
     public $timestamps = false;
 

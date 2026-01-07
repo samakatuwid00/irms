@@ -20,8 +20,10 @@ return new class extends Migration
             $table->string('isbn');
             $table->string('subject_grade_level_ids');
             $table->timestamps();
+            $table->uuid('library_id');
 
             $table->foreign('print_title_id')->references('id')->on('print_titles');
+            $table->foreign('print_type_id')->references('id')->on('print_types');
         });
     }
 

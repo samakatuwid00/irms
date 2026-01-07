@@ -12,6 +12,7 @@ return new class extends Migration
             $table->uuid('id')->primary();
             $table->uuid('school_id');
             $table->uuid('librarian');
+            $table->string('library_name');
 
             $table->foreign('school_id')->references('id')->on('schools');
         });

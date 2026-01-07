@@ -11,7 +11,7 @@ class PrintAcquisition extends Model
     public $incrementing = false;
     protected $keyType = 'string';
     protected $fillable = [
-        'id', 'library_id', 'print_id', 'source', 'date_acquired', 'cost', 'iar',
+        'id', 'print_id', 'source', 'date_acquired', 'cost', 'iar',
         'total_qty', 'usable', 'partially_damaged', 'damaged', 'lost', 'condemnable',
         'remarks', 'date_encoded', 'encoded_by', 'curriculum_id', 'created_at', 'updated_at'
     ];

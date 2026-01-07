@@ -3,23 +3,34 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
 class Author extends Model
 {
     public $incrementing = false;
     protected $keyType = 'string';
-    protected $fillable = ['id', 'firstname', 'lastname'];
+
+    protected $fillable = ['id', 'author_name'];
 
     public $timestamps = false;
 
-    public function printTitles(): HasMany
+    public function printTitles(): BelongsToMany
     {
-        return $this->hasMany(PrintTitle::class, 'author_id');
+        return $this->belongsToMany(
+            PrintTitle::class,
+            'author_print_title',
+            'author_id',
+            'print_title_id'
+        );
     }
 
-    public function nonprintTitles(): HasMany
+    public function nonprintTitles(): BelongsToMany
     {
-        return $this->hasMany(NonprintTitle::class, 'author_id');
+        return $this->belongsToMany(
+            NonprintTitle::class,
+            'author_nonprint_title',
+            'author_id',
+            'nonprint_title_id'
+        );
     }
 }

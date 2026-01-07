@@ -15,8 +15,12 @@ use App\Http\Controllers\{
     DistrictController,
     DivisionController,
     RegionController,
-    GenerateReportController
+    GenerateReportController,
+    LookUpController
 };
+use Faker\Guesser\Name;
+use Pest\Plugin\Manager;
+
 //Index
 Route::get('/', [LoginController::class, 'showLoginForm'])->name('index');
 
@@ -33,7 +37,6 @@ Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard
 Route::get('/add-resources', [ManageResourceController::class, 'index'])->name('add-resources');
 Route::get('/print-resources', [PrintResourceController::class, 'index'])->name('print-resources');
 Route::get('/nonprint-resources', [NonPrintResourceController::class, 'index'])->name('nonprint-resources');
-Route::get('/users', [ManageUserController::class, 'index'])->name('users');
 Route::get('/stations', [ManageStationController::class, 'index'])->name('stations');
 Route::get('/profile', [ProfileController::class, 'index'])->name('profile');
 Route::get('/generate-report', [GenerateReportController::class, 'index'])->name('generate-report');
@@ -70,10 +73,18 @@ Route::put('/schools/{school}', [ManageStationController::class, 'updateSchool']
 Route::delete('/schools/{school}', [ManageStationController::class, 'destroySchool'])->name('schools.destroy');
 
 //MANAGE USER
-Route::get('/{user}', [ManageUserController::class, 'show'])->name('show');
-Route::patch('/{user}/status', [ManageUserController::class, 'updateStatus'])->name('users.updateStatus');
+// Route::get('/{user}', [ManageUserController::class, 'show'])->name('show');
+// Route::patch('/{user}/status', [ManageUserController::class, 'updateStatus'])->name('users.updateStatus');
+
+Route::get('/users', [ManageUserController::class, 'index'])->name('users');
+Route::patch('/users/{user}/status', [ManageUserController::class, 'updateStatus'])->name('users.updateStatus');
 
 //MANAGE PROFILE
 Route::put('/profile/update', [ProfileController::class, 'updateInfo'])->name('profile.update');
 Route::put('/profile/password', [ProfileController::class, 'updatePassword'])->name('profile.password');
+
+//MANAGE PRINT RESOURCE
+Route::post('/add-resources', [ManageResourceController::class, 'addPrintResource'])->name('add-print-resource');
+//LOOKUP TEST
+Route::get('/fetch-subject-grade', [LookUpController::class, 'getSubjectGradeLevel'])->name('fetch-subject-grade');
 

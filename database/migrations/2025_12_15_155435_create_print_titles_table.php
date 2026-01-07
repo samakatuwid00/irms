@@ -11,9 +11,6 @@ return new class extends Migration
         Schema::create('print_titles', function (Blueprint $table) {
             $table->uuid('id')->primary();
             $table->string('title');
-            $table->uuid('author_id');
-
-            $table->foreign('author_id')->references('id')->on('authors');
         });
     }
 

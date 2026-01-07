@@ -106,10 +106,10 @@ class ManageUserController extends BaseController
                 if ($request->filled($keys['search'])) {
                     $search = strtolower($request->input($keys['search']));
                     $$queryVar->where(function ($q) use ($search) {
-                        $q->whereRaw('LOWER(firstname) LIKE ?', ["%{$search}%"])
-                        ->orWhereRaw('LOWER(lastname) LIKE ?', ["%{$search}%"])
-                        ->orWhereRaw('LOWER(username) LIKE ?', ["%{$search}%"])
-                        ->orWhereRaw('LOWER(email) LIKE ?', ["%{$search}%"]);
+                        $q->whereRaw('LOWER(users.firstname) LIKE ?', ["%{$search}%"])
+                        ->orWhereRaw('LOWER(users.lastname) LIKE ?', ["%{$search}%"])
+                        ->orWhereRaw('LOWER(users.username) LIKE ?', ["%{$search}%"])
+                        ->orWhereRaw('LOWER(users.email) LIKE ?', ["%{$search}%"]);
                     });
                 }
 
@@ -137,7 +137,6 @@ class ManageUserController extends BaseController
             'subSubUsers' => $subSubUsersQuery,
         ]);
     }
-
 
     public function updateStatus(Request $request, User $user)
     {

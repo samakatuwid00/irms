@@ -9,7 +9,7 @@ class SchoolLibrary extends Model
 {
     public $incrementing = false;
     protected $keyType = 'string';
-    protected $fillable = ['id', 'school_id', 'librarian'];
+    protected $fillable = ['id', 'school_id', 'librarian', 'library_name'];
 
     public $timestamps = false;
 

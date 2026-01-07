@@ -1,13 +1,11 @@
-    <!-- Print Resource Form -->
-    <form id="print" class="resource-form space-y-8" method="POST" enctype="multipart/form-data">
+    {{-- Print Resource Form --}}
+    <form id="print" action="{{ route('add-print-resource') }}" class="resource-form space-y-8" method="POST" enctype="multipart/form-data">
         @csrf
 
-        {{-- =========================
-            1ST GROUP
-        ========================== --}}
+        {{-- ========================= 1ST GROUP ========================== --}}
         <div class="grid grid-cols-1 md:grid-cols-3 gap-6 items-stretch">
 
-            <!-- LEFT: IMAGE -->
+            {{-- LEFT: IMAGE  --}}
             <div class="h-full">
                 <div class="h-full flex flex-col items-center justify-between
                             border-2 border-dashed border-blue-500 rounded-lg
@@ -41,19 +39,46 @@
                 </div>
             </div>
 
-            <!-- RIGHT: INPUTS -->
+             {{-- RIGHT: INPUTS --}}
             <div class="md:col-span-2 space-y-6">
 
-                <!-- Title / Author / Publisher -->
+                 {{-- Title / Author / Publisher --}}
                 <div class="space-y-4">
+                    @if (Auth::user()->userType?->level === 3)
+                        <div>
+                            <label class="block text-sm font-medium mb-1">Library</label>
+                            <select name="library_id" class="w-full border rounded px-3 py-2" required>
+                                @foreach ($divisionLibraries as $library)
+                                    <option value="{{ $library->id }}">{{ $library->library_name }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                    @elseif (Auth::user()->userType?->level === 4)
+                        <input type="hidden" name="library_id" id="library_id" value='{{ $regionLibrary->id }}' readonly required>
+                    @elseif (Auth::user()->userType?->level === 1)
+                        <input type="hidden" name="library_id" id="library_id" value='{{ $schoolLibrary->id }}' readonly required>
+                    @endif
+
                     <div>
                         <label class="block text-sm font-medium mb-1">Title</label>
                         <input type="text" name="title" class="w-full border rounded px-3 py-2">
                     </div>
 
                     <div>
-                        <label class="block text-sm font-medium mb-1">Author</label>
-                        <input type="text" name="author" class="w-full border rounded px-3 py-2">
+                        <label class="block text-sm font-medium mb-1">Authors</label>
+
+                         {{-- Visible input --}}
+                        <div class="flex flex-wrap gap-2 border rounded px-2 py-2" id="author-wrapper">
+                            <input
+                                type="text"
+                                id="author-input"
+                                class="flex-1 outline-none border-none"
+                                placeholder="Type author name and press Enter"
+                            >
+                        </div>
+
+                         {{-- Hidden input (stores array)  --}}
+                        <input type="hidden" name="authors" id="authors-hidden">
                     </div>
 
                     <div>
@@ -62,17 +87,20 @@
                     </div>
                 </div>
 
-                <!-- Two Columns -->
+                 {{-- Two Columns  --}}
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div class="space-y-4">
                         <div>
                             <label class="block text-sm mb-1">Type</label>
-                            <select name="type" class="w-full border rounded px-3 py-2">
-                                <option>Select type</option>
-                                <option>Book</option>
-                                <option>Journal</option>
-                                <option>Magazine</option>
-                            </select>
+                                <select name="type" class="w-full border rounded px-3 py-2">
+                                    <option selected disabled>Select type</option>
+
+                                    @foreach ($printTypes as $type)
+                                        <option value="{{ $type->id }}">
+                                            {{ $type->type_name }}
+                                        </option>
+                                    @endforeach
+                                </select>
                         </div>
 
                         <div>
@@ -107,110 +135,123 @@
             </div>
         </div>
 
-        {{-- =========================
-            2ND GROUP (EDGE-TO-EDGE)
-        ========================== --}}
+    {{-- ========================= SUBJECT–GRADE LEVEL MAPPING ========================== --}}
+
+        @php
+        $stages = [
+            'S1' => [
+                'tab' => 'stage1',
+                'label' => 'Stage 1',
+                'grades' => [
+                    0 => 'K',
+                    1 => '1',
+                    2 => '2',
+                    3 => '3',
+                ],
+            ],
+            'ES' => [
+                'tab' => 'stage2',
+                'label' => 'Stage 2',
+                'grades' => [
+                    4 => '4',
+                    5 => '5',
+                    6 => '6',
+                ],
+            ],
+            'JHS' => [
+                'tab' => 'jhs',
+                'label' => 'Junior High',
+                'grades' => [
+                    7 => '7',
+                    8 => '8',
+                    9 => '9',
+                    10 => '10',
+                ],
+            ],
+            'SHS' => [
+                'tab' => 'shs',
+                'label' => 'Senior High',
+                'grades' => [
+                    11 => '11',
+                    12 => '12',
+                ],
+            ],
+        ];
+
+        // Group data: [key_stage][subject_name][]
+        $grouped = $subjectGradeLevels->groupBy(['key_stage', 'subject_name']);
+        @endphp
+
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-
             <div class="md:col-span-2 space-y-4">
-                <!-- Tabs -->
+
+                {{-- ================= TABS ================= --}}
                 <div class="flex gap-6 border-b">
-                    <button type="button" class="tab-btn active" data-tab="primary">Primary</button>
-                    <button type="button" class="tab-btn" data-tab="secondary">Secondary</button>
-                    <button type="button" class="tab-btn" data-tab="sh">Senior High</button>
+                    @foreach ($stages as $stage)
+                        <button
+                            type="button"
+                            class="tab-btn {{ $loop->first ? 'active border-blue-600 text-blue-600' : 'text-gray-600' }}"
+                            data-tab="{{ $stage['tab'] }}">
+                            {{ $stage['label'] }}
+                        </button>
+                    @endforeach
                 </div>
 
-                <!-- PRIMARY -->
-                <div class="tab-content" id="primary">
-                    <table class="w-full border text-sm">
-                        <thead class="bg-gray-100">
-                            <tr>
-                                <th class="border px-3 py-2 text-left w-48">Subject</th>
-                                <th class="border">K</th>
-                                <th class="border">1</th>
-                                <th class="border">2</th>
-                                <th class="border">3</th>
-                                <th class="border">4</th>
-                                <th class="border">5</th>
-                                <th class="border">6</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @foreach (['English','Math','Science','Filipino'] as $subject)
-                            <tr>
-                                <td class="border px-3 py-2">{{ $subject }}</td>
-                                @for ($i = 0; $i <= 6; $i++)
-                                    <td class="border text-center">
-                                        <input type="checkbox"
-                                            name="primary[{{ $subject }}][{{ $i }}]">
-                                    </td>
-                                @endfor
-                            </tr>
-                            @endforeach
-                        </tbody>
-                    </table>
-                </div>
+                {{-- ================= TAB CONTENTS ================= --}}
+                @foreach ($stages as $stageKey => $stage)
+                    <div
+                        id="{{ $stage['tab'] }}"
+                        class="tab-content {{ !$loop->first ? 'hidden' : '' }}">
 
-                <!-- SECONDARY -->
-                <div class="tab-content hidden" id="secondary">
-                    <table class="w-full border text-sm">
-                        <thead class="bg-gray-100">
-                            <tr>
-                                <th class="border px-3 py-2 text-left w-48">Subject</th>
-                                <th class="border">7</th>
-                                <th class="border">8</th>
-                                <th class="border">9</th>
-                                <th class="border">10</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @foreach (['English','Math','Science','Filipino'] as $subject)
-                            <tr>
-                                <td class="border px-3 py-2">{{ $subject }}</td>
-                                @for ($i = 0; $i < 4; $i++)
-                                    <td class="border text-center">
-                                        <input type="checkbox"
-                                            name="primary[{{ $subject }}][{{ $i }}]">
-                                    </td>
-                                @endfor
-                            </tr>
-                            @endforeach
-                        </tbody>
-                    </table>
-                </div>
+                        <table class="w-full border text-sm">
+                            <thead class="bg-gray-100">
+                                <tr>
+                                    <th class="border px-3 py-2 text-left w-72">
+                                        Subject
+                                    </th>
 
-                <!-- SH -->
-                <div class="tab-content hidden" id="sh">
-                    <table class="w-full border text-sm">
-                        <thead class="bg-gray-100">
-                            <tr>
-                                <th class="border px-3 py-2 text-left w-48">Subject</th>
-                                <th class="border">11</th>
-                                <th class="border">12</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @foreach (['English','Math','Science','Filipino'] as $subject)
-                            <tr>
-                                <td class="border px-3 py-2">{{ $subject }}</td>
-                                @for ($i = 0; $i < 2; $i++)
-                                    <td class="border text-center">
-                                        <input type="checkbox"
-                                            name="primary[{{ $subject }}][{{ $i }}]">
-                                    </td>
-                                @endfor
-                            </tr>
-                            @endforeach
-                        </tbody>
-                    </table>
-                </div>
+                                    @foreach ($stage['grades'] as $gradeLabel)
+                                        <th class="border">
+                                            {{ $gradeLabel }}
+                                        </th>
+                                    @endforeach
+                                </tr>
+                            </thead>
+
+                            <tbody>
+                                @foreach ($grouped[$stageKey] ?? [] as $subject => $rows)
+                                    @php
+                                        // Map grade sort_order → subject_grade_level row
+                                        $gradeMap = collect($rows)->keyBy('sort_order');
+                                    @endphp
+
+                                    <tr>
+                                        <td class="border px-3 py-2">
+                                            {{ $subject }}
+                                        </td>
+
+                                        @foreach ($stage['grades'] as $sortOrder => $label)
+                                            <td class="border text-center">
+                                                @if ($gradeMap->has($sortOrder))
+                                                    <input
+                                                        type="checkbox"
+                                                        name="subject_grade_levels[]"
+                                                        value="{{ $gradeMap[$sortOrder]->subject_grade_level_id }}">
+                                                @endif
+                                            </td>
+                                        @endforeach
+                                    </tr>
+                                @endforeach
+                            </tbody>
+                        </table>
+
+                    </div>
+                @endforeach
 
             </div>
         </div>
 
-        {{-- =========================
-                3RD GROUP (ACQUISITION & CONDITION)
-            ========================== --}}
+        {{-- ========================= 3RD GROUP (ACQUISITION & CONDITION) ========================== --}}
         <div class="bg-gray-50 border rounded-xl p-6 space-y-6">
                 <h3 class="text-lg font-semibold text-gray-700">
                     Acquisition & Condition Details
@@ -238,9 +279,11 @@
                         <label class="block text-sm font-medium mb-1">Source</label>
                         <select id="source" name="source" class="w-full border rounded px-3 py-2">
                             <option value="" selected disabled>Select source</option>
-                            <option value="DepEd">DepEd</option>
-                            <option value="Donation">Donation</option>
-                            <option value="Purchased">Purchased</option>
+                            <option value="CO">DepEd - Central Office</option>
+                            <option value="RO">Regional Office</option>
+                            <option value="SDO">Schools Division Office</option>
+                            <option value="LOCAL">Locally Developed</option>
+                            <option value="DONATED">DONATED</option>
                         </select>
                     </div>
                     <div>
@@ -347,17 +390,73 @@
             const tabs = form.querySelectorAll('.tab-btn');
             const contents = form.querySelectorAll('.tab-content');
 
+            function activateTab(tab) {
+                tabs.forEach(t => {
+                    t.classList.remove('border-blue-600', 'text-blue-600', 'active');
+                    t.classList.add('text-gray-600');
+                });
+
+                contents.forEach(c => c.classList.add('hidden'));
+
+                tab.classList.add('border-blue-600', 'text-blue-600', 'active');
+                tab.classList.remove('text-gray-600');
+
+                const target = form.querySelector(`#${tab.dataset.tab}`);
+                if (target) {
+                    target.classList.remove('hidden');
+                }
+            }
+
+            if (tabs.length > 0) {
+                activateTab(tabs[0]);
+            }
+
             tabs.forEach(tab => {
                 tab.addEventListener('click', () => {
-                    tabs.forEach(t => {
-                        t.classList.remove('border-blue-600', 'text-blue-600');
-                        t.classList.add('text-gray-600');
-                    });
-                    contents.forEach(c => c.classList.add('hidden'));
-
-                    tab.classList.add('border-blue-600', 'text-blue-600');
-                    form.querySelector(`#${tab.dataset.tab}`).classList.remove('hidden');
+                    activateTab(tab);
                 });
+            });
+
+            //HANDLE MULTI-AUTHOR
+            const authorInput = document.getElementById('author-input');
+            const wrapper = document.getElementById('author-wrapper');
+            const hiddenInput = document.getElementById('authors-hidden');
+
+            let authors = [];
+
+            function refreshHiddenInput() {
+                hiddenInput.value = JSON.stringify(authors);
+            }
+
+            function addAuthor(name) {
+                if (!name || authors.includes(name)) return;
+
+                authors.push(name);
+                refreshHiddenInput();
+
+                const tag = document.createElement('span');
+                tag.className = 'flex items-center bg-blue-100 text-blue-700 px-2 py-1 rounded text-sm';
+
+                tag.innerHTML = `
+                    ${name}
+                    <button type="button" class="ml-1 text-blue-700 hover:text-red-600">&times;</button>
+                `;
+
+                tag.querySelector('button').onclick = () => {
+                    authors = authors.filter(a => a !== name);
+                    refreshHiddenInput();
+                    tag.remove();
+                };
+
+                wrapper.insertBefore(tag, authorInput);
+                authorInput.value = '';
+            }
+
+            authorInput.addEventListener('keydown', function (e) {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    addAuthor(authorInput.value.trim());
+                }
             });
 
             // QUANTITY TOTAL CALCULATION
@@ -373,7 +472,7 @@
             };
             qtyInputs.forEach(input => input.addEventListener('input', calculateTotal));
 
-            // ACQUISITIONS MANAGEMENT
+        // ACQUISITIONS MANAGEMENT
         let acquisitions = [];
         let editIndex = null;
 
@@ -420,7 +519,7 @@
 
                                     <!-- EDIT ICON -->
                                     <button type="button"
-                                        onclick="editAcquisition(${index})"
+                                        onclick="editPrintAcquisition(${index})"
                                         class="p-1 rounded hover:bg-blue-100 text-blue-600"
                                         title="Edit">
                                         <svg xmlns="http://www.w3.org/2000/svg"
@@ -437,7 +536,7 @@
 
                                     <!-- DELETE ICON -->
                                     <button type="button"
-                                        onclick="deleteAcquisition(${index})"
+                                        onclick="deletePrintAcquisition(${index})"
                                         class="p-1 rounded hover:bg-red-100 text-red-600"
                                         title="Delete">
                                         <svg xmlns="http://www.w3.org/2000/svg"
@@ -498,16 +597,24 @@
                 resetAcquisitionForm();
             });
 
-            window.editAcquisition = (index) => {
-                const a = acquisitions[index];
+            window.editPrintAcquisition = (index) => {
+                const b = acquisitions[index];
                 editIndex = index;
-                Object.keys(fields).forEach(key => {
-                    form.querySelector(`[name="${key}"]`).value = a[key];
-                });
+                form.querySelector('[name="source"]').value = b.source;
+                form.querySelector('[name="date_acquired"]').value = b.date_acquired;
+                form.querySelector('[name="cost"]').value = b.cost || '';
+                form.querySelector('[name="iar"]').value = b.iar || '';
+                form.querySelector('[name="remarks"]').value = b.remarks || '';
+                form.querySelector('[name="usable"]').value = b.usable;
+                form.querySelector('[name="partially_damaged"]').value = b.partially_damaged || 0;
+                form.querySelector('[name="damaged"]').value = b.damaged;
+                form.querySelector('[name="lost"]').value = b.lost;
+                form.querySelector('[name="condemnable"]').value = b.condemnable;
+                calculateTotal();
                 form.querySelector('[name="source"]').scrollIntoView({ behavior: 'smooth' });
             };
 
-            window.deleteAcquisition = (index) => {
+            window.deletePrintAcquisition = (index) => {
                 if (!confirm('Delete this acquisition?')) return;
                 acquisitions.splice(index, 1);
                 renderAcquisitions();

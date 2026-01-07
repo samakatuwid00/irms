@@ -12,7 +12,6 @@
     <div class="p-6 space-y-6">
         <!-- ================= HEADER ================= -->
         @include('pages.partials.page-header')
-
         <div class="bg-white shadow rounded-xl p-6">
             <h2 class="text-xl font-semibold mb-4">Add Resource</h2>
 

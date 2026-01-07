@@ -15,7 +15,7 @@ class SubjectGradeLevel extends Model
     protected $fillable = [
         'subject_id',
         'grade_level_id',
-        'school_type',
+        'key_stage',
         'curriculum_id',
     ];
     public function subject()

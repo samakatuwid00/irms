@@ -15,6 +15,7 @@ class GradeLevel extends Model
     protected $fillable = [
         'grade',
         'classification',
+        'sort_order'
     ];
 
     public function subjectGradeLevels()

@@ -12,6 +12,7 @@ return new class extends Migration {
             $table->string('grade');
             $table->string('classification')->nullable();
             $table->timestamps();
+            $table->integer('sort_order');
         });
     }
 

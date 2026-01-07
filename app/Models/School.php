@@ -12,8 +12,19 @@ class School extends Model
     public $incrementing = false;
     protected $keyType = 'string';
     protected $fillable = [
-        'id', 'school_name', 'shortname', 'school_type', 'address', 'contact_number', 'email', 'date_establish',
-        'school_id', 'legislative_district', 'district_id', 'created_at', 'updated_at'
+        'id',
+        'school_name',
+        'shortname',
+        'school_type',
+        'address',
+        'contact_number',
+        'email',
+        'date_establish',
+        'school_id',
+        'legislative_district',
+        'district_id',
+        'created_at',
+        'updated_at'
     ];
 
     public function district(): BelongsTo

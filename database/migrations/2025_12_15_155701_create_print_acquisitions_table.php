@@ -10,7 +10,6 @@ return new class extends Migration
     {
         Schema::create('print_acquisitions', function (Blueprint $table) {
             $table->uuid('id')->primary();
-            $table->uuid('library_id');
             $table->uuid('print_id');
             $table->string('source');
             $table->date('date_acquired');

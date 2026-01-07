@@ -12,7 +12,7 @@ return new class extends Migration {
 
             $table->uuid('subject_id');
             $table->uuid('grade_level_id');
-            $table->string('school_type'); // Elementary, JHS, SHS
+            $table->string('key_stage');
             $table->uuid('curriculum_id');
 
             $table->timestamps();
