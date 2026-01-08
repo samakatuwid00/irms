@@ -86,6 +86,7 @@ class PrintResourceController extends BaseController
             $allSchools = School::whereIn('district_id', $districts->pluck('id'))
                 ->orderBy('school_name')
                 ->get(['id', 'school_name', 'district_id']);
+
             // Always load Division Library IDs
             $mainLibraryIds = DivisionLibrary::where('division_id', $divisionId)
                 ->pluck('id')
@@ -139,11 +140,6 @@ class PrintResourceController extends BaseController
             $resources = $divisionQuery->paginate(15)->withQueryString();
 
             // ── Filtered School Library Resources ─────────────────────────────────
-            $filteredResources = new LengthAwarePaginator([], 0, 15, 1, [
-                'path'  => $request->url(),
-                'query' => $request->query(),
-            ]);
-
             $filteredLibraryIds = collect();
 
             if ($selectedSchool && $selectedSchool !== 'all') {
@@ -166,55 +162,8 @@ class PrintResourceController extends BaseController
                     ->pluck('id')
                     ->map(fn($id) => (string)$id);
             }
-
-            if ($filteredLibraryIds->isNotEmpty()) {
-                $schoolQuery = PrintResource::with([
-                    'printTitle.authors',
-                    'type',
-                    'printAcquisitions'
-                ])
-                ->whereHas('printAcquisitions', fn($q) =>
-                    $q->whereIn('library_id', $filteredLibraryIds->toArray())
-                );
-
-                // Apply School-specific search
-                $schoolSearch = trim($request->input('school_search', ''));
-                if ($schoolSearch !== '') {
-                    $searchLower = '%' . strtolower($schoolSearch) . '%';
-
-                    $schoolQuery->where(function ($q) use ($searchLower) {
-                        $q->whereRaw('LOWER(isbn) LIKE ?', [$searchLower])
-                        ->orWhereRaw('LOWER(publisher) LIKE ?', [$searchLower])
-                        ->orWhereRaw('LOWER(copyright) LIKE ?', [$searchLower])
-
-                        // Title
-                        ->orWhereHas('printTitle', fn($qt) =>
-                            $qt->whereRaw('LOWER(title) LIKE ?', [$searchLower])
-                        )
-
-                        // Authors
-                        ->orWhereHas('printTitle.authors', fn($qa) =>
-                            $qa->whereRaw('LOWER(author_name) LIKE ?', [$searchLower])
-                        )
-
-                        // Subject + Grade
-                        ->orWhereExists(function ($exists) use ($searchLower) {
-                            $exists->select(DB::raw(1))
-                                    ->from('subject_grade_levels as sgl')
-                                    ->join('subjects as subj', 'sgl.subject_id', '=', 'subj.id')
-                                    ->join('grade_levels as gl', 'sgl.grade_level_id', '=', 'gl.id')
-                                    ->whereRaw("sgl.id::text = ANY(string_to_array(print_resources.subject_grade_level_ids, ','))")
-                                    ->where(function ($match) use ($searchLower) {
-                                        $match->whereRaw('LOWER(subj.subject_name) LIKE ?', [$searchLower])
-                                            ->orWhereRaw('LOWER(gl.grade) LIKE ?', [$searchLower]);
-                                    });
-                        });
-                    });
-                }
-
-                $filteredResources = $schoolQuery->paginate(15)->withQueryString();
-            }
         }
+
         // LEVEL 4: Region
         elseif ($level === 4) {
             $regionId = $stationId;
@@ -318,20 +267,23 @@ class PrintResourceController extends BaseController
         };
 
         // ── Main (auto-loaded) resources ─────────────────────────────────────
-        $mainQuery = PrintResource::with([
-            'printTitle.authors',
-            'type',
-            'printAcquisitions',
-        ]);
+        // Skip for Level 3 - handled separately above
+        if ($level !== 3) {
+            $mainQuery = PrintResource::with([
+                'printTitle.authors',
+                'type',
+                'printAcquisitions',
+            ]);
 
-        if ($mainLibraryIds->isNotEmpty()) {
-            $mainQuery->whereHas('printAcquisitions', fn($q) =>
-                $q->whereIn('library_id', $mainLibraryIds->toArray())
-            );
+            if ($mainLibraryIds->isNotEmpty()) {
+                $mainQuery->whereHas('printAcquisitions', fn($q) =>
+                    $q->whereIn('library_id', $mainLibraryIds->toArray())
+                );
+            }
+
+            $mainQuery = $applySearch($mainQuery);
+            $resources = $mainQuery->paginate(15)->withQueryString();
         }
-
-        $mainQuery = $applySearch($mainQuery);
-        $resources = $mainQuery->paginate(15)->withQueryString();
 
         // ── Filtered resources (school/district/division selection) ──────────
         $filteredResources = new LengthAwarePaginator([], 0, 15, 1, [
@@ -353,7 +305,47 @@ class PrintResourceController extends BaseController
                 $q->whereIn('library_id', $filteredLibraryIds->toArray())
             );
 
-            $filteredQuery = $applySearch($filteredQuery);
+            // Apply the correct search parameter based on level
+            if ($level === 3) {
+                // For Level 3, use school_search parameter
+                $schoolSearch = trim($request->input('school_search', ''));
+                if ($schoolSearch !== '') {
+                    $searchLower = '%' . strtolower($schoolSearch) . '%';
+
+                    $filteredQuery->where(function ($q) use ($searchLower) {
+                        $q->whereRaw('LOWER(isbn) LIKE ?', [$searchLower])
+                        ->orWhereRaw('LOWER(publisher) LIKE ?', [$searchLower])
+                        ->orWhereRaw('LOWER(copyright) LIKE ?', [$searchLower])
+
+                        // Title
+                        ->orWhereHas('printTitle', fn($qt) =>
+                            $qt->whereRaw('LOWER(title) LIKE ?', [$searchLower])
+                        )
+
+                        // Authors
+                        ->orWhereHas('printTitle.authors', fn($qa) =>
+                            $qa->whereRaw('LOWER(author_name) LIKE ?', [$searchLower])
+                        )
+
+                        // Subject + Grade
+                        ->orWhereExists(function ($exists) use ($searchLower) {
+                            $exists->select(DB::raw(1))
+                                    ->from('subject_grade_levels as sgl')
+                                    ->join('subjects as subj', 'sgl.subject_id', '=', 'subj.id')
+                                    ->join('grade_levels as gl', 'sgl.grade_level_id', '=', 'gl.id')
+                                    ->whereRaw("sgl.id::text = ANY(string_to_array(print_resources.subject_grade_level_ids, ','))")
+                                    ->where(function ($match) use ($searchLower) {
+                                        $match->whereRaw('LOWER(subj.subject_name) LIKE ?', [$searchLower])
+                                            ->orWhereRaw('LOWER(gl.grade) LIKE ?', [$searchLower]);
+                                    });
+                        });
+                    });
+                }
+            } else {
+                // For other levels, use the generic search
+                $filteredQuery = $applySearch($filteredQuery);
+            }
+
             $filteredResources = $filteredQuery->paginate(15)->withQueryString();
         }
 
