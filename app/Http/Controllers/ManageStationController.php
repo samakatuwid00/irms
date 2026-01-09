@@ -4,69 +4,61 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Str;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Foundation\Validation\ValidatesRequests;
 use Illuminate\Routing\Controller as BaseController;
 
-use App\Models\{
-    Division,
-    District,
-    School
-};
+use App\Models\{Division, District, School};
+use App\Services\StationManagementService;
 
 class ManageStationController extends BaseController
 {
     use AuthorizesRequests, ValidatesRequests;
 
-    public function __construct()
+    protected $stationService;
+
+    public function __construct(StationManagementService $stationService)
     {
         $this->middleware('auth');
+        $this->stationService = $stationService;
     }
 
     public function index(Request $request)
     {
-        $user   = Auth::user();
-        $level  = $user->userType?->level;
+        $user = Auth::user();
+        $level = $user->userType?->level;
         $stationId = $user->station_id;
         $search = strtolower($request->query('search'));
 
         $divisions = null;
         $districts = null;
-        $schools   = null;
+        $schools = null;
 
-        /* ================= REGION ================= */
+        // Region Level (level 4)
         if ($level === 4) {
-            $divisions = $this->getDivisionsByRegion($stationId, $search);
+            $divisions = $this->stationService->getDivisionsByRegion($stationId, $search);
         }
 
-        // Level 3 search values.
-        $districtSearch = strtolower($request->query('district_search', ''));
-        $schoolSearch   = strtolower($request->query('school_search', ''));
-
-        /* ================= DIVISION LEVEL (level 3) ================= */
+        // Division Level (level 3)
         if ($level === 3) {
-            $districts = $this->getDistrictsByDivision($stationId, $districtSearch);
-            $schools   = $this->getSchoolsByDivision($stationId, $schoolSearch);
+            $districtSearch = strtolower($request->query('district_search', ''));
+            $schoolSearch = strtolower($request->query('school_search', ''));
+
+            $districts = $this->stationService->getDistrictsByDivision($stationId, $districtSearch);
+            $schools = $this->stationService->getSchoolsByDivision($stationId, $schoolSearch);
         }
 
-        /* ================= DISTRICT ================= */
+        // District Level (level 2)
         if ($level === 2) {
-            $schools = $this->getSchoolsByDistrict($stationId, $search);
+            $schools = $this->stationService->getSchoolsByDistrict($stationId, $search);
         }
 
-        return view('pages.stations', compact(
-            'divisions',
-            'districts',
-            'schools'
-        ));
+        return view('pages.stations', compact('divisions', 'districts', 'schools'));
     }
-
 
     public function addDivision(Request $request)
     {
-
-        $request->validate([
+        $validated = $request->validate([
             'division_name' => 'required|string|max:255',
             'shortname' => 'nullable|string|max:50',
             'address' => 'nullable|string|max:255',
@@ -76,24 +68,14 @@ class ManageStationController extends BaseController
             'legislative_district' => 'nullable|string|max:255',
         ]);
 
-        Division::create([
-            'id' => Str::uuid(),
-            'division_name' => $request->division_name,
-            'shortname' => $request->shortname,
-            'address' => $request->address,
-            'contact_number' => $request->contact_number,
-            'email' => $request->email,
-            'date_establish' => $request->date_establish,
-            'legislative_district' => $request->legislative_district,
-            'region_id' => Auth::user()->station_id,
-        ]);
+        $this->stationService->createDivision($validated, Auth::user()->station_id);
 
         return redirect()->route('stations')->with('success', 'Division added successfully!');
     }
 
     public function updateDivision(Request $request, Division $division)
     {
-        $request->validate([
+        $validated = $request->validate([
             'division_name' => 'required|string|max:255',
             'shortname' => 'nullable|string|max:50',
             'address' => 'nullable|string|max:255',
@@ -103,22 +85,21 @@ class ManageStationController extends BaseController
             'legislative_district' => 'nullable|string|max:50',
         ]);
 
-        $division->update($request->all());
+        $this->stationService->updateDivision($division, $validated);
 
         return redirect()->route('stations')->with('success', 'Division updated successfully!');
     }
 
     public function destroyDivision(Division $division)
     {
-        $division->delete();
+        $this->stationService->deleteDivision($division);
 
         return redirect()->route('stations')->with('success', 'Division deleted successfully!');
     }
 
     public function addDistrict(Request $request)
     {
-
-        $request->validate([
+        $validated = $request->validate([
             'district_name' => 'required|string|max:255',
             'shortname' => 'nullable|string|max:50',
             'address' => 'nullable|string|max:255',
@@ -128,24 +109,14 @@ class ManageStationController extends BaseController
             'legislative_district' => 'nullable|string|max:255',
         ]);
 
-        District::create([
-            'id' => Str::uuid(),
-            'district_name' => $request->district_name,
-            'shortname' => $request->shortname,
-            'address' => $request->address,
-            'contact_number' => $request->contact_number,
-            'email' => $request->email,
-            'date_establish' => $request->date_establish,
-            'legislative_district' => $request->legislative_district,
-            'division_id' => Auth::user()->station_id,
-        ]);
+        $this->stationService->createDistrict($validated, Auth::user()->station_id);
 
         return redirect()->route('stations')->with('success', 'District added successfully!');
     }
 
     public function updateDistrict(Request $request, District $district)
     {
-        $request->validate([
+        $validated = $request->validate([
             'district_name' => 'required|string|max:255',
             'shortname' => 'nullable|string|max:50',
             'address' => 'nullable|string|max:255',
@@ -155,22 +126,21 @@ class ManageStationController extends BaseController
             'legislative_district' => 'nullable|string|max:50',
         ]);
 
-        $district->update($request->all());
+        $this->stationService->updateDistrict($district, $validated);
 
         return redirect()->route('stations')->with('success', 'District updated successfully!');
     }
 
     public function destroyDistrict(District $district)
     {
-        $district->delete();
+        $this->stationService->deleteDistrict($district);
 
         return redirect()->route('stations')->with('success', 'District deleted successfully!');
     }
 
     public function addSchool(Request $request)
     {
-
-        $request->validate([
+        $validated = $request->validate([
             'school_name' => 'required|string|max:255',
             'shortname' => 'nullable|string|max:50',
             'school_id' => 'required|string|max:50',
@@ -182,26 +152,14 @@ class ManageStationController extends BaseController
             'school_type' => 'nullable|in:primary,secondary,junior-high,senior-high',
         ]);
 
-        School::create([
-            'id' => Str::uuid(),
-            'school_name' => $request->school_name,
-            'shortname' => $request->shortname,
-            'school_id' => $request->school_id,
-            'address' => $request->address,
-            'contact_number' => $request->contact_number,
-            'email' => $request->email,
-            'date_establish' => $request->date_establish,
-            'legislative_school' => $request->legislative_school,
-            'district_id' => Auth::user()->station_id,
-            'school_type' => $request->school_type,
-        ]);
+        $this->stationService->createSchool($validated, Auth::user()->station_id);
 
         return redirect()->route('stations')->with('success', 'School added successfully!');
     }
 
     public function updateSchool(Request $request, School $school)
     {
-        $request->validate([
+        $validated = $request->validate([
             'school_name' => 'required|string|max:255',
             'shortname' => 'nullable|string|max:50',
             'address' => 'nullable|string|max:255',
@@ -211,107 +169,15 @@ class ManageStationController extends BaseController
             'legislative_school' => 'nullable|string|max:50',
         ]);
 
-        $school->update($request->all());
+        $this->stationService->updateSchool($school, $validated);
 
         return redirect()->route('stations')->with('success', 'School updated successfully!');
     }
 
-    public function destroyschool(School $school)
+    public function destroySchool(School $school)
     {
-        $school->delete();
+        $this->stationService->deleteSchool($school);
 
         return redirect()->route('stations')->with('success', 'School deleted successfully!');
-    }
-
-    /* =====================================================
-     | REGION → DIVISIONS
-     ===================================================== */
-    private function getDivisionsByRegion(string $regionId, ?string $search)
-    {
-        $query = Division::query()
-            ->with('region')
-            ->where('region_id', $regionId)
-            ->orderBy('division_name');
-
-        if ($search) {
-            $query->where(function ($q) use ($search) {
-                $q->whereRaw('LOWER(division_name) LIKE ?', ["%{$search}%"])
-                  ->orWhereRaw('LOWER(shortname) LIKE ?', ["%{$search}%"])
-                  ->orWhereRaw('LOWER(address) LIKE ?', ["%{$search}%"])
-                  ->orWhereRaw('LOWER(email) LIKE ?', ["%{$search}%"]);
-            });
-        }
-
-        return $query->paginate(15);
-    }
-
-    /* =====================================================
-     | DIVISION → DISTRICTS
-     ===================================================== */
-    private function getDistrictsByDivision(string $divisionId, ?string $search)
-    {
-        $query = District::query()
-            ->with('division')
-            ->where('division_id', $divisionId)
-            ->orderBy('district_name');
-
-        if ($search) {
-            $query->where(function ($q) use ($search) {
-                $q->whereRaw('LOWER(district_name) LIKE ?', ["%{$search}%"])
-                  ->orWhereRaw('LOWER(shortname) LIKE ?', ["%{$search}%"])
-                  ->orWhereRaw('LOWER(address) LIKE ?', ["%{$search}%"])
-                  ->orWhereRaw('LOWER(email) LIKE ?', ["%{$search}%"]);
-            });
-        }
-
-        return $query->paginate(15);
-    }
-
-    /* =====================================================
-     | DIVISION → SCHOOLS
-     ===================================================== */
-    private function getSchoolsByDivision(string $divisionId, ?string $search)
-    {
-        $query = School::query()
-            ->with('district.division')
-            ->whereHas('district', function ($q) use ($divisionId) {
-                $q->where('division_id', $divisionId);
-            })
-            ->orderBy('school_name');
-
-        if ($search) {
-            $query->where(function ($q) use ($search) {
-                $q->whereRaw('LOWER(school_name) LIKE ?', ["%{$search}%"])
-                  ->orWhereRaw('LOWER(shortname) LIKE ?', ["%{$search}%"])
-                  ->orWhereRaw('LOWER(school_type) LIKE ?', ["%{$search}%"])
-                  ->orWhereRaw('LOWER(address) LIKE ?', ["%{$search}%"])
-                  ->orWhereRaw('LOWER(email) LIKE ?', ["%{$search}%"]);
-            });
-        }
-
-        return $query->paginate(15);
-    }
-
-    /* =====================================================
-     | DISTRICT → SCHOOLS
-     ===================================================== */
-    private function getSchoolsByDistrict(string $districtId, ?string $search)
-    {
-        $query = School::query()
-            ->with('district.division')
-            ->where('district_id', $districtId)
-            ->orderBy('school_name');
-
-        if ($search) {
-            $query->where(function ($q) use ($search) {
-                $q->whereRaw('LOWER(school_name) LIKE ?', ["%{$search}%"])
-                  ->orWhereRaw('LOWER(shortname) LIKE ?', ["%{$search}%"])
-                  ->orWhereRaw('LOWER(school_type) LIKE ?', ["%{$search}%"])
-                  ->orWhereRaw('LOWER(address) LIKE ?', ["%{$search}%"])
-                  ->orWhereRaw('LOWER(email) LIKE ?', ["%{$search}%"]);
-            });
-        }
-
-        return $query->paginate(15);
     }
 }
