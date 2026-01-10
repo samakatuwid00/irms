@@ -57,4 +57,71 @@ class PrintResource extends Model
             ->get();
     }
 
+    public function showDetails(): array
+    {
+        // Get quantities from the quantities accessor/attribute
+        $quantities = $this->quantities ?? [
+            'usable' => 0,
+            'partially_damaged' => 0,
+            'damaged' => 0,
+            'lost' => 0,
+            'condemnable' => 0
+        ];
+
+        // Format subjects
+        $subjects = [];
+        if (method_exists($this, 'subjects')) {
+            foreach ($this->subjects() as $subjectGradeLevel) {
+                $subjects[] = [
+                    'subject' => $subjectGradeLevel->subject->subject_name ?? 'N/A',
+                    'grade' => $subjectGradeLevel->gradeLevel->grade ?? 'N/A'
+                ];
+            }
+        }
+
+        // Format acquisitions
+        $acquisitions = [];
+        if ($this->relationLoaded('printAcquisitions')) {
+            foreach ($this->printAcquisitions as $acquisition) {
+                $acquisitions[] = [
+                    'source' => $acquisition->source ?? '-',
+                    'date_acquired' => $acquisition->date_acquired
+                        ? date('M d, Y', strtotime($acquisition->date_acquired))
+                        : '-',
+                    'cost' => $acquisition->cost ?? null,
+                    'iar' => $acquisition->iar ?? '-',
+                    'remarks' => $acquisition->remarks ?? '-',
+                    'usable' => $acquisition->usable ?? 0,
+                    'partially_damaged' => $acquisition->partially_damaged ?? 0,
+                    'damaged' => $acquisition->damaged ?? 0,
+                    'lost' => $acquisition->lost ?? 0,
+                    'condemnable' => $acquisition->condemnable ?? 0,
+                    'total_quantity' => ($acquisition->usable ?? 0) +
+                                      ($acquisition->partially_damaged ?? 0) +
+                                      ($acquisition->damaged ?? 0) +
+                                      ($acquisition->lost ?? 0) +
+                                      ($acquisition->condemnable ?? 0)
+                ];
+            }
+        }
+
+        return [
+            'id' => $this->id,
+            'image' => $this->image
+                ? asset('assets/images/' . $this->image)
+                : asset('assets/images/default.jpg'),
+            'title' => $this->printTitle->title ?? 'N/A',
+            'author' => $this->printTitle->authors->pluck('author_name')->join(', ') ?: '-',
+            'publisher' => $this->publisher ?? '-',
+            'type' => $this->type->type_name ?? '-',
+            'isbn' => $this->isbn ?? 'N/A',
+            'copyright' => $this->copyright ?? '-',
+            'pages' => $this->pages ?? '-',
+            'subjects' => $subjects,
+            'acquisitions' => $acquisitions,
+            'quantities' => $quantities,
+            // 'edit_url' => route('edit-resource', $this->id)
+        ];
+    }
+
 }

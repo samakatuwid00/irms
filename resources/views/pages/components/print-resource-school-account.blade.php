@@ -103,10 +103,10 @@
                         </td>
                         <td class="px-4 py-3">
                             <div class="flex justify-center gap-2">
-                                <button onclick='openPrintModal(@json($item))'
-                                        class="px-3 py-1 text-xs rounded-lg bg-blue-100 text-blue-600 hover:bg-blue-200">
-                                    View
-                                </button>
+                                    <button onclick='openPrintModal(@json($item->showDetails()))'
+                                            class="px-3 py-1 text-xs rounded-lg bg-blue-100 text-blue-600 hover:bg-blue-200">
+                                        View
+                                    </button>
                                 <a href=""
                                     class="px-3 py-1 text-xs rounded-lg bg-yellow-100 text-yellow-700 hover:bg-yellow-200">
                                     Edit
