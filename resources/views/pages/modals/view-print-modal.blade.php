@@ -126,14 +126,14 @@
         <div class="flex justify-end p-6 border-t gap-3 bg-gray-50 sticky bottom-0">
             <button type="button"
                     onclick="closePrintModal()"
-                    class="px-5 py-2 border border-gray-300 rounded-lg hover:bg-gray-100 transition-colors">
+                    class="px-5 py-2 border border-gray-600 rounded-lg hover:bg-gray-300 transition-colors">
                 Close
             </button>
-            <a href="#"
+            {{-- <a href="#"
                id="printEditLink"
                class="px-5 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
                 Edit Resource
-            </a>
+            </a> --}}
         </div>
     </div>
 </div>
@@ -223,7 +223,7 @@
         document.getElementById('printTotal').textContent = grandTotal;
 
         // Set edit link
-        document.getElementById('printEditLink').href = resource.edit_url || '#';
+        // document.getElementById('printEditLink').href = resource.edit_url || '#';
 
         // Show modal
         document.getElementById('viewPrintModal').classList.remove('hidden');

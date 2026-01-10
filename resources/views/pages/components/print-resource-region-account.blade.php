@@ -103,7 +103,7 @@
                             <th class="px-4 py-3">ISBN</th>
                             <th class="px-4 py-3">Copyright</th>
                             <th class="px-4 py-3 text-center">Quantity Breakdown</th>
-                            <th class="px-4 py-3 text-center">Actions</th>
+                            <th class="px-6 py-3 text-center">Actions</th>
                         </tr>
                     </thead>
                     <tbody class="divide-y">
@@ -161,10 +161,6 @@
                                                 class="px-3 py-1 text-xs rounded-lg bg-blue-100 text-blue-600 hover:bg-blue-200">
                                             View
                                         </button>
-                                        <a href=""
-                                            class="px-3 py-1 text-xs rounded-lg bg-yellow-100 text-yellow-700 hover:bg-yellow-200">
-                                            Edit
-                                        </a>
                                     </div>
                                 </td>
                             </tr>
