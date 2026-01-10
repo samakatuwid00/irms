@@ -26,7 +26,9 @@ class School extends Model
         'created_at',
         'updated_at'
     ];
-
+    protected $casts = [
+        'id' => 'string',
+    ];
     public function district(): BelongsTo
     {
         return $this->belongsTo(District::class, 'district_id');

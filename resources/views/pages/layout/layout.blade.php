@@ -31,7 +31,7 @@
     </style>
     @stack('styles')
 </head>
-<body class="bg-gray-100">
+<body class="bg-gray-100 overflow-x-hidden">
     <div class="flex h-screen">
 
         <!-- Sidebar -->
@@ -323,7 +323,7 @@
         </div>
 
         <!-- Main Content Area -->
-        <div class="flex-1 flex flex-col">
+        <div class="flex-1 flex flex-col overflow-x-hidden">
             <!-- Mobile Header -->
             <header class="md:hidden bg-white shadow p-4 flex justify-between items-center">
                 <button id="open-sidebar">☰</button>

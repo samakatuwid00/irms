@@ -14,6 +14,12 @@ class PrintResource extends Model
         'id', 'print_title_id', 'print_type_id', 'publisher', 'volume', 'edition',
         'copyright', 'pages', 'isbn', 'remarks', 'subject_grade_level_ids', 'created_at', 'updated_at', 'library_id'
     ];
+    protected $casts = [
+        'id' => 'string',
+        'library_id' => 'string',
+    ];
+
+    protected $appends = ['library_name'];
 
     // Relationship to PrintTitle
     public function printTitle(): BelongsTo
@@ -55,6 +61,33 @@ class PrintResource extends Model
         return SubjectGradeLevel::with(['subject', 'gradeLevel'])
             ->whereIn('id', $ids)
             ->get();
+    }
+
+    public function getLibraryNameAttribute(): string
+    {
+        if (!$this->library_id) {
+            return 'No Library Assigned';
+        }
+
+        // Check school library
+        $schoolLibrary = SchoolLibrary::find($this->library_id);
+        if ($schoolLibrary) {
+            return $schoolLibrary->library_name;
+        }
+
+        // Check division library
+        $divisionLibrary = DivisionLibrary::find($this->library_id);
+        if ($divisionLibrary) {
+            return $divisionLibrary->library_name;
+        }
+
+        // Check region library
+        $regionLibrary = RegionLibrary::find($this->library_id);
+        if ($regionLibrary) {
+            return $regionLibrary->library_name;
+        }
+
+        return 'Unknown Library';
     }
 
     public function showDetails(): array
@@ -120,6 +153,7 @@ class PrintResource extends Model
             'subjects' => $subjects,
             'acquisitions' => $acquisitions,
             'quantities' => $quantities,
+            'library_name' => $this->library_name,
             // 'edit_url' => route('edit-resource', $this->id)
         ];
     }

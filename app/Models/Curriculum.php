@@ -10,6 +10,9 @@ class Curriculum extends Model
     public $incrementing = false;
     protected $keyType = 'string';
     protected $fillable = ['id', 'name', 'description', 'implementation_year'];
+    protected $casts = [
+        'id' => 'string',
+    ];
 
     public $timestamps = false;
 

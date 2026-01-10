@@ -15,6 +15,9 @@ class PrintAcquisition extends Model
         'total_qty', 'usable', 'partially_damaged', 'damaged', 'lost', 'condemnable',
         'remarks', 'date_encoded', 'encoded_by', 'curriculum_id', 'created_at', 'updated_at'
     ];
+    protected $casts = [
+        'id' => 'string',
+    ];
 
     public function printResource(): BelongsTo
     {

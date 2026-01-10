@@ -11,6 +11,8 @@ class PrintType extends Model
     public $incrementing = false;
     protected $keyType = 'string';
     protected $fillable = ['id', 'type_name', 'shortname'];
-
+    protected $casts = [
+        'id' => 'string',
+    ];
     public $timestamps = false;
 }

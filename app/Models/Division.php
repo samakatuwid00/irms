@@ -16,6 +16,10 @@ class Division extends Model
         'legislative_district', 'region_id', 'logo', 'created_at', 'updated_at'
     ];
 
+    protected $casts = [
+        'id' => 'string',
+    ];
+
     public function region(): BelongsTo
     {
         return $this->belongsTo(Region::class, 'region_id');

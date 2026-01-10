@@ -17,7 +17,9 @@ class GradeLevel extends Model
         'classification',
         'sort_order'
     ];
-
+    protected $casts = [
+        'id' => 'string',
+    ];
     public function subjectGradeLevels()
     {
         return $this->hasMany(SubjectGradeLevel::class);

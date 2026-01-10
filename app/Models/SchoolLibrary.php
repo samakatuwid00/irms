@@ -11,6 +11,10 @@ class SchoolLibrary extends Model
     protected $keyType = 'string';
     protected $fillable = ['id', 'school_id', 'librarian', 'library_name'];
 
+    protected $casts = [
+        'id' => 'string',
+    ];
+
     public $timestamps = false;
 
     public function school(): BelongsTo

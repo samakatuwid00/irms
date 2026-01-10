@@ -10,7 +10,9 @@ class Grade extends Model
     public $incrementing = false;
     protected $keyType = 'string';
     protected $fillable = ['id', 'grade', 'classification'];
-
+    protected $casts = [
+        'id' => 'string',
+    ];
     public $timestamps = false;
 
     public function populations(): HasMany

@@ -16,6 +16,10 @@ class District extends Model
         'legislative_district', 'division_id', 'logo', 'created_at', 'updated_at'
     ];
 
+    protected $casts = [
+        'id' => 'string',
+    ];
+
     public function division(): BelongsTo
     {
         return $this->belongsTo(Division::class, 'division_id');

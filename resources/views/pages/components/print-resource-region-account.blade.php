@@ -102,6 +102,7 @@
                             <th class="px-4 py-3">Subject</th>
                             <th class="px-4 py-3">ISBN</th>
                             <th class="px-4 py-3">Copyright</th>
+                            <th class="px-4 py-3">Station</th>
                             <th class="px-4 py-3 text-center">Quantity Breakdown</th>
                             <th class="px-6 py-3 text-center">Actions</th>
                         </tr>
@@ -141,6 +142,11 @@
                                 </td>
                                 <td class="px-4 py-3 text-gray-600 font-mono text-xs">{{ $item->isbn }}</td>
                                 <td class="px-4 py-3 text-center">{{ $item->copyright }}</td>
+                                <td class="px-4 py-3 text-gray-700">
+                                    <span class="text-xs font-medium text-blue-600">
+                                        {{ $item->library_name ?? 'N/A' }}
+                                    </span>
+                                </td>
                                 <td class="px-4 py-3 text-center text-xs">
                                     <div class="space-y-1">
                                         <div class="flex justify-center gap-3 text-gray-700">

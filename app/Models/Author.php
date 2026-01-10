@@ -14,6 +14,10 @@ class Author extends Model
 
     public $timestamps = false;
 
+    protected $casts = [
+        'id' => 'string',
+    ];
+
     public function printTitles(): BelongsToMany
     {
         return $this->belongsToMany(

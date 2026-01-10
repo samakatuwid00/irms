@@ -10,7 +10,9 @@ class PrintMasterlist extends Model
     public $incrementing = false;
     protected $keyType = 'string';
     protected $fillable = ['id', 'print_acquisition_id', 'status'];
-
+    protected $casts = [
+        'id' => 'string',
+    ];
     public $timestamps = false;
 
     public function printAcquisition(): BelongsTo

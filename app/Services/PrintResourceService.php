@@ -8,6 +8,7 @@ use App\Models\District;
 use App\Models\Division;
 use App\Models\SchoolLibrary;
 use App\Models\DivisionLibrary;
+use App\Models\RegionLibrary;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
 use Illuminate\Pagination\LengthAwarePaginator;
@@ -19,11 +20,14 @@ use Illuminate\Support\Facades\Cache;
  *
  * Handles resource retrieval, filtering, and search functionality for a hierarchical
  * structure: School -> District -> Division -> Region.
+ *
+ * Note: Libraries exist at School, Division, and Region levels only. Districts do not have libraries.
+ * The library_id is stored directly in the print_resources table.
  */
 class PrintResourceService
 {
     /** Number of items per page for pagination */
-    private const PER_PAGE = 15;
+    private const PER_PAGE = 5;
 
     /** Cache time-to-live in seconds (1 hour) */
     private const CACHE_TTL = 3600;
@@ -57,11 +61,78 @@ class PrintResourceService
         $resources = $this->getResources($request, $level, $libraryIds['main']);
         $filteredResources = $this->getFilteredResources($request, $level, $libraryIds['filtered']);
 
+        // Attach library names to resources
+        $this->attachLibraryNames($resources);
+        $this->attachLibraryNames($filteredResources);
+
         return array_merge([
             'level' => $level,
             'resources' => $resources,
             'filteredResources' => $filteredResources,
         ], $dropdownData);
+    }
+
+    /**
+     * Attach library names to paginated resources.
+     *
+     * Fetches library names from three library tables (School, Division, Region).
+     * Since library_id can point to any of these three tables, we fetch from all
+     * and match based on the ID.
+     *
+     * @param LengthAwarePaginator $resources The paginated resources
+     * @return void
+     */
+    private function attachLibraryNames(LengthAwarePaginator $resources): void
+    {
+        if ($resources->isEmpty()) {
+            return;
+        }
+
+        // Collect all unique library IDs from resources
+        $libraryIds = $resources->pluck('library_id')->unique()->filter();
+
+        if ($libraryIds->isEmpty()) {
+            // If no library_ids, set default for all resources
+            foreach ($resources as $resource) {
+                $resource->library_name = 'No Library Assigned';
+            }
+            return;
+        }
+
+        // Fetch libraries from all three tables using the same IDs
+        $schoolLibraries = SchoolLibrary::whereIn('id', $libraryIds->toArray())
+            ->get(['id', 'library_name'])
+            ->keyBy('id');
+
+        $divisionLibraries = DivisionLibrary::whereIn('id', $libraryIds->toArray())
+            ->get(['id', 'library_name'])
+            ->keyBy('id');
+
+        $regionLibraries = RegionLibrary::whereIn('id', $libraryIds->toArray())
+            ->get(['id', 'library_name'])
+            ->keyBy('id');
+
+        // Merge all library collections into one lookup array
+        $allLibraries = $schoolLibraries
+            ->merge($divisionLibraries)
+            ->merge($regionLibraries);
+
+        // Attach library name to each resource
+        foreach ($resources as $resource) {
+            if (!$resource->library_id) {
+                $resource->library_name = 'No Library Assigned';
+                continue;
+            }
+
+            // Look up the library name from the merged collection
+            $library = $allLibraries->get($resource->library_id);
+
+            if ($library) {
+                $resource->library_name = $library->library_name;
+            } else {
+                $resource->library_name = 'Unknown Library';
+            }
+        }
     }
 
     /**
@@ -184,7 +255,7 @@ class PrintResourceService
     /**
      * Get library IDs for district level (Level 2).
      *
-     * Shows resources from selected school(s) within the district.
+     * Districts don't have their own libraries. Shows resources from school libraries.
      * No main resources - only filtered based on school selection.
      *
      * @param Request $request The HTTP request containing school filter
@@ -235,9 +306,11 @@ class PrintResourceService
      * Get filtered library IDs for division level based on user selections.
      *
      * Handles three scenarios:
-     * 1. Specific school selected
-     * 2. Specific district selected (all schools in that district)
-     * 3. All districts selected (all schools in all districts within division)
+     * 1. Specific school selected -> SchoolLibrary
+     * 2. Specific district selected -> SchoolLibraries in that district
+     * 3. All districts selected -> SchoolLibraries in all districts within division
+     *
+     * Note: Districts don't have libraries, so we only get school libraries.
      *
      * @param Request $request The HTTP request containing filter parameters
      * @param Collection $districts Available districts in this division
@@ -253,13 +326,13 @@ class PrintResourceService
             return SchoolLibrary::where('school_id', $selectedSchool)->pluck('id');
         }
 
-        // Priority 2: Specific district
+        // Priority 2: Specific district (get all school libraries in that district)
         if ($selectedDistrict && $selectedDistrict !== 'all') {
             $schoolIds = School::where('district_id', $selectedDistrict)->pluck('id');
             return SchoolLibrary::whereIn('school_id', $schoolIds)->pluck('id');
         }
 
-        // Priority 3: All districts
+        // Priority 3: All districts (get all school libraries in all districts)
         if ($selectedDistrict === 'all') {
             $schoolIds = School::whereIn('district_id', $districts->pluck('id'))->pluck('id');
             return SchoolLibrary::whereIn('school_id', $schoolIds)->pluck('id');
@@ -289,7 +362,7 @@ class PrintResourceService
             return ['main' => collect(), 'filtered' => collect()];
         }
 
-        // Priority 1: Specific school selected
+        // Priority 1: Specific school selected -> only school libraries
         if ($selectedSchool && $selectedSchool !== 'all') {
             return [
                 'main' => collect(),
@@ -297,7 +370,7 @@ class PrintResourceService
             ];
         }
 
-        // Priority 2: Specific district selected
+        // Priority 2: Specific district selected -> school libraries in that district
         if ($selectedDistrict && $selectedDistrict !== 'all') {
             $schoolIds = School::where('district_id', $selectedDistrict)->pluck('id');
             return [
@@ -306,7 +379,7 @@ class PrintResourceService
             ];
         }
 
-        // Priority 3: Specific division selected
+        // Priority 3: Specific division selected -> division + school libraries
         if ($selectedDivision && $selectedDivision !== 'all') {
             return [
                 'main' => collect(),
@@ -314,7 +387,7 @@ class PrintResourceService
             ];
         }
 
-        // Default: All divisions in region
+        // Default: All divisions in region -> region + division + school libraries
         return [
             'main' => collect(),
             'filtered' => $this->getLevel4RegionLibraries($stationId)
@@ -324,8 +397,10 @@ class PrintResourceService
     /**
      * Get all library IDs within a specific division.
      *
-     * Includes both division-level libraries and all school libraries
+     * Includes division-level libraries and all school libraries
      * within districts that belong to this division.
+     *
+     * Note: Districts don't have libraries.
      *
      * @param string $divisionId The division ID
      * @return Collection Combined division and school library IDs
@@ -346,14 +421,19 @@ class PrintResourceService
     /**
      * Get all library IDs within a specific region.
      *
-     * Includes all division libraries and all school libraries within
-     * divisions that belong to this region.
+     * Includes region libraries, all division libraries, and all school libraries
+     * within divisions that belong to this region.
+     *
+     * Note: Districts don't have libraries.
      *
      * @param string $stationId The region ID
-     * @return Collection Combined division and school library IDs
+     * @return Collection Combined region, division, and school library IDs
      */
     private function getLevel4RegionLibraries(string $stationId): Collection
     {
+        // Get region libraries
+        $regionLibs = RegionLibrary::where('region_id', $stationId)->pluck('id');
+
         // Get all division libraries in this region
         $divisionIds = Division::where('region_id', $stationId)->pluck('id');
         $divisionLibs = DivisionLibrary::whereIn('division_id', $divisionIds)->pluck('id');
@@ -363,7 +443,7 @@ class PrintResourceService
         $schoolIds = School::whereIn('district_id', $districtIds)->pluck('id');
         $schoolLibs = SchoolLibrary::whereIn('school_id', $schoolIds)->pluck('id');
 
-        return $divisionLibs->merge($schoolLibs);
+        return $regionLibs->merge($divisionLibs)->merge($schoolLibs);
     }
 
     /**
@@ -371,6 +451,7 @@ class PrintResourceService
      *
      * Special handling for division level which uses 'division_search' parameter.
      * Includes related data (title, authors, type, acquisitions).
+     * Filters resources by library_id field in print_resources table.
      *
      * @param Request $request The HTTP request containing search parameters
      * @param int $level The organizational level
@@ -388,10 +469,9 @@ class PrintResourceService
             return $this->emptyPaginator($request);
         }
 
+        // Query resources by library_id field directly in print_resources table
         $query = PrintResource::with(['printTitle.authors', 'type', 'printAcquisitions'])
-            ->whereHas('printAcquisitions', fn($q) =>
-                $q->whereIn('library_id', $libraryIds->toArray())
-            );
+            ->whereIn('library_id', $libraryIds->toArray());
 
         $this->applySearch($query, (string) $request->input('search', ''));
 
@@ -402,6 +482,7 @@ class PrintResourceService
      * Get paginated resources specifically for division level.
      *
      * Uses 'division_search' parameter instead of 'search'.
+     * Filters resources by library_id field in print_resources table.
      *
      * @param Request $request The HTTP request containing division_search parameter
      * @param Collection $libraryIds Library IDs to query
@@ -413,10 +494,9 @@ class PrintResourceService
             return $this->emptyPaginator($request);
         }
 
+        // Query resources by library_id field directly in print_resources table
         $query = PrintResource::with(['printTitle.authors', 'type', 'printAcquisitions'])
-            ->whereHas('printAcquisitions', fn($q) =>
-                $q->whereIn('library_id', $libraryIds->toArray())
-            );
+            ->whereIn('library_id', $libraryIds->toArray());
 
         $this->applySearch($query, (string) $request->input('division_search', ''));
 
@@ -428,6 +508,7 @@ class PrintResourceService
      *
      * Only returns results when appropriate filters are applied for the level.
      * Uses different search parameters for division level.
+     * Filters resources by library_id field in print_resources table.
      *
      * @param Request $request The HTTP request containing search and filter parameters
      * @param int $level The organizational level
@@ -442,10 +523,9 @@ class PrintResourceService
             return $this->emptyPaginator($request);
         }
 
+        // Query resources by library_id field directly in print_resources table
         $query = PrintResource::with(['printTitle.authors', 'type', 'printAcquisitions'])
-            ->whereHas('printAcquisitions', fn($q) =>
-                $q->whereIn('library_id', $libraryIds->toArray())
-            );
+            ->whereIn('library_id', $libraryIds->toArray());
 
         // Division level uses 'school_search', others use 'search'
         $searchParam = $level === self::LEVEL_DIVISION ? 'school_search' : 'search';
@@ -484,6 +564,7 @@ class PrintResourceService
      * - Title (from related printTitle)
      * - Author names (from related authors through printTitle)
      * - Subject names and grade levels (from related subject_grade_levels)
+     * - Library name (from SchoolLibrary, DivisionLibrary, or RegionLibrary)
      *
      * @param mixed $query The Eloquent query builder
      * @param string $search The search term
@@ -502,28 +583,47 @@ class PrintResourceService
         return $query->where(function ($q) use ($searchLower) {
             // Search in direct resource fields
             $q->whereRaw('LOWER(isbn) LIKE ?', [$searchLower])
-              ->orWhereRaw('LOWER(publisher) LIKE ?', [$searchLower])
-              ->orWhereRaw('LOWER(copyright) LIKE ?', [$searchLower])
-              // Search in title
-              ->orWhereHas('printTitle', fn($qt) =>
-                  $qt->whereRaw('LOWER(title) LIKE ?', [$searchLower])
-              )
-              // Search in author names
-              ->orWhereHas('printTitle.authors', fn($qa) =>
-                  $qa->whereRaw('LOWER(author_name) LIKE ?', [$searchLower])
-              )
-              // Search in subjects and grade levels
-              ->orWhereExists(function ($exists) use ($searchLower) {
-                  $exists->select(DB::raw(1))
-                         ->from('subject_grade_levels as sgl')
-                         ->join('subjects as subj', 'sgl.subject_id', '=', 'subj.id')
-                         ->join('grade_levels as gl', 'sgl.grade_level_id', '=', 'gl.id')
-                         ->whereRaw("sgl.id::text = ANY(string_to_array(print_resources.subject_grade_level_ids, ','))")
-                         ->where(function ($match) use ($searchLower) {
-                             $match->whereRaw('LOWER(subj.subject_name) LIKE ?', [$searchLower])
-                                   ->orWhereRaw('LOWER(gl.grade) LIKE ?', [$searchLower]);
-                         });
-              });
+            ->orWhereRaw('LOWER(publisher) LIKE ?', [$searchLower])
+            ->orWhereRaw('LOWER(copyright) LIKE ?', [$searchLower])
+            // Search in title
+            ->orWhereHas('printTitle', fn($qt) =>
+                $qt->whereRaw('LOWER(title) LIKE ?', [$searchLower])
+            )
+            // Search in author names
+            ->orWhereHas('printTitle.authors', fn($qa) =>
+                $qa->whereRaw('LOWER(author_name) LIKE ?', [$searchLower])
+            )
+            // Search in subjects and grade levels
+            ->orWhereExists(function ($exists) use ($searchLower) {
+                $exists->select(DB::raw(1))
+                        ->from('subject_grade_levels as sgl')
+                        ->join('subjects as subj', 'sgl.subject_id', '=', 'subj.id')
+                        ->join('grade_levels as gl', 'sgl.grade_level_id', '=', 'gl.id')
+                        ->whereRaw("sgl.id::text = ANY(string_to_array(print_resources.subject_grade_level_ids, ','))")
+                        ->where(function ($match) use ($searchLower) {
+                            $match->whereRaw('LOWER(subj.subject_name) LIKE ?', [$searchLower])
+                                ->orWhereRaw('LOWER(gl.grade) LIKE ?', [$searchLower]);
+                        });
+            })
+            // Search in library names (check all three library tables)
+            ->orWhereExists(function ($exists) use ($searchLower) {
+                $exists->select(DB::raw(1))
+                        ->from('school_libraries as sl')
+                        ->whereColumn('print_resources.library_id', 'sl.id')
+                        ->whereRaw('LOWER(sl.library_name) LIKE ?', [$searchLower]);
+            })
+            ->orWhereExists(function ($exists) use ($searchLower) {
+                $exists->select(DB::raw(1))
+                        ->from('division_libraries as dl')
+                        ->whereColumn('print_resources.library_id', 'dl.id')
+                        ->whereRaw('LOWER(dl.library_name) LIKE ?', [$searchLower]);
+            })
+            ->orWhereExists(function ($exists) use ($searchLower) {
+                $exists->select(DB::raw(1))
+                        ->from('region_libraries as rl')
+                        ->whereColumn('print_resources.library_id', 'rl.id')
+                        ->whereRaw('LOWER(rl.library_name) LIKE ?', [$searchLower]);
+            });
         });
     }
 

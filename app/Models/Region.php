@@ -14,7 +14,9 @@ class Region extends Model
         'id', 'region_name', 'shortname', 'address', 'contact_number', 'email', 'date_establish',
         'created_at', 'updated_at', 'logo'
     ];
-
+    protected $casts = [
+        'id' => 'string',
+    ];
     public function divisions(): HasMany
     {
         return $this->hasMany(Division::class, 'region_id');

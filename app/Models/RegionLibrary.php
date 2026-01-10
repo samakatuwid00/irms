@@ -10,6 +10,9 @@ class RegionLibrary extends Model
     public $incrementing = false;
     protected $keyType = 'string';
     protected $fillable = ['id', 'region_id', 'librarian', 'library_name'];
+    protected $casts = [
+        'id' => 'string',
+    ];
 
     public $timestamps = false;
 
