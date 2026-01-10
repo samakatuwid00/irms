@@ -15,10 +15,7 @@ class LoginController extends Controller
             return redirect()->route('dashboard');
         }
 
-        $previousUrl = url()->previous();
-        if ($previousUrl !== url()->current()
-            && !str_contains($previousUrl, '/logout')
-            && !session()->has('success')) {
+        if (session()->has('url.intended')) {
             session()->flash('error', 'You must be logged in to access that page.');
         }
 

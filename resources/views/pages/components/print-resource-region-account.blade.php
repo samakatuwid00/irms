@@ -1,4 +1,4 @@
-    <h2 class="text-lg font-semibold">Resources</h2>
+    <h2 class="text-lg font-semibold">Region Resources</h2>
 
     <form method="GET" class="bg-white p-4 rounded-xl shadow space-y-4">
 
