@@ -154,7 +154,7 @@ class PrintResource extends Model
             'acquisitions' => $acquisitions,
             'quantities' => $quantities,
             'library_name' => $this->library_name,
-            // 'edit_url' => route('edit-resource', $this->id)
+            'edit_url' => route('update-print-resource', $this->id)
         ];
     }
 

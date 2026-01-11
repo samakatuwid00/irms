@@ -1,23 +1,28 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\{
-    RegisterController,
-    LoginController,
-    DashboardController,
-    ManageResourceController,
-    PrintResourceController,
-    NonPrintResourceController,
-    ManageUserController,
-    ManageStationController,
-    ProfileController,
-    SchoolController,
-    DistrictController,
-    DivisionController,
-    RegionController,
-    GenerateReportController,
-    LookUpController
-};
+use App\Http\Controllers\RegisterController;
+use App\Http\Controllers\LoginController;
+use App\Http\Controllers\DashboardController;
+
+use App\Http\Controllers\AddResourceController;
+use App\Http\Controllers\EditResourceController;
+use App\Http\Controllers\PrintResourceController;
+use App\Http\Controllers\NonPrintResourceController;
+
+use App\Http\Controllers\ManageUserController;
+use App\Http\Controllers\ManageStationController;
+
+use App\Http\Controllers\ProfileController;
+
+use App\Http\Controllers\SchoolController;
+use App\Http\Controllers\DistrictController;
+use App\Http\Controllers\DivisionController;
+use App\Http\Controllers\RegionController;
+
+use App\Http\Controllers\GenerateReportController;
+use App\Http\Controllers\LookUpController;
+
 use Faker\Guesser\Name;
 use Pest\Plugin\Manager;
 
@@ -34,7 +39,7 @@ Route::post('/logout', [LoginController::class, 'logout'])->name('logout');
 
 // Protected routes [NAVIGATIONS]
 Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
-Route::get('/add-resources', [ManageResourceController::class, 'index'])->name('add-resources');
+Route::get('/add-resources', [AddResourceController::class, 'index'])->name('add-resources');
 Route::get('/print-resources', [PrintResourceController::class, 'index'])->name('print-resources');
 Route::get('/nonprint-resources', [NonPrintResourceController::class, 'index'])->name('nonprint-resources');
 Route::get('/stations', [ManageStationController::class, 'index'])->name('stations');
@@ -84,7 +89,12 @@ Route::put('/profile/update', [ProfileController::class, 'updateInfo'])->name('p
 Route::put('/profile/password', [ProfileController::class, 'updatePassword'])->name('profile.password');
 
 //MANAGE PRINT RESOURCE
-Route::post('/add-resources', [ManageResourceController::class, 'addPrintResource'])->name('add-print-resource');
-//LOOKUP TEST
-Route::get('/fetch-subject-grade', [LookUpController::class, 'getSubjectGradeLevel'])->name('fetch-subject-grade');
+Route::post('/add-resources', [AddResourceController::class, 'addPrintResource'])->name('add-print-resource');
 
+// In routes/web.php
+
+Route::get('/edit-resource/{id}', [EditResourceController::class, 'index'])
+    ->name('edit-resource');
+
+Route::put('/update-print-resource/{id}', [EditResourceController::class, 'updatePrintResource'])
+    ->name('update-print-resource');

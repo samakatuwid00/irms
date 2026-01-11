@@ -21,7 +21,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Foundation\Validation\ValidatesRequests;
 use Illuminate\Routing\Controller as BaseController;
-class ManageResourceController extends BaseController
+class AddResourceController extends BaseController
 {
     use AuthorizesRequests, ValidatesRequests;
 
