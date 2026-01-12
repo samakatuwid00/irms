@@ -16,6 +16,8 @@ class NonprintAcquisition extends Model
         'remarks', 'date_encoded', 'encoded_by', 'curriculum_id', 'created_at', 'updated_at'
     ];
 
+    protected $table = 'nonprint_acquisitions';
+
     public function nonprintResource(): BelongsTo
     {
         return $this->belongsTo(NonprintResource::class, 'nonprint_id');

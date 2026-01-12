@@ -10,6 +10,7 @@ class NonprintMasterlist extends Model
     public $incrementing = false;
     protected $keyType = 'string';
     protected $fillable = ['id', 'nonprint_acquisition_id', 'status'];
+    protected $table = 'nonprint_masterlists';
 
     public $timestamps = false;
 

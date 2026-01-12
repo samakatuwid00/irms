@@ -52,30 +52,61 @@
             const printForm = document.getElementById('print-form');
             const nonprintForm = document.getElementById('nonprint-form');
 
+            function activateTab(tab) {
+                tabButtons.forEach(b => {
+                    b.classList.remove('border-blue-600', 'text-blue-600');
+                    b.classList.add(
+                        'border-transparent',
+                        'text-gray-600',
+                        'hover:text-blue-600',
+                        'hover:border-gray-300'
+                    );
+                });
+
+                const activeBtn = document.querySelector(`[data-tab="${tab}"]`);
+                activeBtn.classList.remove(
+                    'border-transparent',
+                    'text-gray-600',
+                    'hover:text-blue-600',
+                    'hover:border-gray-300'
+                );
+                activeBtn.classList.add('border-blue-600', 'text-blue-600');
+
+                if (tab === 'print') {
+                    printForm.classList.remove('hidden');
+                    nonprintForm.classList.add('hidden');
+                } else {
+                    nonprintForm.classList.remove('hidden');
+                    printForm.classList.add('hidden');
+                }
+
+                // Persist tab only for refresh
+                sessionStorage.setItem('add_resource_active_tab', tab);
+            }
+
+            // Click handling
             tabButtons.forEach(btn => {
                 btn.addEventListener('click', () => {
-                    // Update active tab styling
-                    tabButtons.forEach(b => {
-                        b.classList.remove('border-blue-600', 'text-blue-600');
-                        b.classList.add('border-transparent', 'text-gray-600', 'hover:text-blue-600', 'hover:border-gray-300');
-                    });
-                    btn.classList.remove('border-transparent', 'text-gray-600', 'hover:text-blue-600', 'hover:border-gray-300');
-                    btn.classList.add('border-blue-600', 'text-blue-600');
-
-                    // Show/hide forms
-                    if (btn.dataset.tab === 'print') {
-                        printForm.classList.remove('hidden');
-                        nonprintForm.classList.add('hidden');
-                    } else {
-                        nonprintForm.classList.remove('hidden');
-                        printForm.classList.add('hidden');
-                    }
+                    activateTab(btn.dataset.tab);
                 });
             });
 
-            // Ensure Print is default on load (already set in HTML, but reinforce)
-            printForm.classList.remove('hidden');
-            nonprintForm.classList.add('hidden');
+            // Restore tab on refresh
+            const savedTab = sessionStorage.getItem('add_resource_active_tab');
+
+            if (savedTab === 'nonprint') {
+                activateTab('nonprint');
+            } else {
+                activateTab('print'); // default
+            }
         });
     </script>
+    <script>
+        window.addEventListener('beforeunload', () => {
+            if (document.visibilityState === 'hidden') {
+                sessionStorage.removeItem('add_resource_active_tab');
+            }
+        });
+    </script>
+
 @endsection

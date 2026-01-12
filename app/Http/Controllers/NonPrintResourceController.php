@@ -7,22 +7,28 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Foundation\Validation\ValidatesRequests;
 use Illuminate\Routing\Controller as BaseController;
+use App\Services\NonPrintResourceService;
 
 class NonPrintResourceController extends BaseController
 {
-        use AuthorizesRequests, ValidatesRequests;
+    use AuthorizesRequests, ValidatesRequests;
 
-    public function __construct()
+    protected $nonprintResourceService;
+
+    public function __construct(NonPrintResourceService $nonprintResourceService)
     {
         $this->middleware('auth');
+        $this->nonprintResourceService = $nonprintResourceService;
     }
 
-    public function index()
+    public function index(Request $request)
     {
         $user = Auth::user();
-        // if ($user->usertype_id == 1) {
-        //     return redirect()->route('admin.home');
-        // }
-        return view('pages.nonprint-resources', compact('user'));
+        $level = $user->userType?->level ?? 0;
+        $stationId = (string) $user->station_id;
+
+        $data = $this->nonprintResourceService->getResourcesData($request, $level, $stationId);
+
+        return view('pages.nonprint-resources', $data);
     }
 }

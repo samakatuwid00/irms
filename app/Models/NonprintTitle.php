@@ -13,6 +13,8 @@ class NonprintTitle extends Model
 
     protected $fillable = ['id', 'title'];
 
+    protected $table = 'nonprint_titles';
+
     public $timestamps = false;
 
     public function authors(): BelongsToMany

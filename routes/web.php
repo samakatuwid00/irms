@@ -78,9 +78,6 @@ Route::put('/schools/{school}', [ManageStationController::class, 'updateSchool']
 Route::delete('/schools/{school}', [ManageStationController::class, 'destroySchool'])->name('schools.destroy');
 
 //MANAGE USER
-// Route::get('/{user}', [ManageUserController::class, 'show'])->name('show');
-// Route::patch('/{user}/status', [ManageUserController::class, 'updateStatus'])->name('users.updateStatus');
-
 Route::get('/users', [ManageUserController::class, 'index'])->name('users');
 Route::patch('/users/{user}/status', [ManageUserController::class, 'updateStatus'])->name('users.updateStatus');
 
@@ -89,12 +86,8 @@ Route::put('/profile/update', [ProfileController::class, 'updateInfo'])->name('p
 Route::put('/profile/password', [ProfileController::class, 'updatePassword'])->name('profile.password');
 
 //MANAGE PRINT RESOURCE
-Route::post('/add-resources', [AddResourceController::class, 'addPrintResource'])->name('add-print-resource');
+Route::post('/add-print-resources', [AddResourceController::class, 'addPrintResource'])->name('add-print-resource');
+Route::post('/add-nonprint-resources', [AddResourceController::class, 'addNonPrintResource'])->name('add-nonprint-resource');
 
-// In routes/web.php
-
-Route::get('/edit-resource/{id}', [EditResourceController::class, 'index'])
-    ->name('edit-resource');
-
-Route::put('/update-print-resource/{id}', [EditResourceController::class, 'updatePrintResource'])
-    ->name('update-print-resource');
+Route::get('/edit-resource/{id}', [EditResourceController::class, 'index'])->name('edit-resource');
+Route::put('/update-print-resource/{id}', [EditResourceController::class, 'updatePrintResource'])->name('update-print-resource');

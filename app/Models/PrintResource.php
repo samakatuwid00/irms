@@ -10,13 +10,25 @@ class PrintResource extends Model
 {
     public $incrementing = false;
     protected $keyType = 'string';
-    protected $fillable = [
-        'id', 'print_title_id', 'print_type_id', 'publisher', 'volume', 'edition',
-        'copyright', 'pages', 'isbn', 'remarks', 'subject_grade_level_ids', 'created_at', 'updated_at', 'library_id'
-    ];
     protected $casts = [
         'id' => 'string',
         'library_id' => 'string',
+    ];
+    protected $fillable = [
+        'id',
+        'print_title_id',
+        'print_type_id',
+        'publisher',
+        'volume',
+        'edition',
+        'copyright',
+        'pages',
+        'isbn',
+        'remarks',
+        'subject_grade_level_ids',
+        'created_at',
+        'updated_at',
+        'library_id'
     ];
 
     protected $appends = ['library_name'];

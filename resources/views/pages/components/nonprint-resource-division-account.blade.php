@@ -58,13 +58,14 @@
                             <tr>
                                 <th class="px-4 py-3 w-20">Image</th>
                                 <th class="px-4 py-3">Title</th>
-                                <th class="px-4 py-3">Author</th>
-                                <th class="px-4 py-3">Publisher</th>
                                 <th class="px-4 py-3">Type</th>
+                                <th class="px-4 py-3">Brand</th>
+                                <th class="px-4 py-3">Code</th>
+                                <th class="px-4 py-3">Version</th>
+                                <th class="px-4 py-3">URL</th>
+                                <th class="px-4 py-3">Size</th>
+                                <th class="px-4 py-3">Model</th>
                                 <th class="px-4 py-3">Subject</th>
-                                <th class="px-4 py-3">ISBN</th>
-                                <th class="px-4 py-3">Copyright</th>
-                                <th class="px-4 py-3">Library</th>
                                 <th class="px-4 py-3 text-center">Quantity Breakdown</th>
                                 <th class="px-4 py-3 text-center">Actions</th>
                             </tr>
@@ -72,22 +73,25 @@
                         <tbody class="divide-y">
                             @forelse ($resources as $item)
                                 @php
-                                    $authors = $item->printTitle->authors->pluck('author_name')->join(', ');
                                     $qty = $item->quantities;
                                     $total = array_sum($qty);
                                 @endphp
                                 <tr class="hover:bg-gray-50">
                                     <td class="px-4 py-3">
                                         <img src="{{ asset('assets/images/' . ($item->image ?? 'default.jpg')) }}"
-                                            alt="{{ $item->printTitle->title }}"
-                                            class="w-12 h-16 object-cover rounded shadow-sm">
+                                                alt="{{ $item->nonprintTitle->title }}"
+                                                class="w-12 h-16 object-cover rounded shadow-sm">
                                     </td>
-                                    <td class="px-4 py-3 font-medium text-gray-800 max-w-xs">{{ $item->printTitle->title }}</td>
-                                    <td class="px-4 py-3 text-gray-600">{{ $authors }}</td>
-                                    <td class="px-4 py-3 text-gray-600">{{ $item->publisher }}</td>
+                                    <td class="px-4 py-3 font-medium text-gray-800 max-w-xs">{{ $item->nonprintTitle->title }}</td>
                                     <td class="px-4 py-3">
                                         <span class="px-2 py-1 text-xs rounded-full bg-blue-100 text-blue-700">{{ $item->type->type_name }}</span>
                                     </td>
+                                    <td class="px-4 py-3 text-gray-600">{{ $item->brand }}</td>
+                                    <td class="px-4 py-3 text-gray-600">{{ $item->code }}</td>
+                                    <td class="px-4 py-3 text-gray-600">{{ $item->version }}</td>
+                                    <td class="px-4 py-3 text-gray-600">{{ $item->url }}</td>
+                                    <td class="px-4 py-3 text-gray-600">{{ $item->size }}</td>
+                                    <td class="px-4 py-3 text-gray-600">{{ $item->model }}</td>
                                     <td class="px-4 py-3 text-xs">
                                         @if($item->subjects()->count())
                                             <div class="flex flex-wrap gap-1">
@@ -100,13 +104,6 @@
                                         @else
                                             <span class="text-gray-500 text-xs">No assignment</span>
                                         @endif
-                                    </td>
-                                    <td class="px-4 py-3 text-gray-600 font-mono text-xs">{{ $item->isbn }}</td>
-                                    <td class="px-4 py-3 text-center">{{ $item->copyright }}</td>
-                                    <td class="px-4 py-3 text-gray-700">
-                                        <span class="text-xs font-medium text-blue-600">
-                                            {{ $item->library_name ?? 'N/A' }}
-                                        </span>
                                     </td>
                                     <td class="px-4 py-3 text-center text-xs">
                                         <div class="space-y-1">
@@ -124,21 +121,21 @@
                                     </td>
                                     <td class="px-4 py-3">
                                         <div class="flex justify-center gap-2">
-                                            <button onclick='openPrintModal(@json($item->showDetails()))'
-                                                    class="px-3 py-1 text-xs rounded-lg bg-blue-100 text-blue-600 hover:bg-blue-200">
-                                                View
-                                            </button>
-                                            <a href="{{ route('edit-resource', $item->id) }}"
-                                                class="px-3 py-1 text-xs rounded-lg bg-yellow-100 text-yellow-700 hover:bg-yellow-200">
-                                                Edit
-                                            </a>
+                                                <button onclick='openNonPrintModal(@json($item->showDetails()))'
+                                                        class="px-3 py-1 text-xs rounded-lg bg-blue-100 text-blue-600 hover:bg-blue-200">
+                                                    View
+                                                </button>
+                                                <a href=""
+                                                    class="px-3 py-1 text-xs rounded-lg bg-yellow-100 text-yellow-700 hover:bg-yellow-200">
+                                                    Edit
+                                                </a>
                                         </div>
                                     </td>
                                 </tr>
                             @empty
                                 <tr>
-                                    <td colspan="11" class="text-center py-8 text-gray-500">
-                                        No division library resources found.
+                                    <td colspan="10" class="text-center py-8 text-gray-500">
+                                        No resources found.
                                     </td>
                                 </tr>
                             @endforelse
@@ -216,35 +213,45 @@
                                 <tr>
                                     <th class="px-4 py-3 w-20">Image</th>
                                     <th class="px-4 py-3">Title</th>
-                                    <th class="px-4 py-3">Author</th>
-                                    <th class="px-4 py-3">Publisher</th>
                                     <th class="px-4 py-3">Type</th>
+                                    <th class="px-4 py-3">Brand</th>
+                                    <th class="px-4 py-3">Code</th>
+                                    <th class="px-4 py-3">Version</th>
+                                    <th class="px-4 py-3">URL</th>
+                                    <th class="px-4 py-3">Size</th>
+                                    <th class="px-4 py-3">Model</th>
+                                    <th class="px-4 py-3">School Name</th>
                                     <th class="px-4 py-3">Subject</th>
-                                    <th class="px-4 py-3">ISBN</th>
-                                    <th class="px-4 py-3">Copyright</th>
-                                    <th class="px-4 py-3">School</th>
                                     <th class="px-4 py-3 text-center">Quantity Breakdown</th>
-                                    <th class="px-6 py-3 text-center">Actions</th>
+                                    <th class="px-4 py-3 text-center">Actions</th>
                                 </tr>
                             </thead>
                             <tbody class="divide-y">
                                 @forelse ($filteredResources as $item)
                                     @php
-                                        $authors = $item->printTitle->authors->pluck('author_name')->join(', ');
                                         $qty = $item->quantities;
                                         $total = array_sum($qty);
                                     @endphp
                                     <tr class="hover:bg-gray-50">
                                         <td class="px-4 py-3">
                                             <img src="{{ asset('assets/images/' . ($item->image ?? 'default.jpg')) }}"
-                                                    alt="{{ $item->printTitle->title }}"
+                                                    alt="{{ $item->nonprintTitle->title }}"
                                                     class="w-12 h-16 object-cover rounded shadow-sm">
                                         </td>
-                                        <td class="px-4 py-3 font-medium text-gray-800 max-w-xs">{{ $item->printTitle->title }}</td>
-                                        <td class="px-4 py-3 text-gray-600">{{ $authors }}</td>
-                                        <td class="px-4 py-3 text-gray-600">{{ $item->publisher }}</td>
+                                        <td class="px-4 py-3 font-medium text-gray-800 max-w-xs">{{ $item->nonprintTitle->title }}</td>
                                         <td class="px-4 py-3">
                                             <span class="px-2 py-1 text-xs rounded-full bg-blue-100 text-blue-700">{{ $item->type->type_name }}</span>
+                                        </td>
+                                        <td class="px-4 py-3 text-gray-600">{{ $item->brand }}</td>
+                                        <td class="px-4 py-3 text-gray-600">{{ $item->code }}</td>
+                                        <td class="px-4 py-3 text-gray-600">{{ $item->version }}</td>
+                                        <td class="px-4 py-3 text-gray-600">{{ $item->url }}</td>
+                                        <td class="px-4 py-3 text-gray-600">{{ $item->size }}</td>
+                                        <td class="px-4 py-3 text-gray-600">{{ $item->model }}</td>
+                                        <td class="px-4 py-3 text-gray-700">
+                                            <span class="text-xs font-medium text-blue-600">
+                                                {{ $item->library_name ?? 'N/A' }}
+                                            </span>
                                         </td>
                                         <td class="px-4 py-3 text-xs">
                                             @if($item->subjects()->count())
@@ -258,13 +265,6 @@
                                             @else
                                                 <span class="text-gray-500 text-xs">No assignment</span>
                                             @endif
-                                        </td>
-                                        <td class="px-4 py-3 text-gray-600 font-mono text-xs">{{ $item->isbn }}</td>
-                                        <td class="px-4 py-3 text-center">{{ $item->copyright }}</td>
-                                        <td class="px-4 py-3 text-gray-700">
-                                            <span class="text-xs font-medium text-blue-600">
-                                                {{ $item->library_name ?? 'N/A' }}
-                                            </span>
                                         </td>
                                         <td class="px-4 py-3 text-center text-xs">
                                             <div class="space-y-1">
@@ -282,17 +282,17 @@
                                         </td>
                                         <td class="px-4 py-3">
                                             <div class="flex justify-center gap-2">
-                                                <button onclick='openPrintModal(@json($item->showDetails()))'
-                                                        class="px-3 py-1 text-xs rounded-lg bg-blue-100 text-blue-600 hover:bg-blue-200">
-                                                    View
-                                                </button>
+                                                    <button onclick='openNonPrintModal(@json($item->showDetails()))'
+                                                            class="px-3 py-1 text-xs rounded-lg bg-blue-100 text-blue-600 hover:bg-blue-200">
+                                                        View
+                                                    </button>
                                             </div>
                                         </td>
                                     </tr>
                                 @empty
                                     <tr>
                                         <td colspan="10" class="text-center py-8 text-gray-500">
-                                            No school resources found.
+                                            No resources found.
                                         </td>
                                     </tr>
                                 @endforelse

@@ -1,4 +1,5 @@
     {{-- Print Resource Form --}}
+
     <form id="print" action="{{ route('add-print-resource') }}" class="resource-form space-y-8" method="POST" enctype="multipart/form-data">
         @csrf
 

@@ -1,5 +1,5 @@
 <!-- Non-Print Resource Form -->
-<form id="nonprint" class="resource-form space-y-8" method="POST" enctype="multipart/form-data">
+<form id="nonprintForm" action="{{ route('add-nonprint-resource') }}" class="resource-form space-y-8" method="POST" enctype="multipart/form-data">
     @csrf
 
     {{-- =========================
@@ -14,7 +14,7 @@
                         p-4 text-center">
 
                 <img
-                    id="imagePreview"
+                    id="nonprintImagePreview"
                     src="{{ asset('assets/images/default.jpg') }}"
                     alt="Image preview"
                     class="w-full flex-1 object-cover rounded mb-4"
@@ -23,7 +23,7 @@
                 <input
                     type="file"
                     name="image"
-                    id="imageUpload"
+                    id="nonprintImageUpload"
                     class="hidden"
                     accept="image/*"
                 >
@@ -46,8 +46,22 @@
 
             <!-- Title / Type / Brand -->
             <div class="space-y-4">
+                    @if (Auth::user()->userType?->level === 3)
+                        <div>
+                            <label class="block text-sm font-medium mb-1">Library</label>
+                            <select name="library_id" class="w-full border rounded px-3 py-2" required>
+                                @foreach ($divisionLibraries as $library)
+                                    <option value="{{ $library->id }}">{{ $library->library_name }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                    @elseif (Auth::user()->userType?->level === 4)
+                        <input type="hidden" name="library_id" id="library_id" value='{{ $regionLibrary->id }}' readonly required>
+                    @elseif (Auth::user()->userType?->level === 1)
+                        <input type="hidden" name="library_id" id="library_id" value='{{ $schoolLibrary->id }}' readonly required>
+                    @endif
                 <div>
-                    <label class="block text-sm font-medium mb-1">Title</label>
+                    <label class="block text-sm font-medium mb-1">Title/Name</label>
                     <input type="text" name="title" class="w-full border rounded px-3 py-2" required>
                 </div>
 
@@ -55,12 +69,11 @@
                     <label class="block text-sm font-medium mb-1">Type</label>
                     <select name="type" class="w-full border rounded px-3 py-2" required>
                         <option value="" disabled selected>Select type</option>
-                        <option>Equipment</option>
-                        <option>Furniture</option>
-                        <option>ICT Device</option>
-                        <option>Software</option>
-                        <option>Teaching Aid</option>
-                        <option>Other</option>
+                                @foreach ($nonprintTypes as $type)
+                                    <option value="{{ $type->id }}">
+                                        {{ $type->type_name }}
+                                    </option>
+                                @endforeach
                     </select>
                 </div>
 
@@ -104,226 +117,221 @@
         </div>
     </div>
 
-    {{-- =========================
-        2ND GROUP
-    ========================== --}}
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+    {{-- ========================= 2ND GROUP ========================== --}}
+    {{-- ========================= SUBJECT–GRADE LEVEL MAPPING ========================== --}}
 
-        <div class="md:col-span-2 space-y-4">
-            <!-- Tabs -->
-            <div class="flex gap-6 border-b">
-                <button type="button" class="tab-btn active pb-2 border-b-2 border-blue-600 text-blue-600" data-tab="primary">Primary</button>
-                <button type="button" class="tab-btn pb-2 text-gray-600" data-tab="secondary">Secondary</button>
-                <button type="button" class="tab-btn pb-2 text-gray-600" data-tab="sh">Senior High</button>
+        @php
+        $stages = [
+            'S1' => [
+                'tab' => 'stage1',
+                'label' => 'Stage 1',
+                'grades' => [
+                    0 => 'K',
+                    1 => '1',
+                    2 => '2',
+                    3 => '3',
+                ],
+            ],
+            'ES' => [
+                'tab' => 'stage2',
+                'label' => 'Stage 2',
+                'grades' => [
+                    4 => '4',
+                    5 => '5',
+                    6 => '6',
+                ],
+            ],
+            'JHS' => [
+                'tab' => 'jhs',
+                'label' => 'Junior High',
+                'grades' => [
+                    7 => '7',
+                    8 => '8',
+                    9 => '9',
+                    10 => '10',
+                ],
+            ],
+            'SHS' => [
+                'tab' => 'shs',
+                'label' => 'Senior High',
+                'grades' => [
+                    11 => '11',
+                    12 => '12',
+                ],
+            ],
+        ];
+
+        // Group data: [key_stage][subject_name][]
+        $grouped = $subjectGradeLevels->groupBy(['key_stage', 'subject_name']);
+        @endphp
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div class="md:col-span-2 space-y-4">
+
+                {{-- ================= TABS ================= --}}
+                <div class="flex gap-6 border-b">
+                    @foreach ($stages as $stage)
+                        <button
+                            type="button"
+                            class="tab-btn {{ $loop->first ? 'active border-blue-600 text-blue-600' : 'text-gray-600' }}"
+                            data-tab="{{ $stage['tab'] }}">
+                            {{ $stage['label'] }}
+                        </button>
+                    @endforeach
+                </div>
+
+                {{-- ================= TAB CONTENTS ================= --}}
+                @foreach ($stages as $stageKey => $stage)
+                    <div
+                        id="{{ $stage['tab'] }}"
+                        class="tab-content {{ !$loop->first ? 'hidden' : '' }}">
+
+                        <table class="w-full border text-sm">
+                            <thead class="bg-gray-100">
+                                <tr>
+                                    <th class="border px-3 py-2 text-left w-72">
+                                        Subject
+                                    </th>
+
+                                    @foreach ($stage['grades'] as $gradeLabel)
+                                        <th class="border">
+                                            {{ $gradeLabel }}
+                                        </th>
+                                    @endforeach
+                                </tr>
+                            </thead>
+
+                            <tbody>
+                                @foreach ($grouped[$stageKey] ?? [] as $subject => $rows)
+                                    @php
+                                        // Map grade sort_order → subject_grade_level row
+                                        $gradeMap = collect($rows)->keyBy('sort_order');
+                                    @endphp
+
+                                    <tr>
+                                        <td class="border px-3 py-2">
+                                            {{ $subject }}
+                                        </td>
+
+                                        @foreach ($stage['grades'] as $sortOrder => $label)
+                                            <td class="border text-center">
+                                                @if ($gradeMap->has($sortOrder))
+                                                    <input
+                                                        type="checkbox"
+                                                        name="subject_grade_levels[]"
+                                                        value="{{ $gradeMap[$sortOrder]->subject_grade_level_id }}">
+                                                @endif
+                                            </td>
+                                        @endforeach
+                                    </tr>
+                                @endforeach
+                            </tbody>
+                        </table>
+
+                    </div>
+                @endforeach
+
             </div>
+        </div>
 
-            <!-- PRIMARY -->
-            <div class="tab-content" id="primary">
+        {{-- ========================= 3RD GROUP (ACQUISITION & CONDITION) ========================== --}}
+        <div class="bg-gray-50 border rounded-xl p-6 space-y-6">
+                <h3 class="text-lg font-semibold text-gray-700">
+                    Acquisition & Condition Details
+                </h3>
+
+                <div class="flex justify-end">
+                    <button type="button" id="addNonPrintAcquisitionBtn"
+                            class="px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-700">
+                        ➕ Add Acquisition
+                    </button>
+                </div>
+
+                <!-- Remarks -->
+                <div>
+                    <label class="block text-sm font-medium mb-1">
+                        Remarks <span class="text-xs text-gray-500">(will be saved with each acquisition)</span>
+                    </label>
+                    <textarea name="remarks" rows="3" class="w-full border rounded px-3 py-2"
+                            placeholder="Any notes, condition details, or special remarks for this batch..."></textarea>
+                </div>
+
+                <!-- TOP ROW -->
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium mb-1">Source</label>
+                        <select id="source" name="source" class="w-full border rounded px-3 py-2">
+                            <option value="" selected disabled>Select source</option>
+                            <option value="CO">DepEd - Central Office</option>
+                            <option value="RO">Regional Office</option>
+                            <option value="SDO">Schools Division Office</option>
+                            <option value="LOCAL">Locally Developed</option>
+                            <option value="DONATED">DONATED</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-1">Date Acquired</label>
+                        <input type="date" name="date_acquired" class="w-full border rounded px-3 py-2">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-1">Cost</label>
+                        <input type="number" step="0.01" name="cost" class="w-full border rounded px-3 py-2">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-1">IAR No.</label>
+                        <input type="text" name="iar" class="w-full border rounded px-3 py-2">
+                    </div>
+                </div>
+
+                <!-- CONDITION QUANTITY -->
+                <div>
+                    <h4 class="text-sm font-semibold mb-3 text-gray-600">Condition & Quantity</h4>
+                    <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4">
+                        <div><label class="block text-xs mb-1">Usable</label><input type="number" name="usable" value="0" min="0" class="qty w-full border rounded px-3 py-2"></div>
+                        <div><label class="block text-xs mb-1">Partially Damaged</label><input type="number" name="partially_damaged" value="0" min="0" class="qty w-full border rounded px-3 py-2"></div>
+                        <div><label class="block text-xs mb-1">Damaged</label><input type="number" name="damaged" value="0" min="0" class="qty w-full border rounded px-3 py-2"></div>
+                        <div><label class="block text-xs mb-1">Lost</label><input type="number" name="lost" value="0" min="0" class="qty w-full border rounded px-3 py-2"></div>
+                        <div><label class="block text-xs mb-1">Condemnable</label><input type="number" name="condemnable" value="0" min="0" class="qty w-full border rounded px-3 py-2"></div>
+                        <div class="md:col-span-2">
+                            <label class="block text-xs mb-1">Total Quantity</label>
+                            <input type="number" name="total_quantity" id="nonprintTotalQuantity" readonly class="w-full bg-gray-100 border rounded px-3 py-2 font-semibold">
+                        </div>
+                    </div>
+                </div>
+        </div>
+
+        {{-- ========================= ACQUISITION LIST ========================== --}}
+        <div class="mt-6">
+            <h3 class="text-lg font-semibold mb-3 text-gray-700">Acquisition List</h3>
+            <div class="overflow-x-auto">
                 <table class="w-full border text-sm">
                     <thead class="bg-gray-100">
                         <tr>
-                            <th class="border px-3 py-2 text-left w-48">Level</th>
-                            <th class="border text-center">K</th>
-                            <th class="border text-center">1</th>
-                            <th class="border text-center">2</th>
-                            <th class="border text-center">3</th>
-                            <th class="border text-center">4</th>
-                            <th class="border text-center">5</th>
-                            <th class="border text-center">6</th>
+                            <th class="border px-2 py-1">Source</th>
+                            <th class="border px-2 py-1">Date</th>
+                            <th class="border px-2 py-1">Cost</th>
+                            <th class="border px-2 py-1">IAR</th>
+                            <th class="border px-2 py-1">Remarks</th>
+                            <th class="border px-2 py-1">Usable</th>
+                            <th class="border px-2 py-1">PD</th>
+                            <th class="border px-2 py-1">Damaged</th>
+                            <th class="border px-2 py-1">Lost</th>
+                            <th class="border px-2 py-1">Cond.</th>
+                            <th class="border px-2 py-1">Total</th>
+                            <th class="border px-2 py-1">Actions</th>
                         </tr>
                     </thead>
-                    <tbody>
-                        <tr>
-                            <td class="border px-3 py-2">Assigned to Level</td>
-                            @for ($i = 0; $i <= 6; $i++)
-                                <td class="border text-center">
-                                    <input type="checkbox" name="levels[primary][{{ $i }}]">
-                                </td>
-                            @endfor
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
-
-            <!-- SECONDARY -->
-            <div class="tab-content hidden" id="secondary">
-                <table class="w-full border text-sm">
-                    <thead class="bg-gray-100">
-                        <tr>
-                            <th class="border px-3 py-2 text-left w-48">Level</th>
-                            <th class="border text-center">7</th>
-                            <th class="border text-center">8</th>
-                            <th class="border text-center">9</th>
-                            <th class="border text-center">10</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr>
-                            <td class="border px-3 py-2">Assigned to Level</td>
-                            @for ($i = 7; $i <= 10; $i++)
-                                <td class="border text-center">
-                                    <input type="checkbox" name="levels[secondary][{{ $i }}]">
-                                </td>
-                            @endfor
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
-
-            <!-- SENIOR HIGH -->
-            <div class="tab-content hidden" id="sh">
-                <table class="w-full border text-sm">
-                    <thead class="bg-gray-100">
-                        <tr>
-                            <th class="border px-3 py-2 text-left w-48">Level</th>
-                            <th class="border text-center">11</th>
-                            <th class="border text-center">12</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr>
-                            <td class="border px-3 py-2">Assigned to Level</td>
-                            @for ($i = 11; $i <= 12; $i++)
-                                <td class="border text-center">
-                                    <input type="checkbox" name="levels[sh][{{ $i }}]">
-                                </td>
-                            @endfor
-                        </tr>
+                    <tbody id="nonprintAcquisitionTableBody">
+                        <tr><td colspan="12" class="text-center text-gray-400 py-3">No acquisitions added</td></tr>
                     </tbody>
                 </table>
             </div>
         </div>
-    </div>
 
-    {{-- =========================
-        3RD GROUP (ACQUISITION & CONDITION)
-    ========================== --}}
-    <div class="bg-gray-50 border rounded-xl p-6 space-y-6">
-
-        <h3 class="text-lg font-semibold text-gray-700">
-            Acquisition & Condition Details
-        </h3>
-
-        <div class="flex justify-end">
-            <button type="button"
-                    id="addAcquisitionBtn"
-                    class="px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-700">
-                ➕ Add Acquisition
-            </button>
-        </div>
-
-        <!-- Remarks (per acquisition) -->
-        <div>
-            <label class="block text-sm font-medium mb-1">
-                Remarks <span class="text-xs text-gray-500">(will be saved with each acquisition)</span>
-            </label>
-            <textarea name="remarks" rows="4" class="w-full border rounded px-3 py-2"
-                      placeholder="Any notes, specifications, condition details, or special remarks for this batch..."></textarea>
-        </div>
-
-        <!-- TOP ROW -->
-        <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <div>
-                <label class="block text-sm font-medium mb-1">Source</label>
-                <select id="source" name="source" class="w-full border rounded px-3 py-2">
-                    <option value="" selected disabled>Select source</option>
-                    <option value="DepEd">DepEd</option>
-                    <option value="Donation">Donation</option>
-                    <option value="Purchased">Purchased</option>
-                </select>
-            </div>
-
-            <div>
-                <label class="block text-sm font-medium mb-1">Date Acquired</label>
-                <input type="date" name="date_acquired" class="w-full border rounded px-3 py-2">
-            </div>
-
-            <div>
-                <label class="block text-sm font-medium mb-1">Cost</label>
-                <input type="number" step="0.01" name="cost" class="w-full border rounded px-3 py-2">
-            </div>
-
-            <div>
-                <label class="block text-sm font-medium mb-1">IAR / Property No.</label>
-                <input type="text" name="iar" class="w-full border rounded px-3 py-2">
-            </div>
-        </div>
-
-        <!-- CONDITION QUANTITY -->
-        <div>
-            <h4 class="text-sm font-semibold mb-3 text-gray-600">
-                Condition & Quantity
-            </h4>
-
-            <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
-                <div>
-                    <label class="block text-xs mb-1">Working / Usable</label>
-                    <input type="number" name="usable" value="0" min="0" class="qty w-full border rounded px-3 py-2">
-                </div>
-
-                <div>
-                    <label class="block text-xs mb-1">Needs Repair</label>
-                    <input type="number" name="needs_repair" value="0" min="0" class="qty w-full border rounded px-3 py-2">
-                </div>
-
-                <div>
-                    <label class="block text-xs mb-1">Damaged</label>
-                    <input type="number" name="damaged" value="0" min="0" class="qty w-full border rounded px-3 py-2">
-                </div>
-
-                <div>
-                    <label class="block text-xs mb-1">Lost / Missing</label>
-                    <input type="number" name="lost" value="0" min="0" class="qty w-full border rounded px-3 py-2">
-                </div>
-
-                <div>
-                    <label class="block text-xs mb-1">Condemnable</label>
-                    <input type="number" name="condemnable" value="0" min="0" class="qty w-full border rounded px-3 py-2">
-                </div>
-
-                <div class="md:col-span-1 lg:col-span-1">
-                    <label class="block text-xs mb-1">Total Quantity</label>
-                    <input type="number" name="total_quantity" id="totalQuantity" readonly
-                           class="w-full bg-gray-100 border rounded px-3 py-2 font-semibold">
-                </div>
-            </div>
-        </div>
-    </div>
-
-    {{-- =========================
-        ACQUISITION LIST - Shows Remarks
-    ========================== --}}
-    <div class="mt-6">
-        <h3 class="text-lg font-semibold mb-3 text-gray-700">Acquisition List</h3>
-        <div class="overflow-x-auto">
-            <table class="w-full border text-sm">
-                <thead class="bg-gray-100">
-                    <tr>
-                        <th class="border px-2 py-1">Source</th>
-                        <th class="border px-2 py-1">Date</th>
-                        <th class="border px-2 py-1">Cost</th>
-                        <th class="border px-2 py-1">IAR / Prop No.</th>
-                        <th class="border px-2 py-1">Remarks</th>
-                        <th class="border px-2 py-1">Usable</th>
-                        <th class="border px-2 py-1">Repair</th>
-                        <th class="border px-2 py-1">Damaged</th>
-                        <th class="border px-2 py-1">Lost</th>
-                        <th class="border px-2 py-1">Cond.</th>
-                        <th class="border px-2 py-1">Total</th>
-                        <th class="border px-2 py-1">Actions</th>
-                    </tr>
-                </thead>
-                <tbody id="acquisitionTableBody">
-                    <tr><td colspan="12" class="text-center text-gray-400 py-3">No acquisitions added</td></tr>
-                </tbody>
-            </table>
-        </div>
-    </div>
-
-    <input type="hidden" name="acquisitions" id="acquisitionsInput">
+        <input type="hidden" name="acquisitions" id="nonprintAcquisitionsInput">
 
     <!-- SUBMIT -->
-    <div class="flex justify-end mt-8">
+    <div class="flex justify-end">
         <button class="px-6 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">
             Save Non-Print Resource
         </button>
@@ -333,106 +341,134 @@
 <!-- JavaScript -->
 <script>
     document.addEventListener('DOMContentLoaded', () => {
-        const form = document.getElementById('nonprint');
+        const form = document.getElementById('nonprintForm');
+        if (!form) return;
 
-        // IMAGE PREVIEW
-        const imageUpload = form.querySelector('#imageUpload');
-        const imagePreview = form.querySelector('#imagePreview');
+        // ── IMAGE PREVIEW ───────────────────────────────────────
+        const imageUpload = form.querySelector('#nonprintImageUpload');
+        const imagePreview = form.querySelector('#nonprintImagePreview');
 
-        imageUpload.addEventListener('change', (event) => {
+        imageUpload?.addEventListener('change', (event) => {
             const file = event.target.files[0];
-            if (file) {
-                if (!file.type.startsWith('image/')) {
-                    alert('Please select a valid image file.');
-                    return;
-                }
-                if (file.size > 5 * 1024 * 1024) {
-                    alert('Image size must be less than 5MB.');
-                    return;
-                }
-                const reader = new FileReader();
-                reader.onload = (e) => imagePreview.src = e.target.result;
-                reader.readAsDataURL(file);
+            if (!file) return;
+
+            if (!file.type.startsWith('image/')) {
+                alert('Please select a valid image file.');
+                return;
             }
+            if (file.size > 5 * 1024 * 1024) {
+                alert('Image size must be less than 5MB.');
+                event.target.value = '';
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                imagePreview.src = e.target.result;
+            };
+            reader.readAsDataURL(file);
         });
 
-        // TABS
+        // ── TABS ─────────────────────────────────────────────────
         const tabs = form.querySelectorAll('.tab-btn');
-        tabs.forEach(tab => {
-            tab.addEventListener('click', () => {
-                tabs.forEach(t => {
-                    t.classList.remove('border-b-2', 'border-blue-600', 'text-blue-600');
-                    t.classList.add('text-gray-600');
-                });
-                form.querySelectorAll('.tab-content').forEach(c => c.classList.add('hidden'));
-                tab.classList.add('border-b-2', 'border-blue-600', 'text-blue-600');
-                form.querySelector(`#${tab.dataset.tab}`).classList.remove('hidden');
+        const contents = form.querySelectorAll('.tab-content');
+
+        function activateTab(tab) {
+            tabs.forEach(t => {
+                t.classList.remove('border-blue-600', 'text-blue-600', 'active');
+                t.classList.add('text-gray-600');
             });
+
+            contents.forEach(c => c.classList.add('hidden'));
+
+            tab.classList.add('border-blue-600', 'text-blue-600', 'active');
+            tab.classList.remove('text-gray-600');
+
+            const target = form.querySelector(`#${tab.dataset.tab}`);
+            target?.classList.remove('hidden');
+        }
+
+        if (tabs.length > 0) {
+            activateTab(tabs[0]);
+        }
+
+        tabs.forEach(tab => {
+            tab.addEventListener('click', () => activateTab(tab));
         });
 
-        // QUANTITY TOTAL CALCULATION
+        // ── QUANTITY CALCULATION ─────────────────────────────────
         const qtyInputs = form.querySelectorAll('.qty');
-        const totalField = form.querySelector('#totalQuantity');
+        const totalField = form.querySelector('#nonprintTotalQuantity');
+
         const calculateTotal = () => {
             let total = 0;
-            qtyInputs.forEach(input => total += parseInt(input.value) || 0);
-            totalField.value = total;
+            qtyInputs.forEach(input => {
+                total += parseInt(input.value) || 0;
+            });
+            if (totalField) totalField.value = total;
         };
+
         qtyInputs.forEach(input => input.addEventListener('input', calculateTotal));
 
-        // ACQUISITIONS MANAGEMENT
-        let acquisitions = [];
-        let editIndex = null;
+        // ── ACQUISITIONS MANAGEMENT (Non-Print version) ───────────
+        let nonprintAcquisitions = [];
+        let nonprintEditIndex = null;
 
-        const fields = {
+        const npFields = {
             source: () => form.querySelector('[name="source"]').value,
             date_acquired: () => form.querySelector('[name="date_acquired"]').value,
             cost: () => form.querySelector('[name="cost"]').value,
             iar: () => form.querySelector('[name="iar"]').value,
             remarks: () => form.querySelector('[name="remarks"]').value.trim(),
             usable: () => form.querySelector('[name="usable"]').value,
-            needs_repair: () => form.querySelector('[name="needs_repair"]').value,
+            partially_damaged: () => form.querySelector('[name="partially_damaged"]').value,
             damaged: () => form.querySelector('[name="damaged"]').value,
             lost: () => form.querySelector('[name="lost"]').value,
             condemnable: () => form.querySelector('[name="condemnable"]').value,
-            total_quantity: () => totalField.value,
+            total_quantity: () => form.querySelector('#nonprintTotalQuantity').value,
         };
 
-        const acquisitionTableBody = form.querySelector('#acquisitionTableBody');
-        const acquisitionsInput = form.querySelector('#acquisitionsInput');
+        const acquisitionTableBody = form.querySelector('#nonprintAcquisitionTableBody');
+        const acquisitionsInput = form.querySelector('#nonprintAcquisitionsInput');
 
-        const renderAcquisitions = () => {
+        const renderNonPrintAcquisitions = () => {
+            if (!acquisitionTableBody) return;
+
             acquisitionTableBody.innerHTML = '';
-            if (acquisitions.length === 0) {
+            if (nonprintAcquisitions.length === 0) {
                 acquisitionTableBody.innerHTML = `<tr><td colspan="12" class="text-center text-gray-400 py-3">No acquisitions added</td></tr>`;
                 return;
             }
 
-            acquisitions.forEach((a, index) => {
-                const shortRemark = a.remarks.length > 40 ? a.remarks.substring(0, 37) + '...' : (a.remarks || '-');
+            nonprintAcquisitions.forEach((a, index) => {
+                const shortRemark = a.remarks?.length > 40 ? a.remarks.substring(0, 37) + '...' : (a.remarks || '-');
                 acquisitionTableBody.innerHTML += `
                     <tr>
-                        <td class="border px-2 py-1">${a.source}</td>
-                        <td class="border px-2 py-1">${a.date_acquired}</td>
+                        <td class="border px-2 py-1">${a.source || ''}</td>
+                        <td class="border px-2 py-1">${a.date_acquired || ''}</td>
                         <td class="border px-2 py-1">${a.cost || ''}</td>
                         <td class="border px-2 py-1">${a.iar || ''}</td>
                         <td class="border px-2 py-1 text-xs">${shortRemark}</td>
-                        <td class="border px-2 py-1">${a.usable}</td>
-                        <td class="border px-2 py-1">${a.needs_repair || 0}</td>
-                        <td class="border px-2 py-1">${a.damaged}</td>
-                        <td class="border px-2 py-1">${a.lost}</td>
-                        <td class="border px-2 py-1">${a.condemnable}</td>
-                        <td class="border px-2 py-1 font-semibold">${a.total_quantity}</td>
+                        <td class="border px-2 py-1">${a.usable || 0}</td>
+                        <td class="border px-2 py-1">${a.partially_damaged || 0}</td>
+                        <td class="border px-2 py-1">${a.damaged || 0}</td>
+                        <td class="border px-2 py-1">${a.lost || 0}</td>
+                        <td class="border px-2 py-1">${a.condemnable || 0}</td>
+                        <td class="border px-2 py-1 font-semibold">${a.total_quantity || 0}</td>
                         <td class="border px-2 py-1 text-center">
                             <div class="flex justify-center gap-2">
-                                <button type="button" onclick="editNonPrintAcquisition(${index})" class="p-1 rounded hover:bg-blue-100 text-blue-600" title="Edit">
+                                <button type="button" onclick="editNonPrintAcquisition(${index})"
+                                    class="p-1 rounded hover:bg-blue-100 text-blue-600" title="Edit">
+                                    <!-- edit svg ... -->
                                     <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                                         <path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.687a1.875 1.875 0 112.652 2.652L7.5 19.153 3 21l1.847-4.5L16.862 4.487z"/>
                                     </svg>
                                 </button>
-                                <button type="button" onclick="deleteNonPrintAcquisition(${index})" class="p-1 rounded hover:bg-red-100 text-red-600" title="Delete">
+                                <button type="button" onclick="deleteNonPrintAcquisition(${index})"
+                                    class="p-1 rounded hover:bg-red-100 text-red-600" title="Delete">
+                                    <!-- delete svg ... -->
                                     <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                                        <path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862 a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6 M9 7h6m2 0H7m3-3h4a1 1 0 011 1v1H9V5a1 1 0 011-1z"/>
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6M9 7h6m2 0H7m3-3h4a1 1 0 011 1v1H9V5a1 1 0 011-1z"/>
                                     </svg>
                                 </button>
                             </div>
@@ -441,23 +477,20 @@
             });
         };
 
-        const resetAcquisitionForm = () => {
-            form.querySelector('[name="source"]').value = '';
-            form.querySelector('[name="date_acquired"]').value = '';
-            form.querySelector('[name="cost"]').value = '';
-            form.querySelector('[name="iar"]').value = '';
-            form.querySelector('[name="remarks"]').value = '';
-            form.querySelector('[name="usable"]').value = 0;
-            form.querySelector('[name="needs_repair"]').value = 0;
-            form.querySelector('[name="damaged"]').value = 0;
-            form.querySelector('[name="lost"]').value = 0;
-            form.querySelector('[name="condemnable"]').value = 0;
-            totalField.value = 0;
+        const resetNonPrintAcquisitionForm = () => {
+            ['remarks','source','date_acquired','cost','iar','usable','partially_damaged','damaged','lost','condemnable']
+                .forEach(name => {
+                    const el = form.querySelector(`[name="${name}"]`);
+                    if (el) el.value = name.includes('damaged') || name.includes('lost') ? '0' : '';
+                });
+            calculateTotal();
         };
 
-        form.querySelector('#addAcquisitionBtn').addEventListener('click', () => {
+        form.querySelector('#addNonPrintAcquisitionBtn')?.addEventListener('click', () => {
             const acquisition = {};
-            for (const key in fields) acquisition[key] = fields[key]();
+            for (const key in npFields) {
+                acquisition[key] = npFields[key]();
+            }
 
             if (!acquisition.source || !acquisition.date_acquired) {
                 alert('Source and Date Acquired are required.');
@@ -468,43 +501,47 @@
                 return;
             }
 
-            if (editIndex !== null) {
-                acquisitions[editIndex] = acquisition;
-                editIndex = null;
+            if (nonprintEditIndex !== null) {
+                nonprintAcquisitions[nonprintEditIndex] = acquisition;
+                nonprintEditIndex = null;
             } else {
-                acquisitions.push(acquisition);
+                nonprintAcquisitions.push(acquisition);
             }
 
-            renderAcquisitions();
-            resetAcquisitionForm();
+            renderNonPrintAcquisitions();
+            resetNonPrintAcquisitionForm();
         });
 
+        // Expose functions with unique names (avoid global pollution)
         window.editNonPrintAcquisition = (index) => {
-            const a = acquisitions[index];
-            editIndex = index;
-            form.querySelector('[name="source"]').value = a.source;
-            form.querySelector('[name="date_acquired"]').value = a.date_acquired;
-            form.querySelector('[name="cost"]').value = a.cost || '';
-            form.querySelector('[name="iar"]').value = a.iar || '';
-            form.querySelector('[name="remarks"]').value = a.remarks || '';
-            form.querySelector('[name="usable"]').value = a.usable;
-            form.querySelector('[name="needs_repair"]').value = a.needs_repair || 0;
-            form.querySelector('[name="damaged"]').value = a.damaged;
-            form.querySelector('[name="lost"]').value = a.lost;
-            form.querySelector('[name="condemnable"]').value = a.condemnable;
+            const item = nonprintAcquisitions[index];
+            if (!item) return;
+
+            nonprintEditIndex = index;
+
+            Object.keys(npFields).forEach(key => {
+                const el = form.querySelector(`[name="${key}"]`);
+                if (el) el.value = item[key] ?? (key.includes('damaged') || key.includes('lost') ? '0' : '');
+            });
+
             calculateTotal();
-            form.querySelector('[name="source"]').scrollIntoView({ behavior: 'smooth' });
+            form.querySelector('[name="source"]')?.scrollIntoView({ behavior: 'smooth' });
         };
 
         window.deleteNonPrintAcquisition = (index) => {
-            if (confirm('Delete this acquisition?')) {
-                acquisitions.splice(index, 1);
-                renderAcquisitions();
-            }
+            if (!confirm('Delete this acquisition?')) return;
+            nonprintAcquisitions.splice(index, 1);
+            renderNonPrintAcquisitions();
         };
 
+        // Submit handler
         form.addEventListener('submit', () => {
-            acquisitionsInput.value = JSON.stringify(acquisitions);
+            if (acquisitionsInput) {
+                acquisitionsInput.value = JSON.stringify(nonprintAcquisitions);
+            }
         });
+
+        // Initial render
+        renderNonPrintAcquisitions();
     });
 </script>
