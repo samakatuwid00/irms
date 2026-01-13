@@ -164,7 +164,7 @@
         if (resource.subjects && resource.subjects.length > 0) {
             subjectsContainer.innerHTML = resource.subjects.map(item =>
                 `<span class="inline-block bg-blue-100 text-blue-800 text-xs font-medium px-3 py-1 rounded-full mr-2 mb-2">
-                    ${item.subject} - Grade ${item.grade}
+                    ${item.subject} - ${item.grade}
                 </span>`
             ).join('');
         } else {

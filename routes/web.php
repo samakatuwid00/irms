@@ -91,3 +91,4 @@ Route::post('/add-nonprint-resources', [AddResourceController::class, 'addNonPri
 
 Route::get('/edit-resource/{id}', [EditResourceController::class, 'index'])->name('edit-resource');
 Route::put('/update-print-resource/{id}', [EditResourceController::class, 'updatePrintResource'])->name('update-print-resource');
+Route::put('/update-nonprint-resource/{id}', [EditResourceController::class, 'updateNonPrintResource'])->name('update-nonprint-resource');

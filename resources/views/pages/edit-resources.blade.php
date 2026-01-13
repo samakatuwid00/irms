@@ -18,27 +18,27 @@
             <!-- Tabs -->
             <div class="flex border-b border-gray-200 mb-6">
                 <button type="button"
-                        class="resource-tab-btn px-6 py-3 text-sm font-medium border-b-2 transition-colors
-                               border-blue-600 text-blue-600"
-                        data-tab="print">
+                        class="resource-tab-btn px-6 py-3 text-sm font-medium border-b-2 transition-colors"
+                        data-tab="print"
+                        id="print-tab">
                     Print Resource
                 </button>
                 <button type="button"
-                        class="resource-tab-btn px-6 py-3 text-sm font-medium border-b-2 border-transparent
-                               text-gray-600 hover:text-blue-600 hover:border-gray-300"
-                        data-tab="nonprint">
+                        class="resource-tab-btn px-6 py-3 text-sm font-medium border-b-2 transition-colors"
+                        data-tab="nonprint"
+                        id="nonprint-tab">
                     Non-Print Resource
                 </button>
             </div>
 
             <!-- Forms Container -->
             <div>
-                <!-- Print Resource Form (Visible by default) -->
-                <div id="print-form">
+                <!-- Print Resource Form -->
+                <div id="print-form" class="hidden">
                     @include('pages.components.edit-print-resource')
                 </div>
 
-                <!-- Non-Print Resource Form (Hidden by default) -->
+                <!-- Non-Print Resource Form -->
                 <div id="nonprint-form" class="hidden">
                     @include('pages.components.edit-nonprint-resource')
                 </div>
@@ -51,31 +51,74 @@
             const tabButtons = document.querySelectorAll('.resource-tab-btn');
             const printForm = document.getElementById('print-form');
             const nonprintForm = document.getElementById('nonprint-form');
+            const printTab = document.getElementById('print-tab');
+            const nonprintTab = document.getElementById('nonprint-tab');
 
+            // Get current resource ID from URL
+            const resourceId = '{{ $printResource->id ?? $nonprintResource->id ?? "" }}';
+            const storageKey = `activeResourceTab_${resourceId}`;
+
+            // Function to activate a specific tab
+            function activateTab(tabType) {
+                // Reset all tabs
+                tabButtons.forEach(b => {
+                    b.classList.remove('border-blue-600', 'text-blue-600');
+                    b.classList.add('border-transparent', 'text-gray-600', 'hover:text-blue-600', 'hover:border-gray-300');
+                });
+
+                // Hide all forms
+                printForm.classList.add('hidden');
+                nonprintForm.classList.add('hidden');
+
+                // Activate the selected tab
+                if (tabType === 'nonprint') {
+                    nonprintTab.classList.remove('border-transparent', 'text-gray-600', 'hover:text-blue-600', 'hover:border-gray-300');
+                    nonprintTab.classList.add('border-blue-600', 'text-blue-600');
+                    nonprintForm.classList.remove('hidden');
+                    // Store active tab in localStorage with resource ID
+                    sessionStorage.setItem(storageKey, 'nonprint');
+                } else {
+                    printTab.classList.remove('border-transparent', 'text-gray-600', 'hover:text-blue-600', 'hover:border-gray-300');
+                    printTab.classList.add('border-blue-600', 'text-blue-600');
+                    printForm.classList.remove('hidden');
+                    // Store active tab in localStorage with resource ID
+                    sessionStorage.setItem(storageKey, 'print');
+                }
+            }
+
+            // Tab click handlers
             tabButtons.forEach(btn => {
                 btn.addEventListener('click', () => {
-                    // Update active tab styling
-                    tabButtons.forEach(b => {
-                        b.classList.remove('border-blue-600', 'text-blue-600');
-                        b.classList.add('border-transparent', 'text-gray-600', 'hover:text-blue-600', 'hover:border-gray-300');
-                    });
-                    btn.classList.remove('border-transparent', 'text-gray-600', 'hover:text-blue-600', 'hover:border-gray-300');
-                    btn.classList.add('border-blue-600', 'text-blue-600');
-
-                    // Show/hide forms
-                    if (btn.dataset.tab === 'print') {
-                        printForm.classList.remove('hidden');
-                        nonprintForm.classList.add('hidden');
-                    } else {
-                        nonprintForm.classList.remove('hidden');
-                        printForm.classList.add('hidden');
-                    }
+                    activateTab(btn.dataset.tab);
                 });
             });
 
-            // Ensure Print is default on load (already set in HTML, but reinforce)
-            printForm.classList.remove('hidden');
-            nonprintForm.classList.add('hidden');
+            // Check URL parameter first, then sessionStorage for this specific resource, then resource availability
+            const urlParams = new URLSearchParams(window.location.search);
+            const tabParam = urlParams.get('tab');
+            const storedTab = sessionStorage.getItem(storageKey);
+            const hasPrintResource = {{ $printResource ? 'true' : 'false' }};
+            const hasNonprintResource = {{ $nonprintResource ? 'true' : 'false' }};
+
+            // Determine which tab to show
+            let initialTab = 'print'; // default
+
+            if (tabParam && (tabParam === 'print' || tabParam === 'nonprint')) {
+                // URL parameter takes highest priority
+                initialTab = tabParam;
+            } else if (storedTab && (storedTab === 'print' || storedTab === 'nonprint')) {
+                // Use stored tab if available for this specific resource
+                initialTab = storedTab;
+            } else if (!hasPrintResource && hasNonprintResource) {
+                // If only nonprint resource exists, show nonprint tab
+                initialTab = 'nonprint';
+            } else if (hasPrintResource && !hasNonprintResource) {
+                // If only print resource exists, show print tab
+                initialTab = 'print';
+            }
+
+            // Activate the determined tab
+            activateTab(initialTab);
         });
     </script>
 @endsection
