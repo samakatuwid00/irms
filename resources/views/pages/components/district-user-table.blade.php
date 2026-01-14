@@ -75,7 +75,7 @@
                             <td class="px-4 py-3">{{ $user->username }}</td>
                             <td class="px-4 py-3">{{ $user->email }}</td>
                             <td class="px-4 py-3">{{ $user->usertype_name }}</td>
-                            <td class="px-4 py-3">{{ $user->station?->station_name ?? '-' }}</td>
+                            <td class="px-4 py-3">{{ $user->station_name ?? '-' }}</td>
                             <td class="px-4 py-3">
                                 <span class="px-2 py-1 rounded-full text-xs
                                     {{ $user->status === 'active' ? 'bg-green-100 text-green-700' : ($user->status === 'pending' ? 'bg-yellow-100 text-yellow-700' : 'bg-gray-200 text-gray-700') }}">

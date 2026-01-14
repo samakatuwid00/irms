@@ -42,11 +42,14 @@ class User extends Authenticatable
 
     protected $casts = [
         'birthday' => 'date',
+        'id' => 'string'
     ];
 
     protected $appends = [
         'usertype_name',
-        'usertype_level'
+        'usertype_level',
+        'station',
+        'station_name'
     ];
 
 
@@ -93,5 +96,55 @@ class User extends Authenticatable
     public function logs(): HasMany
     {
         return $this->hasMany(Log::class, 'user_id');
+    }
+
+    public function regionStation(): BelongsTo
+    {
+        return $this->belongsTo(Region::class, 'station_id');
+    }
+
+    public function divisionStation(): BelongsTo
+    {
+        return $this->belongsTo(Division::class, 'station_id');
+    }
+
+    public function districtStation(): BelongsTo
+    {
+        return $this->belongsTo(District::class, 'station_id');
+    }
+
+    public function schoolStation(): BelongsTo
+    {
+        return $this->belongsTo(School::class, 'station_id');
+    }
+    // Accessor for the station model (based on level)
+    public function getStationAttribute()
+    {
+        $level = $this->usertype_level;
+        return match ($level) {
+            4 => $this->regionStation,
+            3 => $this->divisionStation,
+            2 => $this->districtStation,
+            1 => $this->schoolStation,
+            default => null,
+        };
+    }
+
+    // Accessor for the station name (handles different name fields per model)
+    public function getStationNameAttribute(): ?string
+    {
+        $station = $this->station;
+        if (!$station) {
+            return null;
+        }
+
+        $level = $this->usertype_level;
+        return match ($level) {
+            4 => $station->region_name,
+            3 => $station->division_name,
+            2 => $station->district_name,
+            1 => $station->school_name,
+            default => null,
+        };
     }
 }

@@ -322,7 +322,7 @@
 <script>
     document.addEventListener('DOMContentLoaded', () => {
         const form = document.getElementById('nonprint-edit');
-        if (!form) return; // Exit if form not found
+        if (!form) return;
 
         // IMAGE PREVIEW
         const imageUploadNP = form.querySelector('#imageUploadNP');
