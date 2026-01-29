@@ -79,7 +79,7 @@
                         </div>
 
                          {{-- Hidden input (stores array)  --}}
-                        <input type="hidden" name="authors" id="authors-hidden">
+                        <input type="hidden" name="authors" id="authors-hidden" required readonly>
                     </div>
 
                     <div>
@@ -93,7 +93,7 @@
                     <div class="space-y-4">
                         <div>
                             <label class="block text-sm mb-1">Type</label>
-                                <select name="type" class="w-full border rounded px-3 py-2">
+                                <select name="type" class="w-full border rounded px-3 py-2" required>
                                     <option selected disabled>Select type</option>
 
                                     @foreach ($printTypes as $type)
@@ -301,7 +301,7 @@
                     </div>
                 </div>
 
-                <!-- CONDITION QUANTITY (unchanged) -->
+                <!-- CONDITION QUANTITY -->
                 <div>
                     <h4 class="text-sm font-semibold mb-3 text-gray-600">Condition & Quantity</h4>
                     <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4">

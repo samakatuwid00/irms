@@ -5,6 +5,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 use App\Models\{
     SubjectGradeLevel,
     PrintType,
@@ -133,6 +134,7 @@ class EditResourceController extends BaseController
             'library_id' => 'required|string|max:36',
             'subject_grade_levels' => 'nullable|array',
             'acquisitions' => 'required|string',
+            'image' => 'nullable|image|mimes:jpeg,png,jpg|max:5120', // 5MB max
         ]);
 
         DB::transaction(function () use ($request, $id) {
@@ -179,6 +181,21 @@ class EditResourceController extends BaseController
             }
 
             // ==============================
+            // STEP 2.5: HANDLE IMAGE UPLOAD
+            // ==============================
+            $coverPath = $printResource->cover; // Keep existing cover by default
+
+            if ($request->hasFile('image')) {
+                // Delete old cover if it exists
+                if ($printResource->cover && Storage::disk('public')->exists($printResource->cover)) {
+                    Storage::disk('public')->delete($printResource->cover);
+                }
+
+                // Upload new cover
+                $coverPath = $this->handleImageUpload($request->file('image'), $titleName);
+            }
+
+            // ==============================
             // STEP 3: UPDATE PRINT RESOURCE
             // ==============================
             $gradeLevelIds = $request->subject_grade_levels
@@ -198,6 +215,7 @@ class EditResourceController extends BaseController
                 'isbn' => $request->isbn,
                 'subject_grade_level_ids' => $gradeLevelIds,
                 'library_id' => $request->library_id,
+                'cover' => $coverPath,
             ]);
 
             // ==============================
@@ -245,7 +263,7 @@ class EditResourceController extends BaseController
                     ]);
 
                     // Update masterlist based on quantity changes
-                    $this->updateMasterlist($acquisition, $oldQuantities, [
+                    $this->updatePrintMasterlist($acquisition, $oldQuantities, [
                         'usable' => (int) ($a['usable'] ?? 0),
                         'partially_damaged' => (int) ($a['partially_damaged'] ?? 0),
                         'damaged' => (int) ($a['damaged'] ?? 0),
@@ -307,14 +325,14 @@ class EditResourceController extends BaseController
         });
 
         return redirect()
-            ->route('edit-resource', ['id' => $id, 'tab' => 'print'])
+            ->route('edit-resource', ['id' => $id])
             ->with('success', 'Print resource successfully updated.');
-        }
+    }
 
     /**
-     * Update masterlist entries based on quantity changes
+     * Update print masterlist entries based on quantity changes
      */
-    private function updateMasterlist($acquisition, $oldQuantities, $newQuantities, $statusMap)
+    private function updatePrintMasterlist($acquisition, $oldQuantities, $newQuantities, $statusMap)
     {
         foreach ($statusMap as $field => $statusName) {
             $oldQty = (int) $oldQuantities[$field];
@@ -345,17 +363,17 @@ class EditResourceController extends BaseController
         }
     }
 
-    public function updateNonprintResource(Request $request, $id)
+    public function updateNonPrintResource(Request $request, $id)
     {
         $request->validate([
             'nonprintTitle' => 'required|string|max:255',
             'typeNP' => 'required|exists:nonprint_types,id',
             'brand' => 'nullable|string|max:255',
-            'code' => 'nullable|string|max:100',
-            'version' => 'nullable|string|max:100',
-            'model' => 'nullable|string|max:100',
-            'url' => 'nullable|url|max:500',
-            'size' => 'nullable|string|max:100',
+            'code' => 'nullable|string|max:255',
+            'version' => 'nullable|string|max:255',
+            'model' => 'nullable|string|max:255',
+            'url' => 'nullable|string|max:255',
+            'size' => 'nullable|string|max:255',
             'library_idNP' => 'required|string|max:36',
             'subject_grade_levels' => 'nullable|array',
             'acquisitions' => 'required|string',
@@ -559,5 +577,30 @@ class EditResourceController extends BaseController
             }
             // If diff == 0, no changes needed for this status
         }
+    }
+
+    private function handleImageUpload($image, $title)
+    {
+        // Create a safe filename from the title
+        $baseFileName = Str::slug($title);
+        $extension = $image->getClientOriginalExtension();
+        $fileName = $baseFileName . '.' . $extension;
+
+        // Define the storage path
+        $storagePath = 'print_cover';
+        $fullPath = $storagePath . '/' . $fileName;
+
+        // Check if file already exists, if so, append a counter
+        $counter = 1;
+        while (Storage::disk('public')->exists($fullPath)) {
+            $fileName = $baseFileName . '_' . $counter . '.' . $extension;
+            $fullPath = $storagePath . '/' . $fileName;
+            $counter++;
+        }
+
+        // Store the image
+        $image->storeAs($storagePath, $fileName, 'public');
+
+        return $fullPath;
     }
 }

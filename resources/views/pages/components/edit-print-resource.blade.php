@@ -15,7 +15,7 @@
 
                 <img
                     id="imagePreview"
-                    src="{{ $printResource->image ? asset('storage/' . $printResource->image) : asset('assets/images/default.jpg') }}"
+                    src="{{ $printResource->cover ? asset('storage/' . $printResource->cover) : asset('assets/images/default.jpg') }}"
                     alt="Image preview"
                     class="w-full flex-1 object-cover rounded mb-4"
                 >
@@ -138,32 +138,50 @@
         </div>
     </div>
 
-    {{-- ========================= SUBJECT–GRADE LEVEL MAPPING ========================== --}}
+{{-- ========================= SUBJECT–GRADE LEVEL MAPPING ========================== --}}
 
     @php
     $stages = [
         'S1' => [
             'tab' => 'stage1',
             'label' => 'Stage 1',
-            'grades' => [0 => 'K', 1 => '1', 2 => '2', 3 => '3'],
+            'grades' => [
+                0 => 'K',
+                1 => '1',
+                2 => '2',
+                3 => '3',
+            ],
         ],
         'ES' => [
             'tab' => 'stage2',
             'label' => 'Stage 2',
-            'grades' => [4 => '4', 5 => '5', 6 => '6'],
+            'grades' => [
+                4 => '4',
+                5 => '5',
+                6 => '6',
+            ],
         ],
         'JHS' => [
             'tab' => 'jhs',
             'label' => 'Junior High',
-            'grades' => [7 => '7', 8 => '8', 9 => '9', 10 => '10'],
+            'grades' => [
+                7 => '7',
+                8 => '8',
+                9 => '9',
+                10 => '10',
+            ],
         ],
         'SHS' => [
             'tab' => 'shs',
             'label' => 'Senior High',
-            'grades' => [11 => '11', 12 => '12'],
+            'grades' => [
+                11 => '11',
+                12 => '12',
+            ],
         ],
     ];
 
+    // Group data: [key_stage][subject_name][]
     $grouped = $subjectGradeLevels->groupBy(['key_stage', 'subject_name']);
     @endphp
 
@@ -191,9 +209,14 @@
                     <table class="w-full border text-sm">
                         <thead class="bg-gray-100">
                             <tr>
-                                <th class="border px-3 py-2 text-left w-72">Subject</th>
+                                <th class="border px-3 py-2 text-left w-72">
+                                    Subject
+                                </th>
+
                                 @foreach ($stage['grades'] as $gradeLabel)
-                                    <th class="border">{{ $gradeLabel }}</th>
+                                    <th class="border">
+                                        {{ $gradeLabel }}
+                                    </th>
                                 @endforeach
                             </tr>
                         </thead>
@@ -201,11 +224,14 @@
                         <tbody>
                             @foreach ($grouped[$stageKey] ?? [] as $subject => $rows)
                                 @php
+                                    // Map grade sort_order → subject_grade_level row
                                     $gradeMap = collect($rows)->keyBy('sort_order');
                                 @endphp
 
                                 <tr>
-                                    <td class="border px-3 py-2">{{ $subject }}</td>
+                                    <td class="border px-3 py-2">
+                                        {{ $subject }}
+                                    </td>
 
                                     @foreach ($stage['grades'] as $sortOrder => $label)
                                         <td class="border text-center">
@@ -229,142 +255,140 @@
         </div>
     </div>
 
-    {{-- ========================= ACQUISITION FORM ========================== --}}
+    {{-- ========================= 3RD GROUP (ACQUISITION & CONDITION) ========================== --}}
     <div class="bg-gray-50 border rounded-xl p-6 space-y-6">
-        <h3 class="text-lg font-semibold text-gray-700">Acquisition & Condition Details</h3>
+            <h3 class="text-lg font-semibold text-gray-700">
+                Acquisition & Condition Details
+            </h3>
 
-        <div class="flex justify-end">
-            <button type="button" id="addAcquisitionBtn"
-                    class="px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-700">
-                ➕ Add Acquisition
-            </button>
-        </div>
+            <div class="flex justify-end">
+                <button type="button" id="addAcquisitionBtn"
+                        class="px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-700">
+                    ➕ Add Acquisition
+                </button>
+            </div>
 
-        <!-- Remarks -->
-        <div>
-            <label class="block text-sm font-medium mb-1">
-                Remarks <span class="text-xs text-gray-500">(will be saved with each acquisition)</span>
-            </label>
-            <textarea name="remarks" rows="3" class="w-full border rounded px-3 py-2"
-                    placeholder="Any notes, condition details, or special remarks for this batch..."></textarea>
-        </div>
+            <!-- Remarks -->
+            <div>
+                <label class="block text-sm font-medium mb-1">
+                    Remarks <span class="text-xs text-gray-500">(will be saved with each acquisition)</span>
+                </label>
+                <textarea name="remarks" rows="3" class="w-full border rounded px-3 py-2"
+                        placeholder="Any notes, condition details, or special remarks for this batch..."></textarea>
+            </div>
 
-        <!-- TOP ROW -->
-        <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <div>
-                <label class="block text-sm font-medium mb-1">Source</label>
-                <select name="source" class="w-full border rounded px-3 py-2">
-                    <option value="" selected disabled>Select source</option>
-                    <option value="CO">DepEd - Central Office</option>
-                    <option value="RO">Regional Office</option>
-                    <option value="SDO">Schools Division Office</option>
-                    <option value="LOCAL">Locally Developed</option>
-                    <option value="DONATED">DONATED</option>
-                </select>
+            <!-- TOP ROW -->
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div>
+                    <label class="block text-sm font-medium mb-1">Source</label>
+                    <select id="source" name="source" class="w-full border rounded px-3 py-2">
+                        <option value="" selected disabled>Select source</option>
+                        <option value="CO">DepEd - Central Office</option>
+                        <option value="RO">Regional Office</option>
+                        <option value="SDO">Schools Division Office</option>
+                        <option value="LOCAL">Locally Developed</option>
+                        <option value="DONATED">DONATED</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium mb-1">Date Acquired</label>
+                    <input type="date" name="date_acquired" class="w-full border rounded px-3 py-2">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium mb-1">Cost</label>
+                    <input type="number" step="0.01" name="cost" class="w-full border rounded px-3 py-2">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium mb-1">IAR No.</label>
+                    <input type="text" name="iar" class="w-full border rounded px-3 py-2">
+                </div>
             </div>
-            <div>
-                <label class="block text-sm font-medium mb-1">Date Acquired</label>
-                <input type="date" name="date_acquired" class="w-full border rounded px-3 py-2">
-            </div>
-            <div>
-                <label class="block text-sm font-medium mb-1">Cost</label>
-                <input type="number" step="0.01" name="cost" class="w-full border rounded px-3 py-2">
-            </div>
-            <div>
-                <label class="block text-sm font-medium mb-1">IAR No.</label>
-                <input type="text" name="iar" class="w-full border rounded px-3 py-2">
-            </div>
-        </div>
 
-        <!-- CONDITION QUANTITY -->
-        <div>
-            <h4 class="text-sm font-semibold mb-3 text-gray-600">Condition & Quantity</h4>
-            <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4">
-                <div><label class="block text-xs mb-1">Usable</label><input type="number" name="usable" value="0" min="0" class="qty w-full border rounded px-3 py-2"></div>
-                <div><label class="block text-xs mb-1">Partially Damaged</label><input type="number" name="partially_damaged" value="0" min="0" class="qty w-full border rounded px-3 py-2"></div>
-                <div><label class="block text-xs mb-1">Damaged</label><input type="number" name="damaged" value="0" min="0" class="qty w-full border rounded px-3 py-2"></div>
-                <div><label class="block text-xs mb-1">Lost</label><input type="number" name="lost" value="0" min="0" class="qty w-full border rounded px-3 py-2"></div>
-                <div><label class="block text-xs mb-1">Condemnable</label><input type="number" name="condemnable" value="0" min="0" class="qty w-full border rounded px-3 py-2"></div>
-                <div class="md:col-span-2">
-                    <label class="block text-xs mb-1">Total Quantity</label>
-                    <input type="number" name="total_quantity" id="totalQuantity" readonly class="w-full bg-gray-100 border rounded px-3 py-2 font-semibold">
+            <!-- CONDITION QUANTITY -->
+            <div>
+                <h4 class="text-sm font-semibold mb-3 text-gray-600">Condition & Quantity</h4>
+                <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4">
+                    <div><label class="block text-xs mb-1">Usable</label><input type="number" name="usable" value="0" min="0" class="qty w-full border rounded px-3 py-2"></div>
+                    <div><label class="block text-xs mb-1">Partially Damaged</label><input type="number" name="partially_damaged" value="0" min="0" class="qty w-full border rounded px-3 py-2"></div>
+                    <div><label class="block text-xs mb-1">Damaged</label><input type="number" name="damaged" value="0" min="0" class="qty w-full border rounded px-3 py-2"></div>
+                    <div><label class="block text-xs mb-1">Lost</label><input type="number" name="lost" value="0" min="0" class="qty w-full border rounded px-3 py-2"></div>
+                    <div><label class="block text-xs mb-1">Condemnable</label><input type="number" name="condemnable" value="0" min="0" class="qty w-full border rounded px-3 py-2"></div>
+                    <div class="md:col-span-2">
+                        <label class="block text-xs mb-1">Total Quantity</label>
+                        <input type="number" name="total_quantity" id="totalQuantity" readonly class="w-full bg-gray-100 border rounded px-3 py-2 font-semibold">
+                    </div>
                 </div>
             </div>
         </div>
-    </div>
 
-    {{-- ========================= ACQUISITION LIST ========================== --}}
-    <div class="mt-6">
-        <h3 class="text-lg font-semibold mb-3 text-gray-700">Acquisition List</h3>
-        <div class="overflow-x-auto">
-            <table class="w-full border text-sm">
-                <thead class="bg-gray-100">
-                    <tr>
-                        <th class="border px-2 py-1">Source</th>
-                        <th class="border px-2 py-1">Date</th>
-                        <th class="border px-2 py-1">Cost</th>
-                        <th class="border px-2 py-1">IAR</th>
-                        <th class="border px-2 py-1">Remarks</th>
-                        <th class="border px-2 py-1">Usable</th>
-                        <th class="border px-2 py-1">PD</th>
-                        <th class="border px-2 py-1">Damaged</th>
-                        <th class="border px-2 py-1">Lost</th>
-                        <th class="border px-2 py-1">Cond.</th>
-                        <th class="border px-2 py-1">Total</th>
-                        <th class="border px-2 py-1">Actions</th>
-                    </tr>
-                </thead>
-                <tbody id="acquisitionTableBody">
-                    <tr><td colspan="12" class="text-center text-gray-400 py-3">No acquisitions added</td></tr>
-                </tbody>
-            </table>
+        {{-- =========================
+            ACQUISITION LIST
+        ========================== --}}
+        <div class="mt-6">
+            <h3 class="text-lg font-semibold mb-3 text-gray-700">Acquisition List</h3>
+            <div class="overflow-x-auto">
+                <table class="w-full border text-sm">
+                    <thead class="bg-gray-100">
+                        <tr>
+                            <th class="border px-2 py-1">Source</th>
+                            <th class="border px-2 py-1">Date</th>
+                            <th class="border px-2 py-1">Cost</th>
+                            <th class="border px-2 py-1">IAR</th>
+                            <th class="border px-2 py-1">Remarks</th>
+                            <th class="border px-2 py-1">Usable</th>
+                            <th class="border px-2 py-1">PD</th>
+                            <th class="border px-2 py-1">Damaged</th>
+                            <th class="border px-2 py-1">Lost</th>
+                            <th class="border px-2 py-1">Cond.</th>
+                            <th class="border px-2 py-1">Total</th>
+                            <th class="border px-2 py-1">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="acquisitionTableBody">
+                        <tr><td colspan="12" class="text-center text-gray-400 py-3">Loading acquisitions...</td></tr>
+                    </tbody>
+                </table>
+            </div>
         </div>
-    </div>
 
-    <input type="hidden" name="acquisitions" id="acquisitionsInput">
+        <input type="hidden" name="acquisitions" id="acquisitionsInput">
 
     <!-- SUBMIT -->
-    <div class="flex justify-end gap-4">
-        <a href="{{ url()->previous() }}" class="px-6 py-2 bg-gray-500 text-white rounded hover:bg-gray-600">
-            Cancel
-        </a>
-        <button type="submit" class="px-6 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">
+    <div class="flex justify-end">
+        <button class="px-6 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">
             Update Print Resource
         </button>
     </div>
 </form>
 
-<!-- JavaScript -->
+<!-- JavaScript for Image Preview and Form Logic -->
 <script>
     document.addEventListener('DOMContentLoaded', () => {
         const form = document.getElementById('print-edit');
-        if (!form) return; // Exit if form not found
 
         // IMAGE PREVIEW
         const imageUpload = form.querySelector('#imageUpload');
         const imagePreview = form.querySelector('#imagePreview');
 
-        if (imageUpload && imagePreview) {
-            imageUpload.addEventListener('change', (event) => {
-                const file = event.target.files[0];
-                if (file) {
-                    if (!file.type.startsWith('image/')) {
-                        alert('Please select a valid image file.');
-                        return;
-                    }
-                    if (file.size > 5 * 1024 * 1024) {
-                        alert('Image size must be less than 5MB.');
-                        return;
-                    }
-
-                    const reader = new FileReader();
-                    reader.onload = (e) => {
-                        imagePreview.src = e.target.result;
-                    };
-                    reader.readAsDataURL(file);
+        imageUpload.addEventListener('change', (event) => {
+            const file = event.target.files[0];
+            if (file) {
+                if (!file.type.startsWith('image/')) {
+                    alert('Please select a valid image file.');
+                    return;
                 }
-            });
-        }
+                if (file.size > 5 * 1024 * 1024) {
+                    alert('Image size must be less than 5MB.');
+                    return;
+                }
+
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    imagePreview.src = e.target.result;
+                };
+                reader.readAsDataURL(file);
+            }
+        });
 
         // TABS
         const tabs = form.querySelectorAll('.tab-btn');
@@ -397,51 +421,64 @@
             });
         });
 
-        // HANDLE MULTI-AUTHOR
+        //HANDLE MULTI-AUTHOR
         const authorInput = document.getElementById('author-input');
         const wrapper = document.getElementById('author-wrapper');
         const hiddenInput = document.getElementById('authors-hidden');
 
+        let authors = [];
+
         // Initialize with existing authors
-        let authors = @json($printResource->printTitle->authors->pluck('author_name')->toArray());
+        @if($printResource->printTitle->authors)
+            @foreach($printResource->printTitle->authors as $author)
+                authors.push('{{ $author->author_name }}');
+            @endforeach
+        @endif
 
         function refreshHiddenInput() {
             hiddenInput.value = JSON.stringify(authors);
         }
 
-        function renderAuthors() {
-            // Clear existing tags
-            wrapper.querySelectorAll('span').forEach(el => el.remove());
-
-            // Render each author
-            authors.forEach(name => {
-                const tag = document.createElement('span');
-                tag.className = 'flex items-center bg-blue-100 text-blue-700 px-2 py-1 rounded text-sm';
-                tag.innerHTML = `
-                    ${name}
-                    <button type="button" class="ml-1 text-blue-700 hover:text-red-600">&times;</button>
-                `;
-
-                tag.querySelector('button').onclick = () => {
-                    authors = authors.filter(a => a !== name);
-                    refreshHiddenInput();
-                    tag.remove();
-                };
-
-                wrapper.insertBefore(tag, authorInput);
-            });
-        }
-
         function addAuthor(name) {
             if (!name || authors.includes(name)) return;
+
             authors.push(name);
             refreshHiddenInput();
-            renderAuthors();
+
+            const tag = document.createElement('span');
+            tag.className = 'flex items-center bg-blue-100 text-blue-700 px-2 py-1 rounded text-sm';
+
+            tag.innerHTML = `
+                ${name}
+                <button type="button" class="ml-1 text-blue-700 hover:text-red-600">&times;</button>
+            `;
+
+            tag.querySelector('button').onclick = () => {
+                authors = authors.filter(a => a !== name);
+                refreshHiddenInput();
+                tag.remove();
+            };
+
+            wrapper.insertBefore(tag, authorInput);
             authorInput.value = '';
         }
 
-        // Initial render
-        renderAuthors();
+        // Initialize existing authors in UI
+        authors.forEach(author => {
+            const tag = document.createElement('span');
+            tag.className = 'flex items-center bg-blue-100 text-blue-700 px-2 py-1 rounded text-sm';
+            tag.innerHTML = `
+                ${author}
+                <button type="button" class="ml-1 text-blue-700 hover:text-red-600">&times;</button>
+            `;
+            tag.querySelector('button').onclick = () => {
+                authors = authors.filter(a => a !== author);
+                refreshHiddenInput();
+                tag.remove();
+            };
+            wrapper.insertBefore(tag, authorInput);
+        });
+
         refreshHiddenInput();
 
         authorInput.addEventListener('keydown', function (e) {
@@ -464,89 +501,104 @@
         };
         qtyInputs.forEach(input => input.addEventListener('input', calculateTotal));
 
-        // ACQUISITIONS MANAGEMENT
-        @php
-            $acquisitionsData = $printResource->printAcquisitions->map(function($acq) {
-                return [
-                    'id' => $acq->id,
-                    'source' => $acq->source,
-                    'date_acquired' => $acq->date_acquired,
-                    'cost' => $acq->cost,
-                    'iar' => $acq->iar,
-                    'remarks' => $acq->remarks,
-                    'usable' => $acq->usable,
-                    'partially_damaged' => $acq->partially_damaged,
-                    'damaged' => $acq->damaged,
-                    'lost' => $acq->lost,
-                    'condemnable' => $acq->condemnable,
-                    'total_quantity' => $acq->total_qty,
-                ];
-            })->toArray();
-        @endphp
+    // ACQUISITIONS MANAGEMENT
+    let acquisitions = [];
+    let editIndex = null;
 
-        let acquisitions = @json($acquisitionsData);
+    // Initialize with existing acquisitions
+    @if($printResource->printAcquisitions)
+        @foreach($printResource->printAcquisitions as $acq)
+            acquisitions.push({
+                id: '{{ $acq->id }}',
+                source: '{{ $acq->source }}',
+                date_acquired: '{{ $acq->date_acquired }}',
+                cost: '{{ $acq->cost ?? '' }}',
+                iar: '{{ $acq->iar ?? '' }}',
+                remarks: '{{ $acq->remarks ?? '' }}',
+                usable: '{{ $acq->usable }}',
+                partially_damaged: '{{ $acq->partially_damaged }}',
+                damaged: '{{ $acq->damaged }}',
+                lost: '{{ $acq->lost }}',
+                condemnable: '{{ $acq->condemnable }}',
+                total_quantity: '{{ $acq->total_qty }}'
+            });
+        @endforeach
+    @endif
 
-        let editIndex = null;
+    const fields = {
+        source: () => form.querySelector('[name="source"]').value,
+        date_acquired: () => form.querySelector('[name="date_acquired"]').value,
+        cost: () => form.querySelector('[name="cost"]').value,
+        iar: () => form.querySelector('[name="iar"]').value,
+        remarks: () => form.querySelector('[name="remarks"]').value.trim(),
+        usable: () => form.querySelector('[name="usable"]').value,
+        partially_damaged: () => form.querySelector('[name="partially_damaged"]').value,
+        damaged: () => form.querySelector('[name="damaged"]').value,
+        lost: () => form.querySelector('[name="lost"]').value,
+        condemnable: () => form.querySelector('[name="condemnable"]').value,
+        total_quantity: () => form.querySelector('#totalQuantity').value,
+    };
 
-        const fields = {
-            source: () => form.querySelector('[name="source"]').value,
-            date_acquired: () => form.querySelector('[name="date_acquired"]').value,
-            cost: () => form.querySelector('[name="cost"]').value,
-            iar: () => form.querySelector('[name="iar"]').value,
-            remarks: () => form.querySelector('[name="remarks"]').value.trim(),
-            usable: () => form.querySelector('[name="usable"]').value,
-            partially_damaged: () => form.querySelector('[name="partially_damaged"]').value,
-            damaged: () => form.querySelector('[name="damaged"]').value,
-            lost: () => form.querySelector('[name="lost"]').value,
-            condemnable: () => form.querySelector('[name="condemnable"]').value,
-            total_quantity: () => form.querySelector('#totalQuantity').value,
-        };
+    const acquisitionTableBody = form.querySelector('#acquisitionTableBody');
+    const acquisitionsInput = form.querySelector('#acquisitionsInput');
 
-        const acquisitionTableBody = form.querySelector('#acquisitionTableBody');
-        const acquisitionsInput = form.querySelector('#acquisitionsInput');
-
-        const renderAcquisitions = () => {
-            acquisitionTableBody.innerHTML = '';
-            if (acquisitions.length === 0) {
-                acquisitionTableBody.innerHTML = `<tr><td colspan="12" class="text-center text-gray-400 py-3">No acquisitions added</td></tr>`;
-                return;
-            }
-            acquisitions.forEach((a, index) => {
-                const shortRemark = a.remarks && a.remarks.length > 40 ? a.remarks.substring(0, 37) + '...' : a.remarks || '-';
-                acquisitionTableBody.innerHTML += `
-                    <tr>
-                        <td class="border px-2 py-1">${a.source}</td>
-                        <td class="border px-2 py-1">${a.date_acquired}</td>
-                        <td class="border px-2 py-1">${a.cost || '-'}</td>
-                        <td class="border px-2 py-1">${a.iar || '-'}</td>
-                        <td class="border px-2 py-1 text-xs">${shortRemark}</td>
-                        <td class="border px-2 py-1">${a.usable}</td>
-                        <td class="border px-2 py-1">${a.partially_damaged}</td>
-                        <td class="border px-2 py-1">${a.damaged}</td>
-                        <td class="border px-2 py-1">${a.lost}</td>
-                        <td class="border px-2 py-1">${a.condemnable}</td>
-                        <td class="border px-2 py-1 font-semibold">${a.total_quantity}</td>
-                        <td class="border px-2 py-1 text-center">
-                            <div class="flex justify-center gap-2">
-                                <button type="button"
-                                    onclick="editPrintAcquisition(${index})"
-                                    class="p-1 rounded hover:bg-blue-100 text-blue-600"
-                                    title="Edit">
-                                    <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                                        <path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.687a1.875 1.875 0 112.652 2.652L7.5 19.153 3 21l1.847-4.5L16.862 4.487z"/>
-                                    </svg>
-                                </button>
-                                <button type="button"
-                                    onclick="deletePrintAcquisition(${index})"
-                                    class="p-1 rounded hover:bg-red-100 text-red-600"
-                                    title="Delete">
-                                    <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                                        <path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6M9 7h6m2 0H7m3-3h4a1 1 0 011 1v1H9V5a1 1 0 011-1z"/>
-                                    </svg>
-                                </button>
-                            </div>
-                        </td>
-                    </tr>`;
+    const renderAcquisitions = () => {
+        acquisitionTableBody.innerHTML = '';
+        if (acquisitions.length === 0) {
+            acquisitionTableBody.innerHTML = `<tr><td colspan="12" class="text-center text-gray-400 py-3">No acquisitions added</td></tr>`;
+            return;
+        }
+        acquisitions.forEach((a, index) => {
+            const shortRemark = a.remarks.length > 40 ? a.remarks.substring(0, 37) + '...' : a.remarks || '-';
+            acquisitionTableBody.innerHTML += `
+                <tr>
+                    <td class="border px-2 py-1">${a.source}</td>
+                    <td class="border px-2 py-1">${a.date_acquired}</td>
+                    <td class="border px-2 py-1">${a.cost}</td>
+                    <td class="border px-2 py-1">${a.iar}</td>
+                    <td class="border px-2 py-1 text-xs">${shortRemark}</td>
+                    <td class="border px-2 py-1">${a.usable}</td>
+                    <td class="border px-2 py-1">${a.partially_damaged}</td>
+                    <td class="border px-2 py-1">${a.damaged}</td>
+                    <td class="border px-2 py-1">${a.lost}</td>
+                    <td class="border px-2 py-1">${a.condemnable}</td>
+                    <td class="border px-2 py-1 font-semibold">${a.total_quantity}</td>
+                    <td class="border px-2 py-1 text-center">
+                        <div class="flex justify-center gap-2">
+                            <button type="button"
+                                onclick="editPrintAcquisition(${index})"
+                                class="p-1 rounded hover:bg-blue-100 text-blue-600"
+                                title="Edit">
+                                <svg xmlns="http://www.w3.org/2000/svg"
+                                    class="w-4 h-4"
+                                    fill="none"
+                                    viewBox="0 0 24 24"
+                                    stroke="currentColor"
+                                    stroke-width="2">
+                                    <path stroke-linecap="round" stroke-linejoin="round"
+                                        d="M16.862 4.487l1.687-1.687a1.875 1.875 0 112.652 2.652L7.5 19.153
+                                        3 21l1.847-4.5L16.862 4.487z"/>
+                                </svg>
+                            </button>
+                            <button type="button"
+                                onclick="deletePrintAcquisition(${index})"
+                                class="p-1 rounded hover:bg-red-100 text-red-600"
+                                title="Delete">
+                                <svg xmlns="http://www.w3.org/2000/svg"
+                                    class="w-4 h-4"
+                                    fill="none"
+                                    viewBox="0 0 24 24"
+                                    stroke="currentColor"
+                                    stroke-width="2">
+                                    <path stroke-linecap="round" stroke-linejoin="round"
+                                        d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862
+                                        a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6
+                                        M9 7h6m2 0H7m3-3h4a1 1 0 011 1v1H9V5a1 1 0 011-1z"/>
+                                </svg>
+                            </button>
+                        </div>
+                    </td>
+                </tr>`;
             });
         };
 
@@ -578,7 +630,7 @@
             }
 
             if (editIndex !== null) {
-                // Preserve the ID when editing existing acquisition
+                // Preserve ID if editing existing acquisition
                 if (acquisitions[editIndex].id) {
                     acquisition.id = acquisitions[editIndex].id;
                 }
@@ -610,12 +662,12 @@
         };
 
         window.deletePrintAcquisition = (index) => {
-            if (!confirm('Delete this acquisition? This will also remove associated masterlist entries.')) return;
+            if (!confirm('Delete this acquisition?')) return;
             acquisitions.splice(index, 1);
             renderAcquisitions();
         };
 
-        // Initial render
+        // Render existing acquisitions on load
         renderAcquisitions();
 
         // SUBMIT
@@ -624,8 +676,4 @@
         });
     });
 </script>
-@else
-<div class="text-center py-12">
-    <p class="text-gray-500">Print resource not found.</p>
-</div>
 @endif

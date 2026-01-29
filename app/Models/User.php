@@ -130,7 +130,7 @@ class User extends Authenticatable
         };
     }
 
-    // Accessor for the station name (handles different name fields per model)
+    // Accessor for the station name
     public function getStationNameAttribute(): ?string
     {
         $station = $this->station;

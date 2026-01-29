@@ -5,6 +5,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Foundation\Validation\ValidatesRequests;
 use Illuminate\Routing\Controller as BaseController;
@@ -101,6 +102,7 @@ class AddResourceController extends BaseController
             'library_id' => 'required|string|max:36',
             'subject_grade_levels' => 'nullable|array',
             'acquisitions' => 'required|string',
+            'image' => 'nullable|image|mimes:jpeg,png,jpg|max:5120', // 5MB max
         ]);
 
         // ==============================
@@ -150,6 +152,14 @@ class AddResourceController extends BaseController
             }
 
             // ==============================
+            // STEP 3.5: HANDLE IMAGE UPLOAD
+            // ==============================
+            $coverPath = null;
+            if ($request->hasFile('image')) {
+                $coverPath = $this->handleImageUpload($request->file('image'), $titleName);
+            }
+
+            // ==============================
             // STEP 4: PRINT RESOURCE
             // ==============================
             $gradeLevelIds = $request->subject_grade_levels
@@ -162,14 +172,15 @@ class AddResourceController extends BaseController
                 'id' => (string) Str::uuid(),
                 'print_title_id' => $title->id,
                 'print_type_id' => $request->type,
-                'publisher' => $publisherName,
-                'volume' => $request->volume,
-                'edition' => $request->edition,
-                'copyright' => $request->copyright,
-                'pages' => $request->pages,
-                'isbn' => $request->isbn,
+                'publisher' => $publisherName ?: null,
+                'volume' => $request->volume ?: null,
+                'edition' => $request->edition ?: null,
+                'copyright' => $request->copyright ?: null,
+                'pages' => $request->pages ?: null,
+                'isbn' => $request->isbn ?: null,
                 'subject_grade_level_ids' => $gradeLevelIds,
                 'library_id'       => $request->library_id,
+                'cover' => $coverPath,
             ]);
 
             // ==============================
@@ -354,5 +365,30 @@ class AddResourceController extends BaseController
         return redirect()
             ->route('add-resources')
             ->with('success', 'Non-Print resource successfully added.');
+    }
+
+    private function handleImageUpload($image, $title)
+    {
+        // Create a safe filename from the title
+        $baseFileName = Str::slug($title);
+        $extension = $image->getClientOriginalExtension();
+        $fileName = $baseFileName . '.' . $extension;
+
+        // Define the storage path
+        $storagePath = 'print_cover';
+        $fullPath = $storagePath . '/' . $fileName;
+
+        // Check if file already exists, if so, append a counter
+        $counter = 1;
+        while (Storage::disk('public')->exists($fullPath)) {
+            $fileName = $baseFileName . '_' . $counter . '.' . $extension;
+            $fullPath = $storagePath . '/' . $fileName;
+            $counter++;
+        }
+
+        // Store the image
+        $image->storeAs($storagePath, $fileName, 'public');
+
+        return $fullPath;
     }
 }

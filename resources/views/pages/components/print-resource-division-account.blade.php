@@ -52,11 +52,10 @@
             </div>
 
             <div class="bg-white rounded-xl shadow overflow-hidden my-4">
-                <div class="overflow-x-auto max-h-[600px] overflow-y-auto">
+                <div class="overflow-x-auto max-h-150 overflow-y-auto">
                     <table class="w-full text-sm">
                         <thead class="bg-gray-100 text-gray-600 uppercase text-xs sticky top-0 z-10">
                             <tr>
-                                <th class="px-4 py-3 w-20">Image</th>
                                 <th class="px-4 py-3">Title</th>
                                 <th class="px-4 py-3">Author</th>
                                 <th class="px-4 py-3">Publisher</th>
@@ -77,11 +76,6 @@
                                     $total = array_sum($qty);
                                 @endphp
                                 <tr class="hover:bg-gray-50">
-                                    <td class="px-4 py-3">
-                                        <img src="{{ asset('assets/images/' . ($item->image ?? 'default.jpg')) }}"
-                                            alt="{{ $item->printTitle->title }}"
-                                            class="w-12 h-16 object-cover rounded shadow-sm">
-                                    </td>
                                     <td class="px-4 py-3 font-medium text-gray-800 max-w-xs">{{ $item->printTitle->title }}</td>
                                     <td class="px-4 py-3 text-gray-600">{{ $authors }}</td>
                                     <td class="px-4 py-3 text-gray-600">{{ $item->publisher }}</td>
@@ -210,11 +204,10 @@
 
             @if(request()->has('district') || request()->has('school'))
                 <div class="bg-white rounded-xl shadow overflow-hidden mt-4">
-                    <div class="overflow-x-auto max-h-[600px] overflow-y-auto">
+                    <div class="overflow-x-auto max-h-150 overflow-y-auto">
                         <table class="w-full text-sm">
                             <thead class="bg-gray-100 text-gray-600 uppercase text-xs sticky top-0 z-10">
                                 <tr>
-                                    <th class="px-4 py-3 w-20">Image</th>
                                     <th class="px-4 py-3">Title</th>
                                     <th class="px-4 py-3">Author</th>
                                     <th class="px-4 py-3">Publisher</th>
@@ -235,11 +228,6 @@
                                         $total = array_sum($qty);
                                     @endphp
                                     <tr class="hover:bg-gray-50">
-                                        <td class="px-4 py-3">
-                                            <img src="{{ asset('assets/images/' . ($item->image ?? 'default.jpg')) }}"
-                                                    alt="{{ $item->printTitle->title }}"
-                                                    class="w-12 h-16 object-cover rounded shadow-sm">
-                                        </td>
                                         <td class="px-4 py-3 font-medium text-gray-800 max-w-xs">{{ $item->printTitle->title }}</td>
                                         <td class="px-4 py-3 text-gray-600">{{ $authors }}</td>
                                         <td class="px-4 py-3 text-gray-600">{{ $item->publisher }}</td>

@@ -20,9 +20,6 @@ class DashboardController extends BaseController
     public function index()
     {
         $user = Auth::user();
-        // if ($user->usertype_id == 1) {
-        //     return redirect()->route('admin.home');
-        // }
         return view('pages.dashboard', compact('user'));
     }
 }

@@ -15,10 +15,11 @@
         <div class="p-6 space-y-8">
             <!-- Image + Basic Info -->
             <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div>
+                <div class="flex items-center justify-center">
                     <img id="printImage"
                          src=""
                          alt="Book Cover"
+                         onerror="this.src='{{ asset('assets/images/default.jpg') }}'"
                          class="w-full h-72 object-cover rounded-lg shadow-md">
                 </div>
                 <div class="md:col-span-2 space-y-5">
@@ -58,7 +59,7 @@
             <!-- Subject Assignment -->
             <div class="border-t pt-6">
                 <h3 class="text-lg font-semibold mb-3 text-gray-800">Subject Assignment</h3>
-                <div id="printSubjects" class="bg-gray-50 p-4 rounded-lg min-h-[60px]">
+                <div id="printSubjects" class="bg-gray-50 p-4 rounded-lg min-h-15">
                     <!-- Will be filled by JS -->
                 </div>
             </div>
@@ -91,7 +92,7 @@
             </div>
 
             <!-- Quantity Summary -->
-            <div class="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-lg p-6 border-t">
+            <div class="bg-linear-to-br from-blue-50 to-indigo-50 rounded-lg p-6 border-t">
                 <h4 class="font-semibold text-gray-700 mb-4 text-lg">Overall Quantity Summary</h4>
                 <div class="grid grid-cols-3 md:grid-cols-6 gap-4 text-center">
                     <div class="bg-white p-3 rounded-lg shadow-sm">
@@ -140,10 +141,19 @@
 
 <script>
     function openPrintModal(resource) {
-        // Set image
+        // Set image with fallback
         const imgElement = document.getElementById('printImage');
-        imgElement.src = resource.image || '/assets/images/default.jpg';
+        const defaultImage = '{{ asset('assets/images/default.jpg') }}';
+
+        // Use the image from resource, or fallback to default
+        imgElement.src = resource.image || defaultImage;
         imgElement.alt = resource.title || 'Book Cover';
+
+        // Add error handler in case the image fails to load
+        imgElement.onerror = function() {
+            this.src = defaultImage;
+            this.onerror = null; // Prevent infinite loop if default image also fails
+        };
 
         // Set basic info
         document.getElementById('printTitle').textContent = resource.title || 'N/A';
@@ -159,7 +169,7 @@
         if (resource.subjects && resource.subjects.length > 0) {
             subjectsContainer.innerHTML = resource.subjects.map(item =>
                 `<span class="inline-block bg-blue-100 text-blue-800 text-xs font-medium px-3 py-1 rounded-full mr-2 mb-2">
-                    ${item.subject} - Grade ${item.grade}
+                    ${item.subject} - ${item.grade}
                 </span>`
             ).join('');
         } else {

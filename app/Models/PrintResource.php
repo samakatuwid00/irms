@@ -28,7 +28,8 @@ class PrintResource extends Model
         'subject_grade_level_ids',
         'created_at',
         'updated_at',
-        'library_id'
+        'library_id',
+        'cover'
     ];
 
     protected $appends = ['library_name'];
@@ -152,8 +153,8 @@ class PrintResource extends Model
 
         return [
             'id' => $this->id,
-            'image' => $this->image
-                ? asset('assets/images/' . $this->image)
+            'image' => $this->cover
+                ? asset('storage/' . $this->cover)
                 : asset('assets/images/default.jpg'),
             'title' => $this->printTitle->title ?? 'N/A',
             'author' => $this->printTitle->authors->pluck('author_name')->join(', ') ?: '-',

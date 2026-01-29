@@ -260,7 +260,7 @@
                 <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
                     <div>
                         <label class="block text-sm font-medium mb-1">Source</label>
-                        <select id="source" name="source" class="w-full border rounded px-3 py-2">
+                        <select id="source" name="source" class="w-full border rounded px-3 py-2" required>
                             <option value="" selected disabled>Select source</option>
                             <option value="CO">DepEd - Central Office</option>
                             <option value="RO">Regional Office</option>
