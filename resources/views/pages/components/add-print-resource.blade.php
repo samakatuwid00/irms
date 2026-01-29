@@ -62,14 +62,14 @@
 
                     <div>
                         <label class="block text-sm font-medium mb-1">Title</label>
-                        <input type="text" name="title" class="w-full border rounded px-3 py-2">
+                        <input type="text" name="title" class="w-full border border-gray-300 rounded px-3 py-2">
                     </div>
 
                     <div>
                         <label class="block text-sm font-medium mb-1">Authors</label>
 
                          {{-- Visible input --}}
-                        <div class="flex flex-wrap gap-2 border rounded px-2 py-2" id="author-wrapper">
+                        <div class="flex flex-wrap gap-2 border border-gray-300 rounded px-2 py-2" id="author-wrapper">
                             <input
                                 type="text"
                                 id="author-input"
@@ -84,7 +84,7 @@
 
                     <div>
                         <label class="block text-sm font-medium mb-1">Publisher</label>
-                        <input type="text" name="publisher" class="w-full border rounded px-3 py-2">
+                        <input type="text" name="publisher" class="w-full border border-gray-300 rounded px-3 py-2">
                     </div>
                 </div>
 
@@ -93,7 +93,7 @@
                     <div class="space-y-4">
                         <div>
                             <label class="block text-sm mb-1">Type</label>
-                                <select name="type" class="w-full border rounded px-3 py-2" required>
+                                <select name="type" class="w-full border border-gray-300 rounded px-3 py-2" required>
                                     <option selected disabled>Select type</option>
 
                                     @foreach ($printTypes as $type)
@@ -106,29 +106,29 @@
 
                         <div>
                             <label class="block text-sm mb-1">Volume</label>
-                            <input name="volume" class="w-full border rounded px-3 py-2">
+                            <input name="volume" class="w-full border border-gray-300 rounded px-3 py-2">
                         </div>
 
                         <div>
                             <label class="block text-sm mb-1">Edition</label>
-                            <input name="edition" class="w-full border rounded px-3 py-2">
+                            <input name="edition" class="w-full border border-gray-300 rounded px-3 py-2">
                         </div>
                     </div>
 
                     <div class="space-y-4">
                         <div>
                             <label class="block text-sm mb-1">Copyright</label>
-                            <input name="copyright" type="number" class="w-full border rounded px-3 py-2">
+                            <input name="copyright" type="number" class="w-full border border-gray-300 rounded px-3 py-2">
                         </div>
 
                         <div>
                             <label class="block text-sm mb-1">ISBN</label>
-                            <input name="isbn" class="w-full border rounded px-3 py-2">
+                            <input name="isbn" class="w-full border border-gray-300 rounded px-3 py-2">
                         </div>
 
                         <div>
                             <label class="block text-sm mb-1">Pages</label>
-                            <input name="pages" type="number" class="w-full border rounded px-3 py-2">
+                            <input name="pages" type="number" class="w-full border border-gray-300 rounded px-3 py-2">
                         </div>
                     </div>
                 </div>
@@ -187,7 +187,7 @@
             <div class="md:col-span-2 space-y-4">
 
                 {{-- ================= TABS ================= --}}
-                <div class="flex gap-6 border-b">
+                <div class="flex gap-6 border-b border-gray-300">
                     @foreach ($stages as $stage)
                         <button
                             type="button"
@@ -204,15 +204,15 @@
                         id="{{ $stage['tab'] }}"
                         class="tab-content {{ !$loop->first ? 'hidden' : '' }}">
 
-                        <table class="w-full border text-sm">
+                        <table class="w-full border border-gray-300 text-sm">
                             <thead class="bg-gray-100">
                                 <tr>
-                                    <th class="border px-3 py-2 text-left w-72">
+                                    <th class="border border-gray-300 px-3 py-2 text-left w-72">
                                         Subject
                                     </th>
 
                                     @foreach ($stage['grades'] as $gradeLabel)
-                                        <th class="border">
+                                        <th class="border border-gray-300">
                                             {{ $gradeLabel }}
                                         </th>
                                     @endforeach
@@ -227,12 +227,12 @@
                                     @endphp
 
                                     <tr>
-                                        <td class="border px-3 py-2">
+                                        <td class="border border-gray-300 px-3 py-2">
                                             {{ $subject }}
                                         </td>
 
                                         @foreach ($stage['grades'] as $sortOrder => $label)
-                                            <td class="border text-center">
+                                            <td class="border border-gray-300 text-center">
                                                 @if ($gradeMap->has($sortOrder))
                                                     <input
                                                         type="checkbox"
@@ -253,7 +253,7 @@
         </div>
 
         {{-- ========================= 3RD GROUP (ACQUISITION & CONDITION) ========================== --}}
-        <div class="bg-gray-50 border rounded-xl p-6 space-y-6">
+        <div class="bg-gray-50 border border-gray-300 rounded-xl p-6 space-y-6">
                 <h3 class="text-lg font-semibold text-gray-700">
                     Acquisition & Condition Details
                 </h3>
