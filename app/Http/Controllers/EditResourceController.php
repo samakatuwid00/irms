@@ -399,17 +399,17 @@ class EditResourceController extends BaseController
             // ==============================
             // STEP 2: HANDLE IMAGE UPLOAD
             // ==============================
-            // $imagePath = $nonprintResource->image;
+            $coverPath = $nonprintResource->cover; // Keep existing cover by default
 
-            // if ($request->hasFile('imageNP')) {
-            //     // Delete old image if it exists
-            //     if ($nonprintResource->image && file_exists(storage_path('app/public/' . $nonprintResource->image))) {
-            //         unlink(storage_path('app/public/' . $nonprintResource->image));
-            //     }
+            if ($request->hasFile('imageNP')) {
+                // Delete old cover if it exists
+                if ($nonprintResource->cover && Storage::disk('public')->exists($nonprintResource->cover)) {
+                    Storage::disk('public')->delete($nonprintResource->cover);
+                }
 
-            //     // Store new image
-            //     $imagePath = $request->file('imageNP')->store('nonprint_images', 'public');
-            // }
+                // Upload new cover
+                $coverPath = $this->handleNonprintImageUpload($request->file('imageNP'), $titleName);
+            }
 
             // ==============================
             // STEP 3: UPDATE NONPRINT RESOURCE
@@ -431,7 +431,7 @@ class EditResourceController extends BaseController
                 'size' => $request->size,
                 'subject_grade_level_ids' => $gradeLevelIds,
                 'library_id' => $request->library_idNP,
-                // 'image' => $imagePath,
+                'cover' => $coverPath,
             ]);
 
             // ==============================
@@ -588,6 +588,31 @@ class EditResourceController extends BaseController
 
         // Define the storage path
         $storagePath = 'print_cover';
+        $fullPath = $storagePath . '/' . $fileName;
+
+        // Check if file already exists, if so, append a counter
+        $counter = 1;
+        while (Storage::disk('public')->exists($fullPath)) {
+            $fileName = $baseFileName . '_' . $counter . '.' . $extension;
+            $fullPath = $storagePath . '/' . $fileName;
+            $counter++;
+        }
+
+        // Store the image
+        $image->storeAs($storagePath, $fileName, 'public');
+
+        return $fullPath;
+    }
+
+    private function handleNonprintImageUpload($image, $title)
+    {
+        // Create a safe filename from the title
+        $baseFileName = Str::slug($title);
+        $extension = $image->getClientOriginalExtension();
+        $fileName = $baseFileName . '.' . $extension;
+
+        // Define the storage path
+        $storagePath = 'nonprint_cover';
         $fullPath = $storagePath . '/' . $fileName;
 
         // Check if file already exists, if so, append a counter

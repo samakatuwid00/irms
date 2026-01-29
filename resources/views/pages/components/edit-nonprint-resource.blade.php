@@ -15,7 +15,7 @@
 
                 <img
                     id="imagePreviewNP"
-                    src="{{ $nonprintResource->image ? asset('storage/' . $nonprintResource->image) : asset('assets/images/default.jpg') }}"
+                    src="{{ $nonprintResource->cover ? asset('storage/' . $nonprintResource->cover) : asset('assets/images/default.jpg') }}"
                     alt="Image preview"
                     class="w-full flex-1 object-cover rounded mb-4"
                 >

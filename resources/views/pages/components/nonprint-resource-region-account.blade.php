@@ -94,7 +94,6 @@
                 <table class="w-full text-sm">
                     <thead class="bg-gray-100 text-gray-600 uppercase text-xs sticky top-0 z-10">
                         <tr>
-                            <th class="px-4 py-3 w-20">Image</th>
                             <th class="px-4 py-3">Title</th>
                             <th class="px-4 py-3">Type</th>
                             <th class="px-4 py-3">Brand</th>
@@ -116,11 +115,6 @@
                                 $total = array_sum($qty);
                             @endphp
                             <tr class="hover:bg-gray-50">
-                                <td class="px-4 py-3">
-                                    <img src="{{ asset('assets/images/' . ($item->image ?? 'default.jpg')) }}"
-                                            alt="{{ $item->nonprintTitle->title }}"
-                                            class="w-12 h-16 object-cover rounded shadow-sm">
-                                </td>
                                 <td class="px-4 py-3 font-medium text-gray-800 max-w-xs">{{ $item->nonprintTitle->title }}</td>
                                 <td class="px-4 py-3">
                                     <span class="px-2 py-1 text-xs rounded-full bg-blue-100 text-blue-700">{{ $item->type->type_name }}</span>

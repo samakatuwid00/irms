@@ -261,6 +261,7 @@ class AddResourceController extends BaseController
             'library_id' => 'required|string|max:36',
             'subject_grade_levels' => 'nullable|array',
             'acquisitions' => 'required|string',
+            'image' => 'nullable|image|mimes:jpeg,png,jpg|max:5120', // 5MB max
         ]);
 
         // ==============================
@@ -283,7 +284,15 @@ class AddResourceController extends BaseController
             }
 
             // ==============================
-            // STEP 2: PRINT RESOURCE
+            // STEP 1.5: HANDLE IMAGE UPLOAD
+            // ==============================
+            $coverPath = null;
+            if ($request->hasFile('image')) {
+                $coverPath = $this->handleNonprintImageUpload($request->file('image'), $titleName);
+            }
+
+            // ==============================
+            // STEP 2: NONPRINT RESOURCE
             // ==============================
             $gradeLevelIds = $request->subject_grade_levels
                 ? implode(',', $request->subject_grade_levels)
@@ -305,6 +314,7 @@ class AddResourceController extends BaseController
 
                 'subject_grade_level_ids' => $gradeLevelIds,
                 'library_id'       => $request->library_id,
+                'cover' => $coverPath,
             ]);
 
             // ==============================
@@ -376,6 +386,31 @@ class AddResourceController extends BaseController
 
         // Define the storage path
         $storagePath = 'print_cover';
+        $fullPath = $storagePath . '/' . $fileName;
+
+        // Check if file already exists, if so, append a counter
+        $counter = 1;
+        while (Storage::disk('public')->exists($fullPath)) {
+            $fileName = $baseFileName . '_' . $counter . '.' . $extension;
+            $fullPath = $storagePath . '/' . $fileName;
+            $counter++;
+        }
+
+        // Store the image
+        $image->storeAs($storagePath, $fileName, 'public');
+
+        return $fullPath;
+    }
+
+    private function handleNonprintImageUpload($image, $title)
+    {
+        // Create a safe filename from the title
+        $baseFileName = Str::slug($title);
+        $extension = $image->getClientOriginalExtension();
+        $fileName = $baseFileName . '.' . $extension;
+
+        // Define the storage path
+        $storagePath = 'nonprint_cover';
         $fullPath = $storagePath . '/' . $fileName;
 
         // Check if file already exists, if so, append a counter

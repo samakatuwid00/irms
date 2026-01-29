@@ -29,7 +29,7 @@
                 >
 
                 <label
-                    for="imageUpload"
+                    for="nonprintImageUpload"
                     class="cursor-pointer px-4 py-2 bg-blue-600 text-white text-sm rounded-md hover:bg-blue-700"
                 >
                     Choose Image

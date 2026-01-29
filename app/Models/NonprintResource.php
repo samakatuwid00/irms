@@ -24,7 +24,8 @@ class NonprintResource extends Model
         'description',
         'subject_grade_level_ids',
         'created_at',
-        'updated_at'
+        'updated_at',
+        'cover'
     ];
     protected $table = 'nonprint_resources';
 
@@ -146,17 +147,17 @@ class NonprintResource extends Model
 
         return [
             'id' => $this->id,
-            'image' => $this->image
-                ? asset('assets/images/' . $this->image)
+            'image' => $this->cover
+                ? asset('storage/' . $this->cover)
                 : asset('assets/images/default.jpg'),
-            'title' => $this->printTitle->title ?? 'N/A',
+            'title' => $this->nonprintTitle->title ?? 'N/A',
             'type' => $this->type->type_name ?? '-',
             'brand' => $this->brand ?? '-',
             'code' => $this->code ?? 'N/A',
             'version' => $this->version ?? '-',
             'url' => $this->url ?? '-',
-            'size' => $this->version ?? '-',
-            'model' => $this->url ?? '-',
+            'size' => $this->size ?? '-',
+            'model' => $this->model ?? '-',
             'subjects' => $subjects,
             'acquisitions' => $acquisitions,
             'quantities' => $quantities,
