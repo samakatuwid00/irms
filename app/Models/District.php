@@ -13,7 +13,7 @@ class District extends Model
     protected $keyType = 'string';
     protected $fillable = [
         'id', 'district_name', 'shortname', 'address', 'contact_number', 'email', 'date_establish',
-        'legislative_district', 'division_id', 'logo', 'created_at', 'updated_at'
+        'legislative_district', 'division_id', 'logo', 'created_at', 'updated_at', 'logo'
     ];
 
     protected $casts = [

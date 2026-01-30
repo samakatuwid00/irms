@@ -46,19 +46,20 @@
         </div>
 
         {{-- Logo Upload Form --}}
-        <form id="logoForm" action="" method="POST" enctype="multipart/form-data">
+        <form id="logoForm" action="{{ route('division.logo.update') }}" method="POST" enctype="multipart/form-data">
             @csrf
             @method('PUT')
 
             <label for="logo"
                 class="block w-full cursor-pointer border-2 border-dashed border-gray-300 rounded-lg px-4 py-3 text-sm text-gray-500 hover:border-blue-400 hover:bg-blue-50 transition">
                 <span class="font-medium text-gray-700">Choose logo</span>
-                <span class="block text-xs text-gray-400 mt-1">PNG or JPG</span>
+                <span class="block text-xs text-gray-400 mt-1">PNG or JPG (Max 2MB)</span>
             </label>
-            <input type="file" name="logo" id="logo" accept="image/*" class="hidden">
+            <input type="file" name="logo" id="logo" accept="image/png,image/jpeg,image/jpg" class="hidden">
 
-            <button type="submit"
-                class="w-full px-4 py-2 text-sm rounded-lg bg-blue-600 text-white hover:bg-blue-700 shadow mt-2 transition">
+            <button type="submit" id="logoSubmitBtn"
+                class="w-full px-4 py-2 text-sm rounded-lg bg-blue-600 text-white hover:bg-blue-700 shadow mt-2 transition opacity-50 cursor-not-allowed"
+                disabled>
                 Update Logo
             </button>
         </form>
@@ -196,6 +197,7 @@
     const alertBox = document.getElementById('alertBox');
     const logoInput = document.getElementById('logo');
     const logoPreview = document.getElementById('logoPreview');
+    const logoSubmitBtn = document.getElementById('logoSubmitBtn');
 
     const originalData = Object.fromEntries(new FormData(form).entries());
 
@@ -245,13 +247,42 @@
         }, 6000);
     }
 
-    // Logo preview
+    // Logo preview and submit button enable
     function previewLogo(event) {
         if (event.target.files && event.target.files[0]) {
-            logoPreview.src = URL.createObjectURL(event.target.files[0]);
+            const file = event.target.files[0];
+
+            // Validate file size (2MB max)
+            if (file.size > 2048 * 1024) {
+                alert('File size must be less than 2MB');
+                event.target.value = '';
+                logoSubmitBtn.disabled = true;
+                logoSubmitBtn.classList.add('opacity-50', 'cursor-not-allowed');
+                return;
+            }
+
+            // Validate file type
+            const validTypes = ['image/jpeg', 'image/jpg', 'image/png'];
+            if (!validTypes.includes(file.type)) {
+                alert('Please select a valid image file (JPG or PNG)');
+                event.target.value = '';
+                logoSubmitBtn.disabled = true;
+                logoSubmitBtn.classList.add('opacity-50', 'cursor-not-allowed');
+                return;
+            }
+
+            // Preview image
+            logoPreview.src = URL.createObjectURL(file);
+
+            // Enable submit button
+            logoSubmitBtn.disabled = false;
+            logoSubmitBtn.classList.remove('opacity-50', 'cursor-not-allowed');
         }
     }
-    if (logoInput) logoInput.addEventListener('change', previewLogo);
+
+    if (logoInput) {
+        logoInput.addEventListener('change', previewLogo);
+    }
 
     // ================= DATE ESTABLISHED SWITCH =================
     function switchToDate() {

@@ -53,18 +53,23 @@ Route::get('/generate-report', [GenerateReportController::class, 'index'])->name
 //MANAGE REGION PROFILE
 Route::get('/region-profile', [RegionController::class, 'index'])->name('region-profile');
 Route::put('/region-profile', [RegionController::class, 'update']) ->name('region.profile.update');
+Route::put('/region-profile/update-logo', [RegionController::class, 'updateLogo'])->name('region.logo.update');
+
 
 //MANAGE DIVISION PROFILE
 Route::get('/division-profile', [DivisionController::class, 'index'])->name('division-profile');
 Route::put('/division-profile', [DivisionController::class, 'update'])->name('division.profile.update');
+Route::put('/division-profile/update-logo', [DivisionController::class, 'updateLogo'])->name('division.logo.update');
 
 //MANAGE DISTRICT PROFILE
 Route::get('/district-profile', [DistrictController::class, 'index'])->name('district-profile');
 Route::put('/district-profile', [DistrictController::class, 'update'])->name('district.profile.update');
+Route::put('/district-profile/update-logo', [DistrictController::class, 'updateLogo'])->name('district.logo.update');
 
 //MANAGE SCHOOL PROFILE
 Route::get('/school-profile', [SchoolController::class, 'index'])->name('school-profile');
 Route::put('/school-profile', [SchoolController::class, 'update'])->name('school.profile.update');
+Route::put('/school-profile/update-logo', [SchoolController::class, 'updateLogo'])->name('school.logo.update');
 
 //MANAGE DIVISION
 Route::post('/divisions', [ManageStationController::class, 'addDivision'])->name('divisions.store');

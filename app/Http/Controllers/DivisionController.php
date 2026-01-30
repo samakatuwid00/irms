@@ -6,6 +6,7 @@ use App\Models\Division;
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Foundation\Validation\ValidatesRequests;
 use Illuminate\Routing\Controller as BaseController;
@@ -67,5 +68,29 @@ class DivisionController extends BaseController
 
         return redirect()->route('division-profile')
         ->with('success', 'Division information updated successfully.');
+    }
+
+    public function updateLogo(Request $request)
+    {
+        $division = Division::where('id', Auth::user()->station_id)->firstOrFail();
+
+        $validated = $request->validate([
+            'logo' => 'required|image|mimes:jpeg,jpg,png|max:2048', // 2MB max
+        ]);
+
+        // Delete old logo if exists
+        if ($division->logo && Storage::disk('public')->exists($division->logo)) {
+            Storage::disk('public')->delete($division->logo);
+        }
+
+        // Store new logo
+        $logoPath = $request->file('logo')->store('division-logo', 'public');
+
+        // Update division logo
+        $division->logo = $logoPath;
+        $division->save();
+
+        return redirect()->route('division-profile')
+            ->with('success', 'Division logo updated successfully.');
     }
 }

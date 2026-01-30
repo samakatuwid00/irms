@@ -6,6 +6,7 @@ use App\Models\School;
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Foundation\Validation\ValidatesRequests;
 use Illuminate\Routing\Controller as BaseController;
@@ -67,5 +68,29 @@ class SchoolController extends BaseController
 
         return redirect()->route('school-profile')
         ->with('success', 'School information updated successfully.');
+    }
+
+    public function updateLogo(Request $request)
+    {
+        $school = School::where('id', Auth::user()->station_id)->firstOrFail();
+
+        $validated = $request->validate([
+            'logo' => 'required|image|mimes:jpeg,jpg,png|max:2048', // 2MB max
+        ]);
+
+        // Delete old logo if exists
+        if ($school->logo && Storage::disk('public')->exists($school->logo)) {
+            Storage::disk('public')->delete($school->logo);
+        }
+
+        // Store new logo
+        $logoPath = $request->file('logo')->store('school-logo', 'public');
+
+        // Update school logo
+        $school->logo = $logoPath;
+        $school->save();
+
+        return redirect()->route('school-profile')
+            ->with('success', 'School logo updated successfully.');
     }
 }

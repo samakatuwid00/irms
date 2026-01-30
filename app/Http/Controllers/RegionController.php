@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use App\Models\Region;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Foundation\Validation\ValidatesRequests;
 use Illuminate\Routing\Controller as BaseController;
@@ -66,5 +67,29 @@ class RegionController extends BaseController
 
         return redirect()->route('region-profile')
         ->with('success', 'Region information updated successfully.');
+    }
+
+    public function updateLogo(Request $request)
+    {
+        $region = Region::where('id', Auth::user()->station_id)->firstOrFail();
+
+        $validated = $request->validate([
+            'logo' => 'required|image|mimes:jpeg,jpg,png|max:2048', // 2MB max
+        ]);
+
+        // Delete old logo if exists
+        if ($region->logo && Storage::disk('public')->exists($region->logo)) {
+            Storage::disk('public')->delete($region->logo);
+        }
+
+        // Store new logo
+        $logoPath = $request->file('logo')->store('region-logo', 'public');
+
+        // Update region logo
+        $region->logo = $logoPath;
+        $region->save();
+
+        return redirect()->route('region-profile')
+            ->with('success', 'Region logo updated successfully.');
     }
 }

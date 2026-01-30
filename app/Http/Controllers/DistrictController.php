@@ -6,6 +6,7 @@ use App\Models\District;
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Foundation\Validation\ValidatesRequests;
 use Illuminate\Routing\Controller as BaseController;
@@ -67,5 +68,29 @@ class DistrictController extends BaseController
 
         return redirect()->route('district-profile')
         ->with('success', 'District information updated successfully.');
+    }
+
+    public function updateLogo(Request $request)
+    {
+        $district = District::where('id', Auth::user()->station_id)->firstOrFail();
+
+        $validated = $request->validate([
+            'logo' => 'required|image|mimes:jpeg,jpg,png|max:2048',
+        ]);
+
+        // Delete old logo if exists
+        if ($district->logo && Storage::disk('public')->exists($district->logo)) {
+            Storage::disk('public')->delete($district->logo);
+        }
+
+        // Store new logo
+        $logoPath = $request->file('logo')->store('district-logo', 'public');
+
+        // Update district logo
+        $district->logo = $logoPath;
+        $district->save();
+
+        return redirect()->route('district-profile')
+            ->with('success', 'District logo updated successfully.');
     }
 }

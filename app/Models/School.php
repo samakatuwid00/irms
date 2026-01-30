@@ -24,7 +24,8 @@ class School extends Model
         'legislative_district',
         'district_id',
         'created_at',
-        'updated_at'
+        'updated_at',
+        'logo'
     ];
     protected $casts = [
         'id' => 'string',
