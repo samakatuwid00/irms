@@ -49,7 +49,7 @@
                 @if (Auth::user()->userType?->level === 3)
                     <div>
                         <label class="block text-sm font-medium mb-1">Library</label>
-                        <select name="library_id" class="w-full border rounded px-3 py-2" required>
+                        <select name="library_id" class="w-full border border-gray-300 rounded px-3 py-2" required>
                             @foreach ($divisionLibraries as $library)
                                 <option value="{{ $library->id }}" {{ $printResource->library_id == $library->id ? 'selected' : '' }}>
                                     {{ $library->library_name }}

@@ -38,12 +38,23 @@
                     transition-transform duration-300 ease-in-out
                     flex flex-col">
 
-            <div class="flex items-center justify-between p-4 border-b">
-                <h2 class="text-xl font-semibold">Navigation</h2>
+            <div class="flex items-center justify-between p-4 border-b border-gray-300">
+                <div class="flex items-center gap-3">
+                    <!-- Logo -->
+                    <img
+                        src="{{ asset('assets/images/logo.png') }}"
+                        alt="iRIMS-V Logo"
+                        class="w-10 h-10 object-contain"
+                    />
+
+                    <!-- Title -->
+                    <h2 class="text-xl font-semibold">iRIMS-V</h2>
+                </div>
+
                 <button id="close-sidebar" class="md:hidden text-gray-500 hover:text-gray-700">
                     <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                              d="M6 18L18 6M6 6l12 12"/>
+                            d="M6 18L18 6M6 6l12 12"/>
                     </svg>
                 </button>
             </div>
@@ -241,12 +252,18 @@
                 </ul>
             </nav>
 
+            <div class="p-12">
+                <div class="flex items-center justify-center">
+                    <img src="{{ asset('assets/images/logo.png') }}" alt="Logo" class="h-24 w-auto">
+                </div>
+            </div>
+
             <!-- User Menu -->
-            <footer class="mt-auto border-t p-2 mb-5 relative">
+            <footer class="mt-auto border-t border-gray-300 p-2 mb-5 relative">
                 <div class="relative w-full">
                     <button id="accountToggle" type="button"
                             class="w-full flex items-center gap-x-3.5 py-2 px-2.5 text-sm text-gray-800 rounded-lg hover:bg-gray-100 transition-colors">
-                        <img class="size-6 rounded-full"
+                        <img class="size-10 rounded-full"
                              src="{{ Auth::user()->avatar ?? 'https://images.unsplash.com/photo-1734122415415-88cb1d7d5dc0?q=80&w=320&h=320&auto=format&fit=facearea&facepad=3' }}"
                              alt="User Avatar">
                         <span class="flex-1 text-left truncate">
@@ -260,7 +277,7 @@
                     </button>
 
                     <div id="accountMenu"
-                         class="absolute bottom-full mb-2 w-full hidden opacity-0 transition-all duration-200 bg-white border rounded-lg shadow-lg z-50">
+                         class="absolute bottom-full mb-2 w-full hidden opacity-0 transition-all duration-200 bg-white border  rounded-lg shadow-lg z-50">
                         <div class="p-1 space-y-1">
                             <a href="{{ route('profile') }}"
                                class="flex items-center gap-2 px-3 py-2 rounded-lg text-sm {{ request()->routeIs('profile') ? 'bg-blue-100 text-blue-600' : 'hover:bg-gray-100' }}">

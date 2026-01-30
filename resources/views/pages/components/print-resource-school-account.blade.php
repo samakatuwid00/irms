@@ -8,7 +8,7 @@
                 name="search"
                 placeholder="Search by Title, Author, ISBN, Publisher, Grade, Subject..."
                 value="{{ request('search') }}"
-                class="w-full h-10 pl-10 pr-3 border rounded-lg text-sm"
+                class="w-full h-10 pl-10 pr-3 border border-gray-300 rounded-lg text-sm"
             >
 
             <svg class="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-gray-400"
@@ -59,7 +59,7 @@
                         $qty = $item->quantities;
                         $total = array_sum($qty);
                     @endphp
-                    <tr class="hover:bg-gray-50">
+                    <tr class="hover:bg-gray-50 border-b border-gray-300">
                         <td class="px-4 py-3 font-medium text-gray-800 max-w-xs">{{ $item->printTitle->title }}</td>
                         <td class="px-4 py-3 text-gray-600">{{ $authors }}</td>
                         <td class="px-4 py-3 text-gray-600">{{ $item->publisher }}</td>
@@ -92,7 +92,7 @@
                                     <span title="Lost"><strong class="text-purple-600">{{ $qty['lost'] }}</strong> Lost</span>
                                     <span title="Condemnable"><strong class="text-gray-800">{{ $qty['condemnable'] }}</strong> Cond.</span>
                                 </div>
-                                <div class="font-semibold text-gray-800 border-t pt-1">Total: {{ $total }}</div>
+                                <div class="font-semibold text-gray-800 border-t border-gray-300 pt-1">Total: {{ $total }}</div>
                             </div>
                         </td>
                         <td class="px-4 py-3">

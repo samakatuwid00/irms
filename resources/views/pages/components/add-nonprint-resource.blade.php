@@ -49,7 +49,7 @@
                     @if (Auth::user()->userType?->level === 3)
                         <div>
                             <label class="block text-sm font-medium mb-1">Library</label>
-                            <select name="library_id" class="w-full border rounded px-3 py-2" required>
+                            <select name="library_id" class="w-full border border-gray-300 rounded px-3 py-2" required>
                                 @foreach ($divisionLibraries as $library)
                                     <option value="{{ $library->id }}">{{ $library->library_name }}</option>
                                 @endforeach
@@ -62,12 +62,12 @@
                     @endif
                 <div>
                     <label class="block text-sm font-medium mb-1">Title/Name</label>
-                    <input type="text" name="title" class="w-full border rounded px-3 py-2" required>
+                    <input type="text" name="title" class="w-full border border-gray-300 rounded px-3 py-2" required>
                 </div>
 
                 <div>
                     <label class="block text-sm font-medium mb-1">Type</label>
-                    <select name="type" class="w-full border rounded px-3 py-2" required>
+                    <select name="type" class="w-full border border-gray-300 rounded px-3 py-2" required>
                         <option value="" disabled selected>Select type</option>
                                 @foreach ($nonprintTypes as $type)
                                     <option value="{{ $type->id }}">
@@ -79,7 +79,7 @@
 
                 <div>
                     <label class="block text-sm font-medium mb-1">Brand</label>
-                    <input type="text" name="brand" class="w-full border rounded px-3 py-2">
+                    <input type="text" name="brand" class="w-full border border-gray-300 rounded px-3 py-2">
                 </div>
             </div>
 
@@ -87,17 +87,17 @@
             <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
                     <label class="block text-sm font-medium mb-1">Code</label>
-                    <input type="text" name="code" class="w-full border rounded px-3 py-2">
+                    <input type="text" name="code" class="w-full border border-gray-300 rounded px-3 py-2">
                 </div>
 
                 <div>
                     <label class="block text-sm font-medium mb-1">Version</label>
-                    <input type="text" name="version" class="w-full border rounded px-3 py-2">
+                    <input type="text" name="version" class="w-full border border-gray-300 rounded px-3 py-2">
                 </div>
 
                 <div>
                     <label class="block text-sm font-medium mb-1">Model</label>
-                    <input type="text" name="model" class="w-full border rounded px-3 py-2">
+                    <input type="text" name="model" class="w-full border border-gray-300 rounded px-3 py-2">
                 </div>
             </div>
 
@@ -105,12 +105,12 @@
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                     <label class="block text-sm font-medium mb-1">URL <span class="text-xs text-gray-500">(if applicable)</span></label>
-                    <input type="url" name="url" placeholder="https://example.com" class="w-full border rounded px-3 py-2">
+                    <input type="url" name="url" placeholder="https://example.com" class="w-full border border-gray-300 rounded px-3 py-2">
                 </div>
 
                 <div>
                     <label class="block text-sm font-medium mb-1">Size <span class="text-xs text-gray-500">(e.g., dimensions or file size)</span></label>
-                    <input type="text" name="size" placeholder="e.g., 50x30 cm or 2.4 GB" class="w-full border rounded px-3 py-2">
+                    <input type="text" name="size" placeholder="e.g., 50x30 cm or 2.4 GB" class="w-full border border-gray-300 rounded px-3 py-2">
                 </div>
             </div>
 
@@ -186,15 +186,15 @@
                         id="{{ $stage['tab'] }}"
                         class="tab-content {{ !$loop->first ? 'hidden' : '' }}">
 
-                        <table class="w-full border text-sm">
+                        <table class="w-full border border-gray-300 text-sm">
                             <thead class="bg-gray-100">
                                 <tr>
-                                    <th class="border px-3 py-2 text-left w-72">
+                                    <th class="border border-gray-300 px-3 py-2 text-left w-72">
                                         Subject
                                     </th>
 
                                     @foreach ($stage['grades'] as $gradeLabel)
-                                        <th class="border">
+                                        <th class="border border-gray-300">
                                             {{ $gradeLabel }}
                                         </th>
                                     @endforeach
@@ -209,12 +209,12 @@
                                     @endphp
 
                                     <tr>
-                                        <td class="border px-3 py-2">
+                                        <td class="border border-gray-300 px-3 py-2">
                                             {{ $subject }}
                                         </td>
 
                                         @foreach ($stage['grades'] as $sortOrder => $label)
-                                            <td class="border text-center">
+                                            <td class="border border-gray-300 text-center">
                                                 @if ($gradeMap->has($sortOrder))
                                                     <input
                                                         type="checkbox"
@@ -235,7 +235,7 @@
         </div>
 
         {{-- ========================= 3RD GROUP (ACQUISITION & CONDITION) ========================== --}}
-        <div class="bg-gray-50 border rounded-xl p-6 space-y-6">
+        <div class="bg-gray-50 border border-gray-300 rounded-xl p-6 space-y-6">
                 <h3 class="text-lg font-semibold text-gray-700">
                     Acquisition & Condition Details
                 </h3>
@@ -252,7 +252,7 @@
                     <label class="block text-sm font-medium mb-1">
                         Remarks <span class="text-xs text-gray-500">(will be saved with each acquisition)</span>
                     </label>
-                    <textarea name="remarks" rows="3" class="w-full border rounded px-3 py-2"
+                    <textarea name="remarks" rows="3" class="w-full border border-gray-300 rounded px-3 py-2"
                             placeholder="Any notes, condition details, or special remarks for this batch..."></textarea>
                 </div>
 
@@ -260,7 +260,7 @@
                 <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
                     <div>
                         <label class="block text-sm font-medium mb-1">Source</label>
-                        <select id="source" name="source" class="w-full border rounded px-3 py-2" required>
+                        <select id="source" name="source" class="w-full border border-gray-300 rounded px-3 py-2" required>
                             <option value="" selected disabled>Select source</option>
                             <option value="CO">DepEd - Central Office</option>
                             <option value="RO">Regional Office</option>
@@ -271,15 +271,15 @@
                     </div>
                     <div>
                         <label class="block text-sm font-medium mb-1">Date Acquired</label>
-                        <input type="date" name="date_acquired" class="w-full border rounded px-3 py-2">
+                        <input type="date" name="date_acquired" class="w-full border border-gray-300 rounded px-3 py-2">
                     </div>
                     <div>
                         <label class="block text-sm font-medium mb-1">Cost</label>
-                        <input type="number" step="0.01" name="cost" class="w-full border rounded px-3 py-2">
+                        <input type="number" step="0.01" name="cost" class="w-full border border-gray-300 rounded px-3 py-2">
                     </div>
                     <div>
                         <label class="block text-sm font-medium mb-1">IAR No.</label>
-                        <input type="text" name="iar" class="w-full border rounded px-3 py-2">
+                        <input type="text" name="iar" class="w-full border border-gray-300 rounded px-3 py-2">
                     </div>
                 </div>
 
@@ -287,14 +287,14 @@
                 <div>
                     <h4 class="text-sm font-semibold mb-3 text-gray-600">Condition & Quantity</h4>
                     <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4">
-                        <div><label class="block text-xs mb-1">Usable</label><input type="number" name="usable" value="0" min="0" class="qty w-full border rounded px-3 py-2"></div>
-                        <div><label class="block text-xs mb-1">Partially Damaged</label><input type="number" name="partially_damaged" value="0" min="0" class="qty w-full border rounded px-3 py-2"></div>
-                        <div><label class="block text-xs mb-1">Damaged</label><input type="number" name="damaged" value="0" min="0" class="qty w-full border rounded px-3 py-2"></div>
-                        <div><label class="block text-xs mb-1">Lost</label><input type="number" name="lost" value="0" min="0" class="qty w-full border rounded px-3 py-2"></div>
-                        <div><label class="block text-xs mb-1">Condemnable</label><input type="number" name="condemnable" value="0" min="0" class="qty w-full border rounded px-3 py-2"></div>
+                        <div><label class="block text-xs mb-1">Usable</label><input type="number" name="usable" value="0" min="0" class="qty w-full border border-gray-300 rounded px-3 py-2"></div>
+                        <div><label class="block text-xs mb-1">Partially Damaged</label><input type="number" name="partially_damaged" value="0" min="0" class="qty w-full border border-gray-300 rounded px-3 py-2"></div>
+                        <div><label class="block text-xs mb-1">Damaged</label><input type="number" name="damaged" value="0" min="0" class="qty w-full border border-gray-300 rounded px-3 py-2"></div>
+                        <div><label class="block text-xs mb-1">Lost</label><input type="number" name="lost" value="0" min="0" class="qty w-full border border-gray-300 rounded px-3 py-2"></div>
+                        <div><label class="block text-xs mb-1">Condemnable</label><input type="number" name="condemnable" value="0" min="0" class="qty w-full border border-gray-300 rounded px-3 py-2"></div>
                         <div class="md:col-span-2">
                             <label class="block text-xs mb-1">Total Quantity</label>
-                            <input type="number" name="total_quantity" id="nonprintTotalQuantity" readonly class="w-full bg-gray-100 border rounded px-3 py-2 font-semibold">
+                            <input type="number" name="total_quantity" id="nonprintTotalQuantity" readonly class="w-full bg-gray-100 border border-gray-300 rounded px-3 py-2 font-semibold">
                         </div>
                     </div>
                 </div>
@@ -304,21 +304,21 @@
         <div class="mt-6">
             <h3 class="text-lg font-semibold mb-3 text-gray-700">Acquisition List</h3>
             <div class="overflow-x-auto">
-                <table class="w-full border text-sm">
+                <table class="w-full border border-gray-300 text-sm">
                     <thead class="bg-gray-100">
                         <tr>
-                            <th class="border px-2 py-1">Source</th>
-                            <th class="border px-2 py-1">Date</th>
-                            <th class="border px-2 py-1">Cost</th>
-                            <th class="border px-2 py-1">IAR</th>
-                            <th class="border px-2 py-1">Remarks</th>
-                            <th class="border px-2 py-1">Usable</th>
-                            <th class="border px-2 py-1">PD</th>
-                            <th class="border px-2 py-1">Damaged</th>
-                            <th class="border px-2 py-1">Lost</th>
-                            <th class="border px-2 py-1">Cond.</th>
-                            <th class="border px-2 py-1">Total</th>
-                            <th class="border px-2 py-1">Actions</th>
+                            <th class="border border-gray-300 px-2 py-1">Source</th>
+                            <th class="border border-gray-300 px-2 py-1">Date</th>
+                            <th class="border border-gray-300 px-2 py-1">Cost</th>
+                            <th class="border border-gray-300 px-2 py-1">IAR</th>
+                            <th class="border border-gray-300 px-2 py-1">Remarks</th>
+                            <th class="border border-gray-300 px-2 py-1">Usable</th>
+                            <th class="border border-gray-300 px-2 py-1">PD</th>
+                            <th class="border border-gray-300 px-2 py-1">Damaged</th>
+                            <th class="border border-gray-300 px-2 py-1">Lost</th>
+                            <th class="border border-gray-300 px-2 py-1">Cond.</th>
+                            <th class="border border-gray-300 px-2 py-1">Total</th>
+                            <th class="border border-gray-300 px-2 py-1">Actions</th>
                         </tr>
                     </thead>
                     <tbody id="nonprintAcquisitionTableBody">

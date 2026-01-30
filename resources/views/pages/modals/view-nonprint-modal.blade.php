@@ -1,5 +1,5 @@
 <!-- Print Resource View Modal -->
-<div id="viewNonPrintModal" class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden flex items-center justify-center p-4">
+<div id="viewNonPrintModal" class="fixed inset-0 bg-black/50 z-50 hidden flex items-center justify-center p-4">
     <div class="bg-white rounded-xl shadow-2xl max-w-5xl w-full max-h-[90vh] overflow-y-auto">
         <!-- Header -->
         <div class="flex justify-between items-center p-6 border-b bg-blue-50 sticky top-0 z-10">
@@ -62,7 +62,7 @@
             <!-- Subject Assignment -->
             <div class="border-t pt-6">
                 <h3 class="text-lg font-semibold mb-3 text-gray-800">Subject Assignment</h3>
-                <div id="nonprintSubjects" class="bg-gray-50 p-4 rounded-lg min-h-[60px]">
+                <div id="nonprintSubjects" class="bg-gray-50 p-4 rounded-lg min-h-15">
                     <!-- Will be filled by JS -->
                 </div>
             </div>
@@ -95,7 +95,7 @@
             </div>
 
             <!-- Quantity Summary -->
-            <div class="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-lg p-6 border-t">
+            <div class="bg-linear-to-br from-blue-50 to-indigo-50 rounded-lg p-6 border-t">
                 <h4 class="font-semibold text-gray-700 mb-4 text-lg">Overall Quantity Summary</h4>
                 <div class="grid grid-cols-3 md:grid-cols-6 gap-4 text-center">
                     <div class="bg-white p-3 rounded-lg shadow-sm">

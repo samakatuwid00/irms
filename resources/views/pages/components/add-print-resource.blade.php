@@ -142,7 +142,7 @@
         $stages = [
             'S1' => [
                 'tab' => 'stage1',
-                'label' => 'Stage 1',
+                'label' => 'Key Stage 1',
                 'grades' => [
                     0 => 'K',
                     1 => '1',
@@ -152,7 +152,7 @@
             ],
             'ES' => [
                 'tab' => 'stage2',
-                'label' => 'Stage 2',
+                'label' => 'Key Stage 2',
                 'grades' => [
                     4 => '4',
                     5 => '5',
@@ -270,7 +270,7 @@
                     <label class="block text-sm font-medium mb-1">
                         Remarks <span class="text-xs text-gray-500">(will be saved with each acquisition)</span>
                     </label>
-                    <textarea name="remarks" rows="3" class="w-full border rounded px-3 py-2"
+                    <textarea name="remarks" rows="3" class="w-full border border-gray-300 rounded px-3 py-2"
                             placeholder="Any notes, condition details, or special remarks for this batch..."></textarea>
                 </div>
 
@@ -278,7 +278,7 @@
                 <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
                     <div>
                         <label class="block text-sm font-medium mb-1">Source</label>
-                        <select id="source" name="source" class="w-full border rounded px-3 py-2">
+                        <select id="source" name="source" class="w-full border border-gray-300 rounded px-3 py-2">
                             <option value="" selected disabled>Select source</option>
                             <option value="CO">DepEd - Central Office</option>
                             <option value="RO">Regional Office</option>
@@ -289,15 +289,15 @@
                     </div>
                     <div>
                         <label class="block text-sm font-medium mb-1">Date Acquired</label>
-                        <input type="date" name="date_acquired" class="w-full border rounded px-3 py-2">
+                        <input type="date" name="date_acquired" class="w-full border border-gray-300 rounded px-3 py-2">
                     </div>
                     <div>
                         <label class="block text-sm font-medium mb-1">Cost</label>
-                        <input type="number" step="0.01" name="cost" class="w-full border rounded px-3 py-2">
+                        <input type="number" step="0.01" name="cost" class="w-full border border-gray-300 rounded px-3 py-2">
                     </div>
                     <div>
                         <label class="block text-sm font-medium mb-1">IAR No.</label>
-                        <input type="text" name="iar" class="w-full border rounded px-3 py-2">
+                        <input type="text" name="iar" class="w-full border border-gray-300 rounded px-3 py-2">
                     </div>
                 </div>
 
@@ -305,14 +305,14 @@
                 <div>
                     <h4 class="text-sm font-semibold mb-3 text-gray-600">Condition & Quantity</h4>
                     <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4">
-                        <div><label class="block text-xs mb-1">Usable</label><input type="number" name="usable" value="0" min="0" class="qty w-full border rounded px-3 py-2"></div>
-                        <div><label class="block text-xs mb-1">Partially Damaged</label><input type="number" name="partially_damaged" value="0" min="0" class="qty w-full border rounded px-3 py-2"></div>
-                        <div><label class="block text-xs mb-1">Damaged</label><input type="number" name="damaged" value="0" min="0" class="qty w-full border rounded px-3 py-2"></div>
-                        <div><label class="block text-xs mb-1">Lost</label><input type="number" name="lost" value="0" min="0" class="qty w-full border rounded px-3 py-2"></div>
-                        <div><label class="block text-xs mb-1">Condemnable</label><input type="number" name="condemnable" value="0" min="0" class="qty w-full border rounded px-3 py-2"></div>
+                        <div><label class="block text-xs mb-1">Usable</label><input type="number" name="usable" value="0" min="0" class="qty w-full border border-gray-300 rounded px-3 py-2"></div>
+                        <div><label class="block text-xs mb-1">Partially Damaged</label><input type="number" name="partially_damaged" value="0" min="0" class="qty w-full border border-gray-300 rounded px-3 py-2"></div>
+                        <div><label class="block text-xs mb-1">Damaged</label><input type="number" name="damaged" value="0" min="0" class="qty w-full border border-gray-300 rounded px-3 py-2"></div>
+                        <div><label class="block text-xs mb-1">Lost</label><input type="number" name="lost" value="0" min="0" class="qty w-full border border-gray-300 rounded px-3 py-2"></div>
+                        <div><label class="block text-xs mb-1">Condemnable</label><input type="number" name="condemnable" value="0" min="0" class="qty w-full border border-gray-300 rounded px-3 py-2"></div>
                         <div class="md:col-span-2">
                             <label class="block text-xs mb-1">Total Quantity</label>
-                            <input type="number" name="total_quantity" id="totalQuantity" readonly class="w-full bg-gray-100 border rounded px-3 py-2 font-semibold">
+                            <input type="number" name="total_quantity" id="totalQuantity" readonly class="w-full bg-gray-100 border border-gray-300 rounded px-3 py-2 font-semibold">
                         </div>
                     </div>
                 </div>
@@ -324,21 +324,21 @@
             <div class="mt-6">
                 <h3 class="text-lg font-semibold mb-3 text-gray-700">Acquisition List</h3>
                 <div class="overflow-x-auto">
-                    <table class="w-full border text-sm">
+                    <table class="w-full border border-gray-300 text-sm">
                         <thead class="bg-gray-100">
                             <tr>
-                                <th class="border px-2 py-1">Source</th>
-                                <th class="border px-2 py-1">Date</th>
-                                <th class="border px-2 py-1">Cost</th>
-                                <th class="border px-2 py-1">IAR</th>
-                                <th class="border px-2 py-1">Remarks</th>
-                                <th class="border px-2 py-1">Usable</th>
-                                <th class="border px-2 py-1">PD</th>
-                                <th class="border px-2 py-1">Damaged</th>
-                                <th class="border px-2 py-1">Lost</th>
-                                <th class="border px-2 py-1">Cond.</th>
-                                <th class="border px-2 py-1">Total</th>
-                                <th class="border px-2 py-1">Actions</th>
+                                <th class="border border-gray-300 px-2 py-1">Source</th>
+                                <th class="border border-gray-300 px-2 py-1">Date</th>
+                                <th class="border border-gray-300 px-2 py-1">Cost</th>
+                                <th class="border border-gray-300 px-2 py-1">IAR</th>
+                                <th class="border border-gray-300 px-2 py-1">Remarks</th>
+                                <th class="border border-gray-300 px-2 py-1">Usable</th>
+                                <th class="border border-gray-300 px-2 py-1">PD</th>
+                                <th class="border border-gray-300 px-2 py-1">Damaged</th>
+                                <th class="border border-gray-300 px-2 py-1">Lost</th>
+                                <th class="border border-gray-300 px-2 py-1">Cond.</th>
+                                <th class="border border-gray-300 px-2 py-1">Total</th>
+                                <th class="border border-gray-300 px-2 py-1">Actions</th>
                             </tr>
                         </thead>
                         <tbody id="acquisitionTableBody">

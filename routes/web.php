@@ -29,6 +29,10 @@ use Pest\Plugin\Manager;
 //Index
 Route::get('/', [LoginController::class, 'showLoginForm'])->name('index');
 
+Route::get('/index2', function () {
+    return view('index2');
+});
+
 //Register
 Route::get('/register', [RegisterController::class, 'showRegisterForm'])->name('register');
 Route::post('/register', [RegisterController::class, 'submitRegistration'])->name('register.submit');

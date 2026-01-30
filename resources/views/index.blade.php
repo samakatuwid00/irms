@@ -4,13 +4,13 @@
 
 @section('content')
     <div class="w-full max-w-md">
-        <div class="bg-white rounded-xl shadow-lg p-8 border">
+        <div class="bg-white rounded-xl shadow-lg p-8 border border-gray-200">
             {{-- Validation Errors --}}
             @if($errors->any())
                 <div class="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 rounded-lg mb-8 shadow-md relative transition-opacity duration-300">
                     <div class="flex items-center justify-between">
                         <div class="flex items-center">
-                            <svg class="w-6 h-6 mr-3 text-red-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <svg class="w-6 h-6 mr-3 text-red-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                     d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
                             </svg>
@@ -31,7 +31,7 @@
                 <div id="error-alert" class="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 rounded-lg mb-8 shadow-md relative transition-opacity duration-300">
                     <div class="flex items-center justify-between">
                         <div class="flex items-center">
-                            <svg class="w-6 h-6 mr-3 text-red-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <svg class="w-6 h-6 mr-3 text-red-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                     d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
                             </svg>
@@ -53,7 +53,7 @@
                 <div id="success-alert" class="bg-green-100 border-l-4 border-green-500 text-green-700 p-4 rounded-lg mb-8 shadow-md relative transition-opacity duration-300">
                     <div class="flex items-center justify-between">
                         <div class="flex items-center">
-                            <svg class="w-6 h-6 mr-3 text-green-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <svg class="w-6 h-6 mr-3 text-green-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
                             </svg>
                             <p class="font-medium">{{ session('success') }}</p>
@@ -77,7 +77,7 @@
                     <input type="text" id="username" name="username" placeholder=" " required value="{{ old('username') }}"
                            class="w-full px-3 py-2 pt-4 pb-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-custom-yellow focus:border-transparent peer @error('username') border-red-500 @enderror">
                     <label for="username"
-                           class="absolute left-4 top-3 text-gray-500 pointer-events-none transition-all duration-200 peer-focus:top-[-10px] peer-focus:left-3 peer-focus:text-xs peer-focus:bg-white peer-focus:px-2 peer-focus:text-custom-yellow peer-valid:top-[-10px] peer-valid:left-3 peer-valid:text-xs peer-valid:bg-white peer-valid:px-2 peer-valid:text-custom-yellow">
+                           class="absolute left-4 top-3 text-gray-500 pointer-events-none transition-all duration-200 peer-focus:-top-2.5 peer-focus:left-3 peer-focus:text-xs peer-focus:bg-white peer-focus:px-2 peer-focus:text-custom-yellow peer-valid:-top-2.5 peer-valid:left-3 peer-valid:text-xs peer-valid:bg-white peer-valid:px-2 peer-valid:text-custom-yellow">
                         Username or Email
                     </label>
                 </div>
@@ -87,7 +87,7 @@
                     <input type="password" id="password" name="password" placeholder=" " required
                            class="w-full px-3  py-2 pt-4 pb-2 pr-12 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-custom-yellow focus:border-transparent peer">
                     <label for="password"
-                           class="absolute left-4 top-3 text-gray-500 pointer-events-none transition-all duration-200 peer-focus:top-[-10px] peer-focus:left-3 peer-focus:text-xs peer-focus:bg-white peer-focus:px-2 peer-focus:text-custom-yellow peer-valid:top-[-10px] peer-valid:left-3 peer-valid:text-xs peer-valid:bg-white peer-valid:px-2 peer-valid:text-custom-yellow">
+                           class="absolute left-4 top-3 text-gray-500 pointer-events-none transition-all duration-200 peer-focus:-top-2.5 peer-focus:left-3 peer-focus:text-xs peer-focus:bg-white peer-focus:px-2 peer-focus:text-custom-yellow peer-valid:-top-2.5 peer-valid:left-3 peer-valid:text-xs peer-valid:bg-white peer-valid:px-2 peer-valid:text-custom-yellow">
                         Password
                     </label>
                     <i id="passwordToggle" class="fas fa-eye absolute right-4 top-1/2 -translate-y-1/2 cursor-pointer text-gray-500 hover:text-gray-700"></i>
