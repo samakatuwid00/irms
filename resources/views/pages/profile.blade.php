@@ -56,6 +56,7 @@
                             border-2 border-dotted border-gray-300
                             shadow-sm"
                         alt="Profile Photo"
+                        id="photoPreview"
                     >
                 </div>
 
@@ -101,7 +102,7 @@
                 </div>
 
                 {{-- Change Photo --}}
-                <form action="" enctype="multipart/form-data" class="mt-6 w-full">
+                <form action="{{ route('profile.photo') }}" method="POST" enctype="multipart/form-data" class="mt-6 w-full">
                     @csrf
                     @method('PUT')
 
@@ -112,6 +113,8 @@
                     <input
                         type="file"
                         name="photo"
+                        id="photoInput"
+                        accept="image/png,image/jpeg,image/jpg"
                         class="block w-full rounded-lg
                             text-sm text-gray-600
                             border-2 border-dotted border-gray-300
@@ -123,19 +126,20 @@
                             hover:file:bg-blue-200
                             focus:bg-white focus:border-blue-500
                             transition"
-                        required
                     >
 
                     <div class="mt-4 flex justify-center">
                         <button
                             type="submit"
+                            id="photoSubmitBtn"
                             class="inline-flex items-center justify-center
                                 bg-blue-600 text-white
                                 p-3 rounded-full shadow
                                 hover:bg-blue-700 hover:shadow-md
                                 focus:outline-none focus:ring-2 focus:ring-blue-300
-                                transition"
+                                transition opacity-50 cursor-not-allowed"
                             title="Update Photo"
+                            disabled
                         > Update Photo
                         </button>
                     </div>
@@ -361,4 +365,45 @@
         </div>
     </div>
 </div>
+
+{{-- JavaScript for Photo Preview and Button Enable --}}
+<script>
+    const photoInput = document.getElementById('photoInput');
+    const photoPreview = document.getElementById('photoPreview');
+    const photoSubmitBtn = document.getElementById('photoSubmitBtn');
+
+    if (photoInput) {
+        photoInput.addEventListener('change', function(event) {
+            if (event.target.files && event.target.files[0]) {
+                const file = event.target.files[0];
+
+                // Validate file size (2MB max)
+                if (file.size > 2048 * 1024) {
+                    alert('File size must be less than 2MB');
+                    event.target.value = '';
+                    photoSubmitBtn.disabled = true;
+                    photoSubmitBtn.classList.add('opacity-50', 'cursor-not-allowed');
+                    return;
+                }
+
+                // Validate file type
+                const validTypes = ['image/jpeg', 'image/jpg', 'image/png'];
+                if (!validTypes.includes(file.type)) {
+                    alert('Please select a valid image file (JPG or PNG)');
+                    event.target.value = '';
+                    photoSubmitBtn.disabled = true;
+                    photoSubmitBtn.classList.add('opacity-50', 'cursor-not-allowed');
+                    return;
+                }
+
+                // Preview image
+                photoPreview.src = URL.createObjectURL(file);
+
+                // Enable submit button
+                photoSubmitBtn.disabled = false;
+                photoSubmitBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+            }
+        });
+    }
+</script>
 @endsection

@@ -202,17 +202,17 @@ class EditResourceController extends BaseController
                 ? implode(',', $request->subject_grade_levels)
                 : null;
 
-            $publisherName = $request->publisher ? ucwords(strtolower($request->publisher)) : null;
+            $publisherName = $request->publisher ? ucwords(strtolower($request->publisher)) : 'publisher';
 
             $printResource->update([
                 'print_title_id' => $title->id,
                 'print_type_id' => $request->type,
                 'publisher' => $publisherName,
-                'volume' => $request->volume,
-                'edition' => $request->edition,
-                'copyright' => $request->copyright,
-                'pages' => $request->pages,
-                'isbn' => $request->isbn,
+                'volume' => $request->volume ?: 'volume',
+                'edition' => $request->edition ?: 'edition',
+                'copyright' => $request->copyright ?: 0,
+                'pages' => $request->pages ?: 0,
+                'isbn' => $request->isbn ?: 'isbn',
                 'subject_grade_level_ids' => $gradeLevelIds,
                 'library_id' => $request->library_id,
                 'cover' => $coverPath,
@@ -251,15 +251,15 @@ class EditResourceController extends BaseController
                     $acquisition->update([
                         'source' => $a['source'],
                         'date_acquired' => $a['date_acquired'],
-                        'cost' => $a['cost'] ?: null,
-                        'iar' => $a['iar'] ?: null,
+                        'cost' => $a['cost'] ?: 0,
+                        'iar' => $a['iar'] ?: 'iar',
                         'usable' => (int) ($a['usable'] ?? 0),
                         'partially_damaged' => (int) ($a['partially_damaged'] ?? 0),
                         'damaged' => (int) ($a['damaged'] ?? 0),
                         'lost' => (int) ($a['lost'] ?? 0),
                         'condemnable' => (int) ($a['condemnable'] ?? 0),
                         'total_qty' => (int) ($a['total_quantity'] ?? 0),
-                        'remarks' => $a['remarks'] ?? null,
+                        'remarks' => $a['remarks'] ?? 'remarks',
                     ]);
 
                     // Update masterlist based on quantity changes
@@ -279,15 +279,15 @@ class EditResourceController extends BaseController
                         'print_id' => $printResource->id,
                         'source' => $a['source'],
                         'date_acquired' => $a['date_acquired'],
-                        'cost' => $a['cost'] ?: null,
-                        'iar' => $a['iar'] ?: null,
+                        'cost' => $a['cost'] ?: 0,
+                        'iar' => $a['iar'] ?: 'iar',
                         'usable' => (int) ($a['usable'] ?? 0),
                         'partially_damaged' => (int) ($a['partially_damaged'] ?? 0),
                         'damaged' => (int) ($a['damaged'] ?? 0),
                         'lost' => (int) ($a['lost'] ?? 0),
                         'condemnable' => (int) ($a['condemnable'] ?? 0),
                         'total_qty' => (int) ($a['total_quantity'] ?? 0),
-                        'remarks' => $a['remarks'] ?? null,
+                        'remarks' => $a['remarks'] ?? 'remarks',
                         'encoded_by' => Auth::user()->id,
                         'date_encoded' => now(),
                     ]);
@@ -418,17 +418,17 @@ class EditResourceController extends BaseController
                 ? implode(',', $request->subject_grade_levels)
                 : null;
 
-            $brandName = $request->brand ? ucwords(strtolower($request->brand)) : null;
+            $brandName = $request->brand ? ucwords(strtolower($request->brand)) : 'brand';
 
             $nonprintResource->update([
                 'nonprint_title_id' => $title->id,
                 'nonprint_type_id' => $request->typeNP,
                 'brand' => $brandName,
-                'code' => $request->code,
-                'version' => $request->version,
-                'model' => $request->model,
-                'url' => $request->url,
-                'size' => $request->size,
+                'code' => $request->code ?: 'code',
+                'version' => $request->version ?: 'version',
+                'model' => $request->model ?: 'model',
+                'url' => $request->url ?: 'url',
+                'size' => $request->size ?: 'size',
                 'subject_grade_level_ids' => $gradeLevelIds,
                 'library_id' => $request->library_idNP,
                 'cover' => $coverPath,
@@ -467,15 +467,15 @@ class EditResourceController extends BaseController
                     $acquisition->update([
                         'source' => $a['source'],
                         'date_acquired' => $a['date_acquired'],
-                        'cost' => $a['cost'] ?: null,
-                        'iar' => $a['iar'] ?: null,
+                        'cost' => $a['cost'] ?: 0,
+                        'iar' => $a['iar'] ?: 'iar',
                         'usable' => (int) ($a['usable'] ?? 0),
                         'partially_damaged' => (int) ($a['partially_damaged'] ?? 0),
                         'damaged' => (int) ($a['damaged'] ?? 0),
                         'lost' => (int) ($a['lost'] ?? 0),
                         'condemnable' => (int) ($a['condemnable'] ?? 0),
                         'total_qty' => (int) ($a['total_quantity'] ?? 0),
-                        'remarks' => $a['remarks'] ?? null,
+                        'remarks' => $a['remarks'] ?? 'remarks',
                     ]);
 
                     // Update masterlist based on quantity changes
@@ -495,15 +495,15 @@ class EditResourceController extends BaseController
                         'nonprint_id' => $nonprintResource->id,
                         'source' => $a['source'],
                         'date_acquired' => $a['date_acquired'],
-                        'cost' => $a['cost'] ?: null,
-                        'iar' => $a['iar'] ?: null,
+                        'cost' => $a['cost'] ?: 0,
+                        'iar' => $a['iar'] ?: 'iar',
                         'usable' => (int) ($a['usable'] ?? 0),
                         'partially_damaged' => (int) ($a['partially_damaged'] ?? 0),
                         'damaged' => (int) ($a['damaged'] ?? 0),
                         'lost' => (int) ($a['lost'] ?? 0),
                         'condemnable' => (int) ($a['condemnable'] ?? 0),
                         'total_qty' => (int) ($a['total_quantity'] ?? 0),
-                        'remarks' => $a['remarks'] ?? null,
+                        'remarks' => $a['remarks'] ?? 'remarks',
                         'encoded_by' => Auth::user()->id,
                         'date_encoded' => now(),
                     ]);

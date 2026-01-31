@@ -332,8 +332,11 @@
 
     <!-- SUBMIT -->
     <div class="flex justify-end">
-        <button class="px-6 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">
-            Save Non-Print Resource
+        <button type="submit" id="saveNonPrintBtn" class="px-6 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed">
+            <span id="saveNonPrintText">Save Non-Print Resource</span>
+            <span id="saveNonPrintLoading" class="hidden">
+                <i class="fas fa-spinner fa-spin mr-2"></i>Saving...
+            </span>
         </button>
     </div>
 </form>
@@ -538,6 +541,17 @@
         form.addEventListener('submit', () => {
             if (acquisitionsInput) {
                 acquisitionsInput.value = JSON.stringify(nonprintAcquisitions);
+            }
+
+            // Add loading state to save button
+            const saveBtn = document.getElementById('saveNonPrintBtn');
+            const saveText = document.getElementById('saveNonPrintText');
+            const saveLoading = document.getElementById('saveNonPrintLoading');
+
+            if (saveBtn && saveText && saveLoading) {
+                saveBtn.disabled = true;
+                saveText.classList.add('hidden');
+                saveLoading.classList.remove('hidden');
             }
         });
 

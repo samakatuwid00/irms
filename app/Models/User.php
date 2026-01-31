@@ -49,7 +49,9 @@ class User extends Authenticatable
         'usertype_name',
         'usertype_level',
         'station',
-        'station_name'
+        'station_name',
+        'station_logo',
+        'station_logo_url',
     ];
 
 
@@ -61,6 +63,39 @@ class User extends Authenticatable
     public function getUsertypeLevelAttribute(): ?int
     {
         return $this->userType?->level;
+    }
+
+    public function getStationLogoAttribute(): ?string
+    {
+        $station = $this->station;
+        return $station?->logo;
+    }
+
+    public function getStationLogoUrlAttribute(): ?string
+    {
+        $filename = $this->station_logo;
+
+        if (!$filename) {
+            return null;
+        }
+
+        $level = $this->usertype_level;
+
+        $folder = match ($level) {
+            1 => 'school-logo',
+            2 => 'district-logo',
+            3 => 'division-logo',
+            4 => 'region-logo',
+            default => null,
+        };
+
+        if (!$folder) {
+            return null;
+        }
+        return asset("storage/{$filename}");
+
+        // Alternative (if no storage:link):
+        // return asset("storage/app/public/{$folder}/{$filename}");
     }
     /* ================= RELATIONSHIPS ================= */
     public function userType(): BelongsTo

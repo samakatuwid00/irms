@@ -235,7 +235,7 @@
                             </a>
                         </li>
                     @endif
-                    <li class="rounded-lg transition-colors">
+                    {{-- <li class="rounded-lg transition-colors">
                         <a href="{{ route('generate-report') }}"
                         class="flex items-center gap-x-3.5 py-2 px-2.5 text-sm text-gray-800 rounded-lg
                                 {{ request()->routeIs('generate-report') ? 'bg-blue-100 text-blue-600' : 'hover:bg-gray-100' }}">
@@ -248,13 +248,13 @@
                             </svg>
                             Generate Report
                         </a>
-                    </li>
+                    </li> --}}
                 </ul>
             </nav>
 
             <div class="p-12">
                 <div class="flex items-center justify-center">
-                    <img src="{{ asset('assets/images/logo.png') }}" alt="Logo" class="h-24 w-auto">
+                    <img src="{{ Auth::user()?->station_logo_url ?? asset('assets/images/logo.png') }}" alt="Logo" class="h-24 w-auto">
                 </div>
             </div>
 
@@ -264,7 +264,7 @@
                     <button id="accountToggle" type="button"
                             class="w-full flex items-center gap-x-3.5 py-2 px-2.5 text-sm text-gray-800 rounded-lg hover:bg-gray-100 transition-colors">
                         <img class="size-10 rounded-full"
-                             src="{{ Auth::user()->avatar ?? 'https://images.unsplash.com/photo-1734122415415-88cb1d7d5dc0?q=80&w=320&h=320&auto=format&fit=facearea&facepad=3' }}"
+                             src="{{ auth()->user()->photo ? asset('storage/' . auth()->user()->photo) : asset('assets/images/default.jpg') }}"
                              alt="User Avatar">
                         <span class="flex-1 text-left truncate">
                             {{ Auth::user()->firstname}} {{ Auth::user()->lastname}}

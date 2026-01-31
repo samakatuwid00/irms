@@ -101,9 +101,12 @@
                     @enderror
                 </div>
 
-                <button type="submit"
-                        class="w-full bg-custom-yellow text-gray-800 font-semibold py-3 rounded-lg hover:bg-custom-yellow-hover transition duration-300">
-                    Login
+                <button type="submit" id="loginButton"
+                        class="w-full bg-custom-yellow text-gray-800 font-semibold py-3 rounded-lg hover:bg-custom-yellow-hover transition duration-300 disabled:opacity-50 disabled:cursor-not-allowed">
+                    <span id="buttonText">Login</span>
+                    <span id="buttonLoading" class="hidden">
+                        <i class="fas fa-spinner fa-spin mr-2"></i>Logging in...
+                    </span>
                 </button>
             </form>
 
@@ -142,6 +145,21 @@
                 alert.style.opacity = '0';
                 setTimeout(() => alert.remove(), 300);
             }, 8000);
+        });
+
+        // Login button loading state
+        const loginForm = document.getElementById('loginForm');
+        const loginButton = document.getElementById('loginButton');
+        const buttonText = document.getElementById('buttonText');
+        const buttonLoading = document.getElementById('buttonLoading');
+
+        loginForm.addEventListener('submit', function(e) {
+            // Disable the button
+            loginButton.disabled = true;
+
+            // Hide "Login" text and show "Logging in..." text
+            buttonText.classList.add('hidden');
+            buttonLoading.classList.remove('hidden');
         });
     });
 </script>

@@ -166,18 +166,18 @@ class AddResourceController extends BaseController
                 ? implode(',', $request->subject_grade_levels)
                 : null;
 
-            $publisherName = $request->publisher ? ucwords(strtolower($request->publisher)) : null;
+            $publisherName = $request->publisher ? ucwords(strtolower($request->publisher)) : 'publisher';
 
             $printResource = PrintResource::create([
                 'id' => (string) Str::uuid(),
                 'print_title_id' => $title->id,
                 'print_type_id' => $request->type,
-                'publisher' => $publisherName ?: null,
-                'volume' => $request->volume ?: null,
-                'edition' => $request->edition ?: null,
-                'copyright' => $request->copyright ?: null,
-                'pages' => $request->pages ?: null,
-                'isbn' => $request->isbn ?: null,
+                'publisher' => $publisherName,
+                'volume' => $request->volume ?: 'volume',
+                'edition' => $request->edition ?: 'edition',
+                'copyright' => $request->copyright ?: 0,
+                'pages' => $request->pages ?: 0,
+                'isbn' => $request->isbn ?: 'isbn',
                 'subject_grade_level_ids' => $gradeLevelIds,
                 'library_id'       => $request->library_id,
                 'cover' => $coverPath,
@@ -203,8 +203,8 @@ class AddResourceController extends BaseController
                     'print_id' => $printResource->id,
                     'source' => $a['source'],
                     'date_acquired' => $a['date_acquired'],
-                    'cost' => $a['cost'] !== '' ? $a['cost'] : null,
-                    'iar' => $a['iar'] !== '' ? $a['iar'] : null,
+                    'cost' => $a['cost'] !== '' ? $a['cost'] : 0,
+                    'iar' => $a['iar'] !== '' ? $a['iar'] : 'iar',
 
                     'usable' => $a['usable'] !== '' ? (int)$a['usable'] : 0,
                     'partially_damaged' => $a['partially_damaged'] !== '' ? (int)$a['partially_damaged'] : 0,
@@ -298,7 +298,7 @@ class AddResourceController extends BaseController
                 ? implode(',', $request->subject_grade_levels)
                 : null;
 
-            $brandName = $request->brand ? ucwords(strtolower($request->brand)) : null;
+            $brandName = $request->brand ? ucwords(strtolower($request->brand)) : 'brand';
 
             $nonprintResource = NonprintResource::create([
                 'id' => (string) Str::uuid(),
@@ -306,11 +306,11 @@ class AddResourceController extends BaseController
                 'nonprint_type_id' => $request->type,
 
                 'brand' => $brandName,
-                'code' => $request->code,
-                'version' => $request->version,
-                'url' => $request->url,
-                'size' => $request->size,
-                'model' => $request->model,
+                'code' => $request->code ?: 'code',
+                'version' => $request->version ?: 'version',
+                'url' => $request->url ?: 'url',
+                'size' => $request->size ?: 'size',
+                'model' => $request->model ?: 'model',
 
                 'subject_grade_level_ids' => $gradeLevelIds,
                 'library_id'       => $request->library_id,
@@ -337,8 +337,8 @@ class AddResourceController extends BaseController
                     'nonprint_id' => $nonprintResource->id,
                     'source' => $a['source'],
                     'date_acquired' => $a['date_acquired'],
-                    'cost' => $a['cost'] !== '' ? $a['cost'] : null,
-                    'iar' => $a['iar'] !== '' ? $a['iar'] : null,
+                    'cost' => $a['cost'] !== '' ? $a['cost'] : 0,
+                    'iar' => $a['iar'] !== '' ? $a['iar'] : 'iar',
 
                     'usable' => $a['usable'] !== '' ? (int)$a['usable'] : 0,
                     'partially_damaged' => $a['partially_damaged'] !== '' ? (int)$a['partially_damaged'] : 0,
@@ -347,7 +347,7 @@ class AddResourceController extends BaseController
                     'condemnable' => $a['condemnable'] !== '' ? (int)$a['condemnable'] : 0,
                     'total_qty' => $a['total_quantity'] !== '' ? (int)$a['total_quantity'] : 0,
 
-                    'remarks' => $a['remarks'] ?? null,
+                    'remarks' => $a['remarks'] ?? 'remarks',
                     'encoded_by' => Auth::user()->id,
                     'date_encoded' => now(),
                 ]);

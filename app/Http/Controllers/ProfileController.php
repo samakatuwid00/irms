@@ -5,8 +5,10 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\ValidationException;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Str;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Foundation\Validation\ValidatesRequests;
 use Illuminate\Routing\Controller as BaseController;
@@ -118,8 +120,7 @@ class ProfileController extends BaseController
                 ]);
             });
 
-            return redirect()
-                ->view('pages.profile')
+            return redirect()->route('profile')
                 ->with('success', 'Password updated successfully.');
 
         } catch (\Throwable $e) {
@@ -131,4 +132,44 @@ class ProfileController extends BaseController
         }
     }
 
+    public function updatePhoto(Request $request)
+    {
+        $user = Auth::user();
+
+        $validated = $request->validate([
+            'photo' => 'required|image|mimes:jpeg,jpg,png|max:2048', // 2MB max
+        ]);
+
+        try {
+            DB::transaction(function () use ($user, $request) {
+                // Delete old photo if exists
+                if ($user->photo && Storage::disk('public')->exists($user->photo)) {
+                    Storage::disk('public')->delete($user->photo);
+                }
+
+                // Generate filename based on user's first and last name
+                $firstname = Str::slug($user->firstname);
+                $lastname = Str::slug($user->lastname);
+                $extension = $request->file('photo')->getClientOriginalExtension();
+
+                // Create filename: firstname_lastname.ext (e.g., john_doe.jpg)
+                $filename = $firstname . '_' . $lastname . '.' . $extension;
+
+                // Store new photo with custom filename
+                $photoPath = $request->file('photo')->storeAs('user_pic', $filename, 'public');
+
+                // Update user photo
+                $user->photo = $photoPath;
+                $user->save();
+            });
+
+            return redirect()->route('profile')
+                ->with('success', 'Profile photo updated successfully.');
+
+        } catch (\Throwable $e) {
+            report($e);
+            return redirect()->route('profile')
+                ->with('error', 'Failed to update photo. Please try again.');
+        }
+    }
 }

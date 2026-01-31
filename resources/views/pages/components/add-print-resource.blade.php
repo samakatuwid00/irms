@@ -1,4 +1,4 @@
-    {{-- Print Resource Form --}}
+{{-- Print Resource Form --}}
 
     <form id="print" action="{{ route('add-print-resource') }}" class="resource-form space-y-8" method="POST" enctype="multipart/form-data">
         @csrf
@@ -352,8 +352,11 @@
 
         <!-- SUBMIT -->
         <div class="flex justify-end">
-            <button class="px-6 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">
-                Save Print Resource
+            <button type="submit" id="savePrintBtn" class="px-6 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed">
+                <span id="savePrintText">Save Print Resource</span>
+                <span id="savePrintLoading" class="hidden">
+                    <i class="fas fa-spinner fa-spin mr-2"></i>Saving...
+                </span>
             </button>
         </div>
     </form>
@@ -624,6 +627,17 @@
             // SUBMIT
             form.addEventListener('submit', () => {
                 acquisitionsInput.value = JSON.stringify(acquisitions);
+
+                // Add loading state to save button
+                const saveBtn = document.getElementById('savePrintBtn');
+                const saveText = document.getElementById('savePrintText');
+                const saveLoading = document.getElementById('savePrintLoading');
+
+                if (saveBtn && saveText && saveLoading) {
+                    saveBtn.disabled = true;
+                    saveText.classList.add('hidden');
+                    saveLoading.classList.remove('hidden');
+                }
             });
         });
     </script>

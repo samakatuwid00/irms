@@ -15,15 +15,6 @@ use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Cache;
 
-/**
- * Service for managing print resource data across different organizational levels.
- *
- * Handles resource retrieval, filtering, and search functionality for a hierarchical
- * structure: School -> District -> Division -> Region.
- *
- * Note: Libraries exist at School, Division, and Region levels only. Districts do not have libraries.
- * The library_id is stored directly in the print_resources table.
- */
 class PrintResourceService
 {
     /** Number of items per page for pagination */
@@ -38,17 +29,6 @@ class PrintResourceService
     public const LEVEL_DIVISION = 3;
     public const LEVEL_REGION = 4;
 
-    /**
-     * Get resources data for a specific organizational level.
-     *
-     * Main entry point that orchestrates fetching dropdown data, determining
-     * library IDs, and retrieving resources based on the level and filters.
-     *
-     * @param Request $request The HTTP request containing filter parameters
-     * @param int $level The organizational level (1-4)
-     * @param string $stationId The ID of the current station/entity
-     * @return array Contains level, resources, filtered resources, and dropdown data
-     */
     public function getResourcesData(Request $request, int $level, string $stationId): array
     {
         // Get dropdown options for filters (schools, districts, divisions)
@@ -61,6 +41,13 @@ class PrintResourceService
         $resources = $this->getResources($request, $level, $libraryIds['main']);
         $filteredResources = $this->getFilteredResources($request, $level, $libraryIds['filtered']);
 
+        // For school level, get division resources
+        $divisionResources = null;
+        if ($level === self::LEVEL_SCHOOL) {
+            $divisionResources = $this->getDivisionResourcesForSchool($request, $stationId);
+            $this->attachLibraryNames($divisionResources);
+        }
+
         // Attach library names to resources
         $this->attachLibraryNames($resources);
         $this->attachLibraryNames($filteredResources);
@@ -69,19 +56,40 @@ class PrintResourceService
             'level' => $level,
             'resources' => $resources,
             'filteredResources' => $filteredResources,
+            'divisionResources' => $divisionResources,
         ], $dropdownData);
     }
 
-    /**
-     * Attach library names to paginated resources.
-     *
-     * Fetches library names from three library tables (School, Division, Region).
-     * Since library_id can point to any of these three tables, we fetch from all
-     * and match based on the ID.
-     *
-     * @param LengthAwarePaginator $resources The paginated resources
-     * @return void
-     */
+    private function getDivisionResourcesForSchool(Request $request, string $schoolId)
+    {
+        // Get the school's division
+        $school = School::find($schoolId);
+        if (!$school || !$school->district_id) {
+            return $this->emptyPaginator($request);
+        }
+
+        $district = District::find($school->district_id);
+        if (!$district || !$district->division_id) {
+            return $this->emptyPaginator($request);
+        }
+
+        // Get division library IDs
+        $divisionLibraryIds = DivisionLibrary::where('division_id', $district->division_id)->pluck('id');
+
+        if ($divisionLibraryIds->isEmpty()) {
+            return $this->emptyPaginator($request);
+        }
+
+        // Query division resources
+        $query = PrintResource::with(['printTitle.authors', 'type', 'printAcquisitions'])
+            ->whereIn('library_id', $divisionLibraryIds->toArray());
+
+        // Apply search if provided
+        $this->applySearch($query, (string) $request->input('division_search', ''));
+
+        return $query->paginate(self::PER_PAGE, ['*'], 'division_page')->withQueryString();
+    }
+
     private function attachLibraryNames(LengthAwarePaginator $resources): void
     {
         if ($resources->isEmpty()) {
@@ -135,16 +143,6 @@ class PrintResourceService
         }
     }
 
-    /**
-     * Get dropdown data for filters based on organizational level.
-     *
-     * Retrieves and caches the relevant entities (schools, districts, divisions)
-     * that should be available for filtering at the current level.
-     *
-     * @param int $level The organizational level
-     * @param string $stationId The ID of the current station/entity
-     * @return array Contains divisions, districts, schools collections
-     */
     private function getDropdownData(int $level, string $stationId): array
     {
         $data = [
@@ -213,19 +211,6 @@ class PrintResourceService
         return $data;
     }
 
-    /**
-     * Get library IDs to query based on level and request filters.
-     *
-     * Returns two sets of IDs:
-     * - 'main': Primary libraries for the current level
-     * - 'filtered': Libraries based on user's filter selections
-     *
-     * @param Request $request The HTTP request containing filter parameters
-     * @param int $level The organizational level
-     * @param string $stationId The ID of the current station/entity
-     * @param array $dropdownData Available dropdown options
-     * @return array Contains 'main' and 'filtered' library ID collections
-     */
     private function getLibraryIds(Request $request, int $level, string $stationId, array $dropdownData): array
     {
         return match($level) {
@@ -237,14 +222,6 @@ class PrintResourceService
         };
     }
 
-    /**
-     * Get library IDs for school level (Level 1).
-     *
-     * At school level, only show resources from this specific school's library.
-     *
-     * @param string $stationId The school ID
-     * @return array Contains 'main' with school library IDs, 'filtered' is empty
-     */
     private function getLevel1LibraryIds(string $stationId): array
     {
         $main = SchoolLibrary::where('school_id', $stationId)->pluck('id');
@@ -252,16 +229,6 @@ class PrintResourceService
         return ['main' => $main, 'filtered' => collect()];
     }
 
-    /**
-     * Get library IDs for district level (Level 2).
-     *
-     * Districts don't have their own libraries. Shows resources from school libraries.
-     * No main resources - only filtered based on school selection.
-     *
-     * @param Request $request The HTTP request containing school filter
-     * @param array $dropdownData Available schools in this district
-     * @return array Contains empty 'main' and 'filtered' with selected school library IDs
-     */
     private function getLevel2LibraryIds(Request $request, array $dropdownData): array
     {
         if (!$request->has('school')) {
@@ -269,88 +236,61 @@ class PrintResourceService
         }
 
         $selectedSchool = $request->input('school');
-        $schools = $dropdownData['schools'];
 
-        // If specific school selected, get its libraries; otherwise get all schools in district
-        $filtered = ($selectedSchool && $selectedSchool !== 'all')
-            ? SchoolLibrary::where('school_id', $selectedSchool)->pluck('id')
-            : SchoolLibrary::whereIn('school_id', $schools->pluck('id'))->pluck('id');
+        // Handle "All Schools" selection
+        if ($selectedSchool === 'all') {
+            $schoolIds = $dropdownData['schools']->pluck('id');
+            return [
+                'main' => collect(),
+                'filtered' => SchoolLibrary::whereIn('school_id', $schoolIds)->pluck('id')
+            ];
+        }
 
-        return ['main' => collect(), 'filtered' => $filtered];
+        // Specific school selected
+        return [
+            'main' => collect(),
+            'filtered' => SchoolLibrary::where('school_id', $selectedSchool)->pluck('id')
+        ];
     }
 
-    /**
-     * Get library IDs for division level (Level 3).
-     *
-     * Main resources from division libraries, filtered by district/school selection.
-     *
-     * @param Request $request The HTTP request containing filter parameters
-     * @param string $stationId The division ID
-     * @param array $dropdownData Available districts and schools
-     * @return array Contains 'main' with division library IDs and 'filtered' based on selection
-     */
     private function getLevel3LibraryIds(Request $request, string $stationId, array $dropdownData): array
     {
-        $districts = $dropdownData['districts'];
-
-        // Main resources come from division libraries
-        $main = DivisionLibrary::where('division_id', $stationId)->pluck('id');
-
-        // Filtered resources based on district/school selection
-        $filtered = $this->getLevel3FilteredIds($request, $districts);
-
-        return ['main' => $main, 'filtered' => $filtered];
-    }
-
-    /**
-     * Get filtered library IDs for division level based on user selections.
-     *
-     * Handles three scenarios:
-     * 1. Specific school selected -> SchoolLibrary
-     * 2. Specific district selected -> SchoolLibraries in that district
-     * 3. All districts selected -> SchoolLibraries in all districts within division
-     *
-     * Note: Districts don't have libraries, so we only get school libraries.
-     *
-     * @param Request $request The HTTP request containing filter parameters
-     * @param Collection $districts Available districts in this division
-     * @return Collection School library IDs based on filter selection
-     */
-    private function getLevel3FilteredIds(Request $request, Collection $districts): Collection
-    {
-        $selectedSchool = $request->input('school');
         $selectedDistrict = $request->input('district');
+        $selectedSchool = $request->input('school');
 
-        // Priority 1: Specific school
-        if ($selectedSchool && $selectedSchool !== 'all') {
-            return SchoolLibrary::where('school_id', $selectedSchool)->pluck('id');
+        // No filters selected -> show division resources only
+        if (!$request->has('district') && !$request->has('school')) {
+            $main = DivisionLibrary::where('division_id', $stationId)->pluck('id');
+            return ['main' => $main, 'filtered' => collect()];
         }
 
-        // Priority 2: Specific district (get all school libraries in that district)
+        // Specific school selected -> only school resources
+        if ($selectedSchool && $selectedSchool !== 'all') {
+            return [
+                'main' => DivisionLibrary::where('division_id', $stationId)->pluck('id'),
+                'filtered' => SchoolLibrary::where('school_id', $selectedSchool)->pluck('id')
+            ];
+        }
+
+        // Specific district selected -> all schools in that district
         if ($selectedDistrict && $selectedDistrict !== 'all') {
             $schoolIds = School::where('district_id', $selectedDistrict)->pluck('id');
-            return SchoolLibrary::whereIn('school_id', $schoolIds)->pluck('id');
+            return [
+                'main' => DivisionLibrary::where('division_id', $stationId)->pluck('id'),
+                'filtered' => SchoolLibrary::whereIn('school_id', $schoolIds)->pluck('id')
+            ];
         }
 
-        // Priority 3: All districts (get all school libraries in all districts)
-        if ($selectedDistrict === 'all') {
-            $schoolIds = School::whereIn('district_id', $districts->pluck('id'))->pluck('id');
-            return SchoolLibrary::whereIn('school_id', $schoolIds)->pluck('id');
-        }
+        // "All Districts" or "All Schools" -> all schools in division
+        $districtIds = $dropdownData['districts']->pluck('id');
+        $schoolIds = School::whereIn('district_id', $districtIds)->pluck('id');
 
-        return collect();
+        return [
+            'main' => DivisionLibrary::where('division_id', $stationId)->pluck('id'),
+            'filtered' => SchoolLibrary::whereIn('school_id', $schoolIds)->pluck('id')
+        ];
     }
 
-    /**
-     * Get library IDs for region level (Level 4).
-     *
-     * No main resources at region level - all resources are filtered based on
-     * division/district/school selection.
-     *
-     * @param Request $request The HTTP request containing filter parameters
-     * @param string $stationId The region ID
-     * @return array Contains empty 'main' and 'filtered' based on user selection
-     */
     private function getLevel4LibraryIds(Request $request, string $stationId): array
     {
         $selectedDivision = $request->input('division');
@@ -394,17 +334,6 @@ class PrintResourceService
         ];
     }
 
-    /**
-     * Get all library IDs within a specific division.
-     *
-     * Includes division-level libraries and all school libraries
-     * within districts that belong to this division.
-     *
-     * Note: Districts don't have libraries.
-     *
-     * @param string $divisionId The division ID
-     * @return Collection Combined division and school library IDs
-     */
     private function getLevel4DivisionLibraries(string $divisionId): Collection
     {
         // Get division libraries
@@ -418,17 +347,6 @@ class PrintResourceService
         return $divisionLibs->merge($schoolLibs);
     }
 
-    /**
-     * Get all library IDs within a specific region.
-     *
-     * Includes region libraries, all division libraries, and all school libraries
-     * within divisions that belong to this region.
-     *
-     * Note: Districts don't have libraries.
-     *
-     * @param string $stationId The region ID
-     * @return Collection Combined region, division, and school library IDs
-     */
     private function getLevel4RegionLibraries(string $stationId): Collection
     {
         // Get region libraries
@@ -446,18 +364,6 @@ class PrintResourceService
         return $regionLibs->merge($divisionLibs)->merge($schoolLibs);
     }
 
-    /**
-     * Get paginated print resources for the given library IDs.
-     *
-     * Special handling for division level which uses 'division_search' parameter.
-     * Includes related data (title, authors, type, acquisitions).
-     * Filters resources by library_id field in print_resources table.
-     *
-     * @param Request $request The HTTP request containing search parameters
-     * @param int $level The organizational level
-     * @param Collection $libraryIds Library IDs to query
-     * @return LengthAwarePaginator Paginated resources
-     */
     private function getResources(Request $request, int $level, Collection $libraryIds)
     {
         // Division level uses different search parameter
@@ -478,16 +384,6 @@ class PrintResourceService
         return $query->paginate(self::PER_PAGE)->withQueryString();
     }
 
-    /**
-     * Get paginated resources specifically for division level.
-     *
-     * Uses 'division_search' parameter instead of 'search'.
-     * Filters resources by library_id field in print_resources table.
-     *
-     * @param Request $request The HTTP request containing division_search parameter
-     * @param Collection $libraryIds Library IDs to query
-     * @return LengthAwarePaginator Paginated resources
-     */
     private function getDivisionResources(Request $request, Collection $libraryIds)
     {
         if ($libraryIds->isEmpty()) {
@@ -503,18 +399,6 @@ class PrintResourceService
         return $query->paginate(self::PER_PAGE)->withQueryString();
     }
 
-    /**
-     * Get paginated filtered resources based on user selections.
-     *
-     * Only returns results when appropriate filters are applied for the level.
-     * Uses different search parameters for division level.
-     * Filters resources by library_id field in print_resources table.
-     *
-     * @param Request $request The HTTP request containing search and filter parameters
-     * @param int $level The organizational level
-     * @param Collection $libraryIds Filtered library IDs to query
-     * @return LengthAwarePaginator Paginated filtered resources
-     */
     private function getFilteredResources(Request $request, int $level, Collection $libraryIds)
     {
         $shouldShowFiltered = $this->shouldShowFilteredResources($request, $level);
@@ -534,18 +418,6 @@ class PrintResourceService
         return $query->paginate(self::PER_PAGE)->withQueryString();
     }
 
-    /**
-     * Determine if filtered resources should be displayed.
-     *
-     * Based on whether appropriate filters have been applied for the level:
-     * - District: requires school selection
-     * - Division: requires district or school selection
-     * - Region: requires division, district, or school selection
-     *
-     * @param Request $request The HTTP request containing filter parameters
-     * @param int $level The organizational level
-     * @return bool True if filtered resources should be shown
-     */
     private function shouldShowFilteredResources(Request $request, int $level): bool
     {
         return match($level) {
@@ -556,20 +428,6 @@ class PrintResourceService
         };
     }
 
-    /**
-     * Apply search filters to the query.
-     *
-     * Searches across multiple fields:
-     * - ISBN, Publisher, Copyright (direct resource fields)
-     * - Title (from related printTitle)
-     * - Author names (from related authors through printTitle)
-     * - Subject names and grade levels (from related subject_grade_levels)
-     * - Library name (from SchoolLibrary, DivisionLibrary, or RegionLibrary)
-     *
-     * @param mixed $query The Eloquent query builder
-     * @param string $search The search term
-     * @return mixed The modified query builder
-     */
     private function applySearch($query, string $search)
     {
         $search = trim($search);
@@ -627,14 +485,6 @@ class PrintResourceService
         });
     }
 
-    /**
-     * Create an empty paginator for cases with no results.
-     *
-     * Maintains proper pagination structure and query strings.
-     *
-     * @param Request $request The HTTP request for path and query context
-     * @return LengthAwarePaginator Empty paginator with correct metadata
-     */
     private function emptyPaginator(Request $request)
     {
         return new LengthAwarePaginator([], 0, self::PER_PAGE, 1, [

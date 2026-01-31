@@ -355,8 +355,11 @@
 
     <!-- SUBMIT -->
     <div class="flex justify-end">
-        <button class="px-6 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">
-            Update Print Resource
+        <button type="submit" id="updatePrintBtn" class="px-6 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed">
+            <span id="updatePrintText">Update Print Resource</span>
+            <span id="updatePrintLoading" class="hidden">
+                <i class="fas fa-spinner fa-spin mr-2"></i>Updating...
+            </span>
         </button>
     </div>
 </form>
@@ -673,6 +676,17 @@
         // SUBMIT
         form.addEventListener('submit', () => {
             acquisitionsInput.value = JSON.stringify(acquisitions);
+
+            // Add loading state to update button
+            const updateBtn = document.getElementById('updatePrintBtn');
+            const updateText = document.getElementById('updatePrintText');
+            const updateLoading = document.getElementById('updatePrintLoading');
+
+            if (updateBtn && updateText && updateLoading) {
+                updateBtn.disabled = true;
+                updateText.classList.add('hidden');
+                updateLoading.classList.remove('hidden');
+            }
         });
     });
 </script>

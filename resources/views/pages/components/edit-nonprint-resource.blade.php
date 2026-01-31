@@ -312,8 +312,11 @@
         <a href="{{ url()->previous() }}" class="px-6 py-2 bg-gray-500 text-white rounded hover:bg-gray-600">
             Cancel
         </a>
-        <button type="submit" class="px-6 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">
-            Update Non-Print Resource
+        <button type="submit" id="updateNonPrintBtn" class="px-6 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed">
+            <span id="updateNonPrintText">Update Non-Print Resource</span>
+            <span id="updateNonPrintLoading" class="hidden">
+                <i class="fas fa-spinner fa-spin mr-2"></i>Updating...
+            </span>
         </button>
     </div>
 </form>
@@ -551,6 +554,17 @@
         // SUBMIT
         form.addEventListener('submit', () => {
             nonprintAcquisitionsInput.value = JSON.stringify(acquisitions);
+
+            // Add loading state to update button
+            const updateBtn = document.getElementById('updateNonPrintBtn');
+            const updateText = document.getElementById('updateNonPrintText');
+            const updateLoading = document.getElementById('updateNonPrintLoading');
+
+            if (updateBtn && updateText && updateLoading) {
+                updateBtn.disabled = true;
+                updateText.classList.add('hidden');
+                updateLoading.classList.remove('hidden');
+            }
         });
     });
 </script>

@@ -93,6 +93,7 @@ Route::patch('/users/{user}/status', [ManageUserController::class, 'updateStatus
 //MANAGE PROFILE
 Route::put('/profile/update', [ProfileController::class, 'updateInfo'])->name('profile.update');
 Route::put('/profile/password', [ProfileController::class, 'updatePassword'])->name('profile.password');
+Route::put('/profile/photo', [ProfileController::class, 'updatePhoto'])->name('profile.photo');
 
 //MANAGE PRINT RESOURCE
 Route::post('/add-print-resources', [AddResourceController::class, 'addPrintResource'])->name('add-print-resource');
