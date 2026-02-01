@@ -20,6 +20,9 @@ use App\Http\Controllers\DistrictController;
 use App\Http\Controllers\DivisionController;
 use App\Http\Controllers\RegionController;
 
+use App\Http\Controllers\PrintResourceExportController;
+use App\Http\Controllers\NonPrintResourceExportController;
+
 use App\Http\Controllers\GenerateReportController;
 use App\Http\Controllers\LookUpController;
 
@@ -102,3 +105,7 @@ Route::post('/add-nonprint-resources', [AddResourceController::class, 'addNonPri
 Route::get('/edit-resource/{id}', [EditResourceController::class, 'index'])->name('edit-resource');
 Route::put('/update-print-resource/{id}', [EditResourceController::class, 'updatePrintResource'])->name('update-print-resource');
 Route::put('/update-nonprint-resource/{id}', [EditResourceController::class, 'updateNonPrintResource'])->name('update-nonprint-resource');
+
+//MANAGE EXPORT PRINT RESOURCE
+Route::get('/print-resources/export', [PrintResourceExportController::class, 'export'])->name('print-resources.export');
+Route::get('/nonprint-resources/export', [NonPrintResourceExportController::class, 'export'])->name('nonprint-resources.export');

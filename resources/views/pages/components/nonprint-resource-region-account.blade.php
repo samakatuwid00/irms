@@ -1,4 +1,4 @@
-    <h2 class="text-lg font-semibold">Region Resources</h2>
+<h2 class="text-lg font-semibold">Region Resources</h2>
 
     <form method="GET" class="bg-white p-4 rounded-xl shadow space-y-4">
 
@@ -7,7 +7,7 @@
             <div class="relative flex-1">
                 <input type="text"
                     name="search"
-                    placeholder="Search School Library... Search by Title, Author, ISBN, Publisher, Grade, Subject..."
+                    placeholder="Search School Library... Search by Title, Brand, Code, Version, Model, Subject..."
                     value="{{ request('search') }}"
                     class="w-full pl-10 py-2 border rounded-lg text-sm">
 
@@ -89,8 +89,19 @@
     </form>
 
     @if(request()->has('division') || request()->has('district') || request()->has('school'))
+        <!-- Export Button -->
+        <div class="flex justify-end mt-4">
+            <a href="{{ route('nonprint-resources.export', request()->query()) }}"
+               class="inline-flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                </svg>
+                Export to Excel
+            </a>
+        </div>
+
         <div class="bg-white rounded-xl shadow overflow-hidden mt-4">
-            <div class="overflow-x-auto max-h-[600px] overflow-y-auto">
+            <div class="overflow-x-auto max-h-150 overflow-y-auto">
                 <table class="w-full text-sm">
                     <thead class="bg-gray-100 text-gray-600 uppercase text-xs sticky top-0 z-10">
                         <tr>
@@ -168,7 +179,7 @@
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="10" class="text-center py-8 text-gray-500">
+                                <td colspan="12" class="text-center py-8 text-gray-500">
                                     No resources found.
                                 </td>
                             </tr>
