@@ -1,6 +1,6 @@
 
 <!-- Privacy & Terms Modal -->
-<div id="privacyModal" class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden flex items-center justify-center px-4">
+<div id="privacyModal" class="fixed inset-0  bg-black/50 z-50 hidden flex items-center justify-center px-4">
     <div class="bg-white rounded-xl shadow-2xl max-w-3xl w-full max-h-[90vh] flex flex-col">
         <!-- Modal Header -->
         <div class="flex justify-between items-center p-6 border-b">
@@ -73,47 +73,62 @@
 <script>
     const openModalBtn = document.getElementById('openPrivacyModal');
     const modal = document.getElementById('privacyModal');
-    const closeBtns = document.querySelectorAll('#closePrivacyModal, #closePrivacyModalBottom');
+    const closeBtns = document.querySelectorAll(
+        '#closePrivacyModal, #closePrivacyModalBottom'
+    );
+
     const privacyTab = document.getElementById('privacyTab');
     const termsTab = document.getElementById('termsTab');
     const privacyContent = document.getElementById('privacyContent');
     const termsContent = document.getElementById('termsContent');
 
-    if (openModalBtn) {
-        openModalBtn.addEventListener('click', () => {
-            modal.classList.remove('hidden');
-        });
-    }
+    // Open modal
+    openModalBtn?.addEventListener('click', () => {
+        modal.classList.remove('hidden');
+    });
 
+    // Close modal buttons
     closeBtns.forEach(btn => {
         btn.addEventListener('click', () => {
             modal.classList.add('hidden');
         });
     });
 
+    // Close on backdrop click
     modal.addEventListener('click', (e) => {
         if (e.target === modal) {
             modal.classList.add('hidden');
         }
     });
 
-    if (privacyTab && termsTab) {
-        privacyTab.addEventListener('click', () => {
-            privacyTab.classList.add('text-custom-teal', 'border-custom-teal');
-            privacyTab.classList.remove('text-gray-600');
-            termsTab.classList.remove('text-custom-teal', 'border-custom-teal');
-            termsTab.classList.add('text-gray-600');
-            privacyContent.classList.remove('hidden');
-            termsContent.classList.add('hidden');
-        });
+    // Tabs logic
+    privacyTab.addEventListener('click', () => {
+        privacyTab.classList.add(
+            'text-custom-teal', 'border-custom-teal', 'border-b-4'
+        );
+        privacyTab.classList.remove('text-gray-600');
 
-        termsTab.addEventListener('click', () => {
-            termsTab.classList.add('text-custom-teal', 'border-custom-teal');
-            termsTab.classList.remove('text-gray-600');
-            privacyTab.classList.remove('text-custom-teal', 'border-custom-teal');
-            privacyTab.classList.add('text-gray-600');
-            termsContent.classList.remove('hidden');
-            privacyContent.classList.add('hidden');
-        });
-    }
+        termsTab.classList.remove(
+            'text-custom-teal', 'border-custom-teal', 'border-b-4'
+        );
+        termsTab.classList.add('text-gray-600');
+
+        privacyContent.classList.remove('hidden');
+        termsContent.classList.add('hidden');
+    });
+
+    termsTab.addEventListener('click', () => {
+        termsTab.classList.add(
+            'text-custom-teal', 'border-custom-teal', 'border-b-4'
+        );
+        termsTab.classList.remove('text-gray-600');
+
+        privacyTab.classList.remove(
+            'text-custom-teal', 'border-custom-teal', 'border-b-4'
+        );
+        privacyTab.classList.add('text-gray-600');
+
+        termsContent.classList.remove('hidden');
+        privacyContent.classList.add('hidden');
+    });
 </script>

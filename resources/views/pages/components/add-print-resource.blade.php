@@ -258,13 +258,6 @@
                     Acquisition & Condition Details
                 </h3>
 
-                <div class="flex justify-end">
-                    <button type="button" id="addAcquisitionBtn"
-                            class="px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-700">
-                        ➕ Add Acquisition
-                    </button>
-                </div>
-
                 <!-- Remarks -->
                 <div>
                     <label class="block text-sm font-medium mb-1">
@@ -315,6 +308,13 @@
                             <input type="number" name="total_quantity" id="totalQuantity" readonly class="w-full bg-gray-100 border border-gray-300 rounded px-3 py-2 font-semibold">
                         </div>
                     </div>
+                </div>
+
+                <div class="flex justify-end">
+                    <button type="button" id="addAcquisitionBtn"
+                            class="px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-700">
+                        ➕ Add Acquisition
+                    </button>
                 </div>
             </div>
 
