@@ -4,19 +4,17 @@ namespace App\Providers;
 
 use Illuminate\Support\ServiceProvider;
 use App\Models\PrintTitle;
+use App\Models\NonprintTitle;
 use App\Models\SchoolLibrary;
 use App\Models\DivisionLibrary;
 use App\Models\RegionLibrary;
 use App\Observers\PrintTitleObserver;
+use App\Observers\NonPrintTitleObserver;
 use App\Observers\SchoolLibraryObserver;
 use App\Observers\DivisionLibraryObserver;
 use App\Observers\RegionLibraryObserver;
 
-/**
- * ADD THIS TO YOUR AppServiceProvider
- *
- * Location: app/Providers/AppServiceProvider.php
- */
+
 class AppServiceProvider extends ServiceProvider
 {
     /**
@@ -24,8 +22,13 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        // Register observers to keep search vectors updated
+        // Register observers for Print Resources
         PrintTitle::observe(PrintTitleObserver::class);
+
+        // Register observers for Non-Print Resources
+        NonprintTitle::observe(NonPrintTitleObserver::class);
+
+        // Register observers for Libraries (affects both Print and Non-Print)
         SchoolLibrary::observe(SchoolLibraryObserver::class);
         DivisionLibrary::observe(DivisionLibraryObserver::class);
         RegionLibrary::observe(RegionLibraryObserver::class);
