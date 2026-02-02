@@ -2,7 +2,7 @@
 
 @section('title', 'Users')
 
-@section('page-title', 'USers')
+@section('page-title', 'Users')
 
 @section('content')
     @php

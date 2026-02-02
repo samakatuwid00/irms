@@ -86,9 +86,7 @@ class AddResourceController extends BaseController
     public function addPrintResource(Request $request)
     {
 
-        // ==============================
-        // STEP 0: VALIDATION
-        // ==============================
+        // Input Validations
         $request->validate([
             'title' => 'required|string|max:255',
             'authors' => 'nullable|string',
@@ -102,17 +100,12 @@ class AddResourceController extends BaseController
             'library_id' => 'required|string|max:36',
             'subject_grade_levels' => 'nullable|array',
             'acquisitions' => 'required|string',
-            'image' => 'nullable|image|mimes:jpeg,png,jpg|max:5120', // 5MB max
+            'image' => 'nullable|image|mimes:jpeg,png,jpg|max:5120',
         ]);
 
-        // ==============================
-        // STEP 7: TRANSACTION START
-        // ==============================
         DB::transaction(function () use ($request) {
 
-            // ==============================
-            // STEP 1: TITLE
-            // ==============================
+            // Title
             $titleName = ucwords(strtolower($request->title));
 
             $title = PrintTitle::where('title', $titleName)->first();
@@ -124,9 +117,7 @@ class AddResourceController extends BaseController
                 ]);
             }
 
-            // ==============================
-            // STEP 2: AUTHORS
-            // ==============================
+            // Author/s
             $authorNames = json_decode($request->authors, true) ?? [];
             $authorIds = [];
 
@@ -144,24 +135,18 @@ class AddResourceController extends BaseController
                 $authorIds[] = $author->id;
             }
 
-            // ==============================
-            // STEP 3: AUTHOR ↔ TITLE PIVOT
-            // ==============================
+            // Author + Pivot Table
             if (!empty($authorIds)) {
                 $title->authors()->syncWithoutDetaching($authorIds);
             }
 
-            // ==============================
-            // STEP 3.5: HANDLE IMAGE UPLOAD
-            // ==============================
+            // Image Upload
             $coverPath = null;
             if ($request->hasFile('image')) {
                 $coverPath = $this->handleImageUpload($request->file('image'), $titleName);
             }
 
-            // ==============================
-            // STEP 4: PRINT RESOURCE
-            // ==============================
+            // Print Resource
             $gradeLevelIds = $request->subject_grade_levels
                 ? implode(',', $request->subject_grade_levels)
                 : null;
@@ -183,9 +168,7 @@ class AddResourceController extends BaseController
                 'cover' => $coverPath,
             ]);
 
-            // ==============================
-            // STEP 5: ACQUISITIONS (MULTIPLE)
-            // ==============================
+            // Acquisitions
             $acquisitions = json_decode($request->acquisitions, true);
 
             $statusMap = [
@@ -218,9 +201,7 @@ class AddResourceController extends BaseController
                     'date_encoded' => now(),
                 ]);
 
-                // ==============================
-                // STEP 6: MASTERLIST POPULATION
-                // ==============================
+                // Masterlist Population
                 foreach ($statusMap as $field => $statusName) {
                     $qty = (int) ($a[$field] ?? 0);
 
@@ -235,9 +216,6 @@ class AddResourceController extends BaseController
             }
         });
 
-        // ==============================
-        // SUCCESS RESPONSE
-        // ==============================
         return redirect()
             ->route('add-resources')
             ->with('success', 'Print resource successfully added.');
@@ -246,9 +224,7 @@ class AddResourceController extends BaseController
     public function addNonPrintResource(Request $request)
     {
 
-        // ==============================
-        // STEP 0: VALIDATION
-        // ==============================
+        // Input Validations
         $request->validate([
             'title' => 'required|string|max:255',
             'type' => 'required|exists:nonprint_types,id',
@@ -261,17 +237,12 @@ class AddResourceController extends BaseController
             'library_id' => 'required|string|max:36',
             'subject_grade_levels' => 'nullable|array',
             'acquisitions' => 'required|string',
-            'image' => 'nullable|image|mimes:jpeg,png,jpg|max:5120', // 5MB max
+            'image' => 'nullable|image|mimes:jpeg,png,jpg|max:5120',
         ]);
 
-        // ==============================
-        // STEP 5: TRANSACTION START
-        // ==============================
         DB::transaction(function () use ($request) {
 
-            // ==============================
-            // STEP 1: TITLE
-            // ==============================
+            // Title
             $titleName = ucwords(strtolower($request->title));
 
             $title = NonprintTitle::where('title', $titleName)->first();
@@ -283,17 +254,13 @@ class AddResourceController extends BaseController
                 ]);
             }
 
-            // ==============================
-            // STEP 1.5: HANDLE IMAGE UPLOAD
-            // ==============================
+            // Image Upload
             $coverPath = null;
             if ($request->hasFile('image')) {
                 $coverPath = $this->handleNonprintImageUpload($request->file('image'), $titleName);
             }
 
-            // ==============================
-            // STEP 2: NONPRINT RESOURCE
-            // ==============================
+            // Non-Print Resource
             $gradeLevelIds = $request->subject_grade_levels
                 ? implode(',', $request->subject_grade_levels)
                 : null;
@@ -317,9 +284,7 @@ class AddResourceController extends BaseController
                 'cover' => $coverPath,
             ]);
 
-            // ==============================
-            // STEP 3: ACQUISITIONS
-            // ==============================
+            // Acquisitions
             $acquisitions = json_decode($request->acquisitions, true);
 
             $statusMap = [
@@ -352,9 +317,7 @@ class AddResourceController extends BaseController
                     'date_encoded' => now(),
                 ]);
 
-                // ==============================
-                // STEP 4: MASTERLIST POPULATION
-                // ==============================
+                // Masterlist Population
                 foreach ($statusMap as $field => $statusName) {
                     $qty = (int) ($a[$field] ?? 0);
 
@@ -369,9 +332,6 @@ class AddResourceController extends BaseController
             }
         });
 
-        // ==============================
-        // SUCCESS RESPONSE
-        // ==============================
         return redirect()
             ->route('add-resources')
             ->with('success', 'Non-Print resource successfully added.');

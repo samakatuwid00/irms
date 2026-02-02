@@ -6,23 +6,22 @@ use Illuminate\Support\Str;
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
-use App\Models\{
-    SubjectGradeLevel,
-    PrintType,
-    PrintTitle,
-    Author,
-    PrintResource,
-    PrintAcquisition,
-    PrintMasterlist,
-    NonprintResource,
-    NonprintAcquisition,
-    NonprintMasterlist,
-    DivisionLibrary,
-    NonPrintType,
-    NonprintTitle,
-    RegionLibrary,
-    SchoolLibrary
-};
+use App\Models\SubjectGradeLevel;
+use App\Models\PrintType;
+use App\Models\PrintTitle;
+use App\Models\Author;
+use App\Models\PrintResource;
+use App\Models\PrintAcquisition;
+use App\Models\PrintMasterlist;
+use App\Models\NonprintResource;
+use App\Models\NonprintAcquisition;
+use App\Models\NonprintMasterlist;
+use App\Models\DivisionLibrary;
+use App\Models\NonPrintType;
+use App\Models\NonprintTitle;
+use App\Models\RegionLibrary;
+use App\Models\SchoolLibrary;
+
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Foundation\Validation\ValidatesRequests;

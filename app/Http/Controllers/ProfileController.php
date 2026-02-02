@@ -137,7 +137,7 @@ class ProfileController extends BaseController
         $user = Auth::user();
 
         $validated = $request->validate([
-            'photo' => 'required|image|mimes:jpeg,jpg,png|max:2048', // 2MB max
+            'photo' => 'required|image|mimes:jpeg,jpg,png|max:2048',
         ]);
 
         try {

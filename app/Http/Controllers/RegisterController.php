@@ -79,7 +79,6 @@ class RegisterController extends Controller
                 'approved_by'    => null,
             ]);
 
-
             DB::commit();
             return redirect()->route('register')->with('success', 'Account registered successfully! Await approval.');
         } catch (\Exception $e) {

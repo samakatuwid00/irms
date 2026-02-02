@@ -74,7 +74,7 @@ class RegionController extends BaseController
         $region = Region::where('id', Auth::user()->station_id)->firstOrFail();
 
         $validated = $request->validate([
-            'logo' => 'required|image|mimes:jpeg,jpg,png|max:2048', // 2MB max
+            'logo' => 'required|image|mimes:jpeg,jpg,png|max:2048',
         ]);
 
         // Delete old logo if exists
