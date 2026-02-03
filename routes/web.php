@@ -1,7 +1,9 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
-
+Route::get('/index2', function () {
+    return view('index2');
+});
 // AUTHENTICATION ROUTES
 require __DIR__.'/auth.php';
 

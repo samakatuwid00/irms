@@ -1,17 +1,5 @@
 <?php
 
-/**
- * MIGRATION: Full-Text Search for Non-Print Resources
- *
- * Run: php artisan migrate
- *
- * This migration adds:
- * - tsvector column for search
- * - GIN index for performance
- * - Automatic trigger to keep search updated
- * - Function to build search vector from related tables
- */
-
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
@@ -72,10 +60,6 @@ return new class extends Migration
                 ) INTO library_name_text;
 
                 -- Build weighted search vector
-                -- A = highest priority (title)
-                -- B = high priority (brand, subjects)
-                -- C = medium priority (code, model, grades)
-                -- D = low priority (library, version, url, size)
                 RETURN
                     setweight(to_tsvector('english', COALESCE(title_text, '')), 'A') ||
                     setweight(to_tsvector('english', COALESCE(resource_rec.brand, '')), 'B') ||
@@ -88,21 +72,22 @@ return new class extends Migration
                     setweight(to_tsvector('english', COALESCE(resource_rec.url, '')), 'D') ||
                     setweight(to_tsvector('english', COALESCE(resource_rec.size, '')), 'D');
             END;
-            $$ LANGUAGE plpgsql IMMUTABLE;
+            $$ LANGUAGE plpgsql STABLE;
         ");
 
-        // Create trigger function
+        // FIXED: BEFORE trigger that modifies NEW directly - NO recursion!
         DB::statement("
             CREATE OR REPLACE FUNCTION nonprint_resources_search_trigger()
             RETURNS trigger AS $$
             BEGIN
+                -- Set the search_vector on NEW before the row is written
                 NEW.search_vector := build_nonprint_resource_search_vector(NEW.id);
                 RETURN NEW;
             END;
             $$ LANGUAGE plpgsql;
         ");
 
-        // Create trigger on INSERT and UPDATE
+        // FIXED: BEFORE trigger (not AFTER)
         DB::statement('
             CREATE TRIGGER nonprint_resources_search_update
             BEFORE INSERT OR UPDATE ON nonprint_resources

@@ -39,7 +39,7 @@ class EditResourceController extends BaseController
     public function index($id)
     {
         $user = Auth::user();
-        $station_id = Auth::user()->station_id;
+        $station_id = $user->station_id;
 
         // Get the print resource with relationships
         $printResource = PrintResource::with([
@@ -133,7 +133,7 @@ class EditResourceController extends BaseController
             'library_id' => 'required|string|max:36',
             'subject_grade_levels' => 'nullable|array',
             'acquisitions' => 'required|string',
-            'image' => 'nullable|image|mimes:jpeg,png,jpg|max:5120', // 5MB max
+            'image' => 'nullable|image|mimes:jpeg,png,jpg|max:5120',
         ]);
 
         DB::transaction(function () use ($request, $id) {
@@ -143,14 +143,12 @@ class EditResourceController extends BaseController
             // STEP 1: UPDATE TITLE
             // ==============================
             $titleName = ucwords(strtolower($request->title));
-            $title = PrintTitle::where('title', $titleName)->first();
 
-            if (!$title) {
-                $title = PrintTitle::create([
-                    'id' => (string) Str::uuid(),
-                    'title' => $titleName,
-                ]);
-            }
+            // OPTIMIZATION: Use firstOrCreate to reduce queries
+            $title = PrintTitle::firstOrCreate(
+                ['title' => $titleName],
+                ['id' => (string) Str::uuid()]
+            );
 
             // ==============================
             // STEP 2: UPDATE AUTHORS
@@ -158,22 +156,28 @@ class EditResourceController extends BaseController
             $authorNames = json_decode($request->authors, true) ?? [];
             $authorIds = [];
 
-            foreach ($authorNames as $name) {
-                $name = ucwords(strtolower($name));
-                $author = Author::where('author_name', $name)->first();
+            if (!empty($authorNames)) {
+                // OPTIMIZATION: Batch fetch existing authors to reduce queries
+                $normalizedNames = array_map(fn($name) => ucwords(strtolower($name)), $authorNames);
 
-                if (!$author) {
-                    $author = Author::create([
-                        'id' => (string) Str::uuid(),
-                        'author_name' => $name,
-                    ]);
+                $existingAuthors = Author::whereIn('author_name', $normalizedNames)
+                    ->get()
+                    ->keyBy('author_name');
+
+                foreach ($normalizedNames as $name) {
+                    if ($existingAuthors->has($name)) {
+                        $authorIds[] = $existingAuthors->get($name)->id;
+                    } else {
+                        // Create new author
+                        $author = Author::create([
+                            'id' => (string) Str::uuid(),
+                            'author_name' => $name,
+                        ]);
+                        $authorIds[] = $author->id;
+                    }
                 }
 
-                $authorIds[] = $author->id;
-            }
-
-            // Sync authors with title
-            if (!empty($authorIds)) {
+                // Sync authors with title
                 $title->authors()->sync($authorIds);
             } else {
                 $title->authors()->detach();
@@ -229,7 +233,12 @@ class EditResourceController extends BaseController
                 'condemnable' => 'CONDEMNABLE',
             ];
 
+            // OPTIMIZATION: Prepare variables for bulk operations
+            $userId = Auth::id();
+            $now = now();
             $submittedAcquisitionIds = [];
+            $masterlistInserts = [];
+            $masterlistDeletes = [];
 
             foreach ($acquisitions as $a) {
                 // Check if this is an existing acquisition (has 'id' field) or new one
@@ -246,35 +255,47 @@ class EditResourceController extends BaseController
                         'condemnable' => $acquisition->condemnable,
                     ];
 
+                    $newQuantities = [
+                        'usable' => (int) ($a['usable'] ?? 0),
+                        'partially_damaged' => (int) ($a['partially_damaged'] ?? 0),
+                        'damaged' => (int) ($a['damaged'] ?? 0),
+                        'lost' => (int) ($a['lost'] ?? 0),
+                        'condemnable' => (int) ($a['condemnable'] ?? 0),
+                    ];
+
                     // Update acquisition data
                     $acquisition->update([
                         'source' => $a['source'],
                         'date_acquired' => $a['date_acquired'],
                         'cost' => $a['cost'] ?: 0,
                         'iar' => $a['iar'] ?: 'iar',
-                        'usable' => (int) ($a['usable'] ?? 0),
-                        'partially_damaged' => (int) ($a['partially_damaged'] ?? 0),
-                        'damaged' => (int) ($a['damaged'] ?? 0),
-                        'lost' => (int) ($a['lost'] ?? 0),
-                        'condemnable' => (int) ($a['condemnable'] ?? 0),
+                        'usable' => $newQuantities['usable'],
+                        'partially_damaged' => $newQuantities['partially_damaged'],
+                        'damaged' => $newQuantities['damaged'],
+                        'lost' => $newQuantities['lost'],
+                        'condemnable' => $newQuantities['condemnable'],
                         'total_qty' => (int) ($a['total_quantity'] ?? 0),
                         'remarks' => $a['remarks'] ?? 'remarks',
                     ]);
 
-                    // Update masterlist based on quantity changes
-                    $this->updatePrintMasterlist($acquisition, $oldQuantities, [
-                        'usable' => (int) ($a['usable'] ?? 0),
-                        'partially_damaged' => (int) ($a['partially_damaged'] ?? 0),
-                        'damaged' => (int) ($a['damaged'] ?? 0),
-                        'lost' => (int) ($a['lost'] ?? 0),
-                        'condemnable' => (int) ($a['condemnable'] ?? 0),
-                    ], $statusMap);
+                    // OPTIMIZATION: Collect masterlist changes for batch processing
+                    $this->preparePrintMasterlistChanges(
+                        $acquisition,
+                        $oldQuantities,
+                        $newQuantities,
+                        $statusMap,
+                        $masterlistInserts,
+                        $masterlistDeletes,
+                        $now
+                    );
 
                     $submittedAcquisitionIds[] = $acquisition->id;
                 } else {
                     // CREATE NEW ACQUISITION
-                    $acquisition = PrintAcquisition::create([
-                        'id' => (string) Str::uuid(),
+                    $acquisitionId = (string) Str::uuid();
+
+                    PrintAcquisition::create([
+                        'id' => $acquisitionId,
                         'print_id' => $printResource->id,
                         'source' => $a['source'],
                         'date_acquired' => $a['date_acquired'],
@@ -287,41 +308,59 @@ class EditResourceController extends BaseController
                         'condemnable' => (int) ($a['condemnable'] ?? 0),
                         'total_qty' => (int) ($a['total_quantity'] ?? 0),
                         'remarks' => $a['remarks'] ?? 'remarks',
-                        'encoded_by' => Auth::user()->id,
-                        'date_encoded' => now(),
+                        'encoded_by' => $userId,
+                        'date_encoded' => $now,
                     ]);
 
-                    // Create masterlist entries for new acquisition
+                    // OPTIMIZATION: Prepare masterlist entries for bulk insert
                     foreach ($statusMap as $field => $statusName) {
                         $qty = (int) ($a[$field] ?? 0);
 
                         for ($i = 0; $i < $qty; $i++) {
-                            PrintMasterlist::create([
+                            $masterlistInserts[] = [
                                 'id' => (string) Str::uuid(),
-                                'print_acquisition_id' => $acquisition->id,
+                                'print_acquisition_id' => $acquisitionId,
                                 'status' => $statusName,
-                            ]);
+                                'created_at' => $now,
+                                'updated_at' => $now,
+                            ];
                         }
                     }
 
-                    $submittedAcquisitionIds[] = $acquisition->id;
+                    $submittedAcquisitionIds[] = $acquisitionId;
                 }
+            }
+
+            // OPTIMIZATION: Process bulk inserts
+            if (!empty($masterlistInserts)) {
+                foreach (array_chunk($masterlistInserts, 500) as $chunk) {
+                    PrintMasterlist::insert($chunk);
+                }
+            }
+
+            // OPTIMIZATION: Process bulk deletes
+            if (!empty($masterlistDeletes)) {
+                PrintMasterlist::whereIn('id', $masterlistDeletes)->delete();
             }
 
             // Delete acquisitions that were removed
             $existingAcquisitionIds = $printResource->printAcquisitions->pluck('id')->toArray();
             $acquisitionsToDelete = array_diff($existingAcquisitionIds, $submittedAcquisitionIds);
 
-            foreach ($acquisitionsToDelete as $acquisitionId) {
-                $acquisition = PrintAcquisition::find($acquisitionId);
-                if ($acquisition) {
-                    // Delete associated masterlist entries
-                    PrintMasterlist::where('print_acquisition_id', $acquisitionId)->delete();
-                    // Delete acquisition
-                    $acquisition->delete();
-                }
+            if (!empty($acquisitionsToDelete)) {
+                // OPTIMIZATION: Bulk delete masterlist entries
+                PrintMasterlist::whereIn('print_acquisition_id', $acquisitionsToDelete)->delete();
+                // OPTIMIZATION: Bulk delete acquisitions
+                PrintAcquisition::whereIn('id', $acquisitionsToDelete)->delete();
             }
         });
+
+        // FIX: Update search vector AFTER transaction commits
+        DB::statement('
+            UPDATE print_resources
+            SET search_vector = build_print_resource_search_vector(id)
+            WHERE id = ?
+        ', [$id]);
 
         return redirect()
             ->route('edit-resource', ['id' => $id])
@@ -329,9 +368,9 @@ class EditResourceController extends BaseController
     }
 
     /**
-     * Update print masterlist entries based on quantity changes
+     * OPTIMIZATION: Prepare print masterlist changes for batch processing
      */
-    private function updatePrintMasterlist($acquisition, $oldQuantities, $newQuantities, $statusMap)
+    private function preparePrintMasterlistChanges($acquisition, $oldQuantities, $newQuantities, $statusMap, &$masterlistInserts, &$masterlistDeletes, $now)
     {
         foreach ($statusMap as $field => $statusName) {
             $oldQty = (int) $oldQuantities[$field];
@@ -339,24 +378,25 @@ class EditResourceController extends BaseController
             $diff = $newQty - $oldQty;
 
             if ($diff > 0) {
-                // ADD new masterlist entries
+                // PREPARE new masterlist entries for bulk insert
                 for ($i = 0; $i < $diff; $i++) {
-                    PrintMasterlist::create([
+                    $masterlistInserts[] = [
                         'id' => (string) Str::uuid(),
                         'print_acquisition_id' => $acquisition->id,
                         'status' => $statusName,
-                    ]);
+                        'created_at' => $now,
+                        'updated_at' => $now,
+                    ];
                 }
             } elseif ($diff < 0) {
-                // REMOVE masterlist entries
+                // PREPARE masterlist entries for bulk delete
                 $entriesToDelete = PrintMasterlist::where('print_acquisition_id', $acquisition->id)
                     ->where('status', $statusName)
                     ->limit(abs($diff))
-                    ->get();
+                    ->pluck('id')
+                    ->toArray();
 
-                foreach ($entriesToDelete as $entry) {
-                    $entry->delete();
-                }
+                $masterlistDeletes = array_merge($masterlistDeletes, $entriesToDelete);
             }
             // If diff == 0, no changes needed for this status
         }
@@ -386,14 +426,12 @@ class EditResourceController extends BaseController
             // STEP 1: UPDATE TITLE
             // ==============================
             $titleName = ucwords(strtolower($request->nonprintTitle));
-            $title = NonprintTitle::where('title', $titleName)->first();
 
-            if (!$title) {
-                $title = NonprintTitle::create([
-                    'id' => (string) Str::uuid(),
-                    'title' => $titleName,
-                ]);
-            }
+            // OPTIMIZATION: Use firstOrCreate to reduce queries
+            $title = NonprintTitle::firstOrCreate(
+                ['title' => $titleName],
+                ['id' => (string) Str::uuid()]
+            );
 
             // ==============================
             // STEP 2: HANDLE IMAGE UPLOAD
@@ -445,7 +483,12 @@ class EditResourceController extends BaseController
                 'condemnable' => 'CONDEMNABLE',
             ];
 
+            // OPTIMIZATION: Prepare variables for bulk operations
+            $userId = Auth::id();
+            $now = now();
             $submittedAcquisitionIds = [];
+            $masterlistInserts = [];
+            $masterlistDeletes = [];
 
             foreach ($acquisitions as $a) {
                 // Check if this is an existing acquisition (has 'id' field) or new one
@@ -462,35 +505,47 @@ class EditResourceController extends BaseController
                         'condemnable' => $acquisition->condemnable,
                     ];
 
+                    $newQuantities = [
+                        'usable' => (int) ($a['usable'] ?? 0),
+                        'partially_damaged' => (int) ($a['partially_damaged'] ?? 0),
+                        'damaged' => (int) ($a['damaged'] ?? 0),
+                        'lost' => (int) ($a['lost'] ?? 0),
+                        'condemnable' => (int) ($a['condemnable'] ?? 0),
+                    ];
+
                     // Update acquisition data
                     $acquisition->update([
                         'source' => $a['source'],
                         'date_acquired' => $a['date_acquired'],
                         'cost' => $a['cost'] ?: 0,
                         'iar' => $a['iar'] ?: 'iar',
-                        'usable' => (int) ($a['usable'] ?? 0),
-                        'partially_damaged' => (int) ($a['partially_damaged'] ?? 0),
-                        'damaged' => (int) ($a['damaged'] ?? 0),
-                        'lost' => (int) ($a['lost'] ?? 0),
-                        'condemnable' => (int) ($a['condemnable'] ?? 0),
+                        'usable' => $newQuantities['usable'],
+                        'partially_damaged' => $newQuantities['partially_damaged'],
+                        'damaged' => $newQuantities['damaged'],
+                        'lost' => $newQuantities['lost'],
+                        'condemnable' => $newQuantities['condemnable'],
                         'total_qty' => (int) ($a['total_quantity'] ?? 0),
                         'remarks' => $a['remarks'] ?? 'remarks',
                     ]);
 
-                    // Update masterlist based on quantity changes
-                    $this->updateNonprintMasterlist($acquisition, $oldQuantities, [
-                        'usable' => (int) ($a['usable'] ?? 0),
-                        'partially_damaged' => (int) ($a['partially_damaged'] ?? 0),
-                        'damaged' => (int) ($a['damaged'] ?? 0),
-                        'lost' => (int) ($a['lost'] ?? 0),
-                        'condemnable' => (int) ($a['condemnable'] ?? 0),
-                    ], $statusMap);
+                    // OPTIMIZATION: Collect masterlist changes for batch processing
+                    $this->prepareNonprintMasterlistChanges(
+                        $acquisition,
+                        $oldQuantities,
+                        $newQuantities,
+                        $statusMap,
+                        $masterlistInserts,
+                        $masterlistDeletes,
+                        $now
+                    );
 
                     $submittedAcquisitionIds[] = $acquisition->id;
                 } else {
                     // CREATE NEW ACQUISITION
-                    $acquisition = NonprintAcquisition::create([
-                        'id' => (string) Str::uuid(),
+                    $acquisitionId = (string) Str::uuid();
+
+                    NonprintAcquisition::create([
+                        'id' => $acquisitionId,
                         'nonprint_id' => $nonprintResource->id,
                         'source' => $a['source'],
                         'date_acquired' => $a['date_acquired'],
@@ -503,41 +558,57 @@ class EditResourceController extends BaseController
                         'condemnable' => (int) ($a['condemnable'] ?? 0),
                         'total_qty' => (int) ($a['total_quantity'] ?? 0),
                         'remarks' => $a['remarks'] ?? 'remarks',
-                        'encoded_by' => Auth::user()->id,
-                        'date_encoded' => now(),
+                        'encoded_by' => $userId,
+                        'date_encoded' => $now,
                     ]);
 
-                    // Create masterlist entries for new acquisition
+                    // OPTIMIZATION: Prepare masterlist entries for bulk insert
                     foreach ($statusMap as $field => $statusName) {
                         $qty = (int) ($a[$field] ?? 0);
 
                         for ($i = 0; $i < $qty; $i++) {
-                            NonprintMasterlist::create([
+                            $masterlistInserts[] = [
                                 'id' => (string) Str::uuid(),
-                                'nonprint_acquisition_id' => $acquisition->id,
+                                'nonprint_acquisition_id' => $acquisitionId,
                                 'status' => $statusName,
-                            ]);
+                            ];
                         }
                     }
 
-                    $submittedAcquisitionIds[] = $acquisition->id;
+                    $submittedAcquisitionIds[] = $acquisitionId;
                 }
+            }
+
+            // OPTIMIZATION: Process bulk inserts
+            if (!empty($masterlistInserts)) {
+                foreach (array_chunk($masterlistInserts, 500) as $chunk) {
+                    NonprintMasterlist::insert($chunk);
+                }
+            }
+
+            // OPTIMIZATION: Process bulk deletes
+            if (!empty($masterlistDeletes)) {
+                NonprintMasterlist::whereIn('id', $masterlistDeletes)->delete();
             }
 
             // Delete acquisitions that were removed
             $existingAcquisitionIds = $nonprintResource->nonprintAcquisitions->pluck('id')->toArray();
             $acquisitionsToDelete = array_diff($existingAcquisitionIds, $submittedAcquisitionIds);
 
-            foreach ($acquisitionsToDelete as $acquisitionId) {
-                $acquisition = NonprintAcquisition::find($acquisitionId);
-                if ($acquisition) {
-                    // Delete associated masterlist entries
-                    NonprintMasterlist::where('nonprint_acquisition_id', $acquisitionId)->delete();
-                    // Delete acquisition
-                    $acquisition->delete();
-                }
+            if (!empty($acquisitionsToDelete)) {
+                // OPTIMIZATION: Bulk delete masterlist entries
+                NonprintMasterlist::whereIn('nonprint_acquisition_id', $acquisitionsToDelete)->delete();
+                // OPTIMIZATION: Bulk delete acquisitions
+                NonprintAcquisition::whereIn('id', $acquisitionsToDelete)->delete();
             }
         });
+
+        // FIX: Update search vector AFTER transaction commits
+        DB::statement('
+            UPDATE nonprint_resources
+            SET search_vector = build_nonprint_resource_search_vector(id)
+            WHERE id = ?
+        ', [$id]);
 
         return redirect()
                 ->route('edit-resource', ['id' => $id, 'tab' => 'nonprint'])
@@ -545,9 +616,9 @@ class EditResourceController extends BaseController
     }
 
     /**
-     * Update nonprint masterlist entries based on quantity changes
+     * OPTIMIZATION: Prepare nonprint masterlist changes for batch processing
      */
-    private function updateNonprintMasterlist($acquisition, $oldQuantities, $newQuantities, $statusMap)
+    private function prepareNonprintMasterlistChanges($acquisition, $oldQuantities, $newQuantities, $statusMap, &$masterlistInserts, &$masterlistDeletes, $now)
     {
         foreach ($statusMap as $field => $statusName) {
             $oldQty = (int) $oldQuantities[$field];
@@ -555,24 +626,23 @@ class EditResourceController extends BaseController
             $diff = $newQty - $oldQty;
 
             if ($diff > 0) {
-                // ADD new masterlist entries
+                // PREPARE new masterlist entries for bulk insert
                 for ($i = 0; $i < $diff; $i++) {
-                    NonprintMasterlist::create([
+                    $masterlistInserts[] = [
                         'id' => (string) Str::uuid(),
                         'nonprint_acquisition_id' => $acquisition->id,
                         'status' => $statusName,
-                    ]);
+                    ];
                 }
             } elseif ($diff < 0) {
-                // REMOVE masterlist entries
+                // PREPARE masterlist entries for bulk delete
                 $entriesToDelete = NonprintMasterlist::where('nonprint_acquisition_id', $acquisition->id)
                     ->where('status', $statusName)
                     ->limit(abs($diff))
-                    ->get();
+                    ->pluck('id')
+                    ->toArray();
 
-                foreach ($entriesToDelete as $entry) {
-                    $entry->delete();
-                }
+                $masterlistDeletes = array_merge($masterlistDeletes, $entriesToDelete);
             }
             // If diff == 0, no changes needed for this status
         }

@@ -1,16 +1,5 @@
 <?php
 
-/**
- * STEP 1: CREATE MIGRATION
- *
- * Run: php artisan make:migration add_full_text_search_to_print_resources
- *
- * This migration adds:
- * - tsvector column for search
- * - GIN index for performance
- * - Automatic trigger to keep search updated
- */
-
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
@@ -37,7 +26,7 @@ return new class extends Migration
                 resource_rec RECORD;
             BEGIN
                 -- Get the resource record
-                SELECT isbn, publisher, copyright, print_title_id, library_id
+                SELECT isbn, publisher, copyright::text, print_title_id, library_id
                 INTO resource_rec
                 FROM print_resources
                 WHERE id = resource_id;
@@ -64,10 +53,6 @@ return new class extends Migration
                 ) INTO library_name_text;
 
                 -- Build weighted search vector
-                -- A = highest priority (title)
-                -- B = high priority (authors)
-                -- C = medium priority (isbn, publisher)
-                -- D = low priority (library, copyright)
                 RETURN
                     setweight(to_tsvector('english', COALESCE(title_text, '')), 'A') ||
                     setweight(to_tsvector('english', COALESCE(authors_text, '')), 'B') ||
@@ -76,21 +61,22 @@ return new class extends Migration
                     setweight(to_tsvector('english', COALESCE(library_name_text, '')), 'D') ||
                     setweight(to_tsvector('english', COALESCE(resource_rec.copyright, '')), 'D');
             END;
-            $$ LANGUAGE plpgsql IMMUTABLE;
+            $$ LANGUAGE plpgsql STABLE;
         ");
 
-        // Create trigger function
+        // FIXED: BEFORE trigger that modifies NEW directly - NO recursion!
         DB::statement("
             CREATE OR REPLACE FUNCTION print_resources_search_trigger()
             RETURNS trigger AS $$
             BEGIN
+                -- Set the search_vector on NEW before the row is written
                 NEW.search_vector := build_print_resource_search_vector(NEW.id);
                 RETURN NEW;
             END;
             $$ LANGUAGE plpgsql;
         ");
 
-        // Create trigger on INSERT and UPDATE
+        // FIXED: BEFORE trigger (not AFTER)
         DB::statement('
             CREATE TRIGGER print_resources_search_update
             BEFORE INSERT OR UPDATE ON print_resources
