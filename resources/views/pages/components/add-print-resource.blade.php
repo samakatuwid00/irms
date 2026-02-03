@@ -1,4 +1,52 @@
 {{-- Print Resource Form --}}
+    {{-- Success Message --}}
+    @if(session('success'))
+        <div
+            class="mb-4 p-4 text-green-800 bg-green-100 border border-green-200 rounded flex justify-between items-center"
+            id="flash-success"
+        >
+            <span>{{ session('success') }}</span>
+            <button
+                type="button"
+                class="text-green-800 font-bold hover:text-green-900"
+                onclick="document.getElementById('flash-success').remove();"
+            >&times;</button>
+        </div>
+    @endif
+
+    {{-- Error Message --}}
+    @if(session('error'))
+        <div
+            class="mb-4 p-4 text-red-800 bg-red-100 border border-red-200 rounded flex justify-between items-center"
+            id="flash-error"
+        >
+            <span>{{ session('error') }}</span>
+            <button
+                type="button"
+                class="text-red-800 font-bold hover:text-red-900"
+                onclick="document.getElementById('flash-error').remove();"
+            >&times;</button>
+        </div>
+    @endif
+
+    {{-- Validation Errors --}}
+    @if ($errors->any())
+        <div
+            class="mb-4 p-4 bg-red-100 border border-red-200 rounded text-red-800 flex justify-between items-start"
+            id="flash-validation"
+        >
+            <ul class="list-disc pl-5 flex-1">
+                @foreach ($errors->all() as $error)
+                    <li>{{ $error }}</li>
+                @endforeach
+            </ul>
+            <button
+                type="button"
+                class="ml-4 text-red-800 font-bold hover:text-red-900"
+                onclick="document.getElementById('flash-validation').remove();"
+            >&times;</button>
+        </div>
+    @endif
 
     <form id="print" action="{{ route('add-print-resource') }}" class="resource-form space-y-8" method="POST" enctype="multipart/form-data">
         @csrf
