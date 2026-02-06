@@ -1,6 +1,8 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\ImportController;
+use App\Http\Controllers\ImportedLrhubController;
 Route::get('/index2', function () {
     return view('index2');
 });
@@ -22,6 +24,13 @@ require __DIR__.'/stations.php';
 // MANAGE USER ROUTES
 require __DIR__.'/user.php';
 
+//     Route::get('/import-resources', [ImportController::class, 'index'])->name('import.index');
+//     Route::post('/import-print-resources', [ImportController::class, 'importPrintResources'])->name('import.print-resources');
+
+// Route::get('/import-old', function () {
+//     return view('indexImport');
+// });
+// Route::post('/imported-schools/import', [ImportedLrhubController::class, 'importCsv'])->name('imported_schools.import');
 
 
 

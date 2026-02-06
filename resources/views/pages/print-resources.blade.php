@@ -15,7 +15,7 @@
 
     <div class="space-y-4">
 
-        <!-- ================= HEADER ================= -->
+        {{-- <!-- ================= HEADER ================= -->
         <div class="flex justify-end items-center">
             @if($level == 1 || $level == 3)
                 <a href="{{ route('add-resources') }}"
@@ -23,7 +23,7 @@
                     + Add Resource
                 </a>
             @endif
-        </div>
+        </div> --}}
 
         <!-- ===================================================== -->
         <!-- LEVEL 1: School account -->
