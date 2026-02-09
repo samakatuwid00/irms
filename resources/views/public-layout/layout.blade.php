@@ -40,28 +40,15 @@
     @stack('styles')
 </head>
 
-<body class="bg-white text-gray-800 font-sans min-h-screen flex flex-col">
-
-    <header class="bg-white py-4">
-        <div class="container mx-auto px-6 flex justify-center items-center">
-            <div class="flex items-center space-x-4">
-                <img src="{{ asset('assets/images/rov.png') }}" alt="Logo" class="h-16 w-16 rounded-full">
-                <img src="{{ asset('assets/images/deped.png') }}" alt="Logo" class="h-16 w-16">
-                <img src="{{ asset('assets/images/bp.png') }}" alt="Logo" class="h-16 w-16">
-            </div>
-        </div>
-    </header>
+<body class="bg-gradient-to-br from-[#A0F0FF] via-[#B0C8E0] to-[#FFB49A] text-gray-900 font-sans min-h-screen flex flex-col">
 
     {{-- Page Content --}}
     <main class="flex-1 flex items-center justify-center px-4 py-12">
         @yield('content')
     </main>
-    <footer class="bg-white py-6 border-t">
-        <div class="container mx-auto px-6 text-center text-sm text-gray-600">
-            &copy; {{ date('Y') }} Learning Resource Management System. All rights reserved.
-        </div>
-    </footer>
-    @stack('scripts')
 
+    @stack('scripts')
 </body>
+
+
 </html>
