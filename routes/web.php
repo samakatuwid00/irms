@@ -3,9 +3,7 @@
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\ImportController;
 use App\Http\Controllers\ImportedLrhubController;
-Route::get('/index2', function () {
-    return view('index2');
-});
+
 // AUTHENTICATION ROUTES
 require __DIR__.'/auth.php';
 
@@ -31,6 +29,3 @@ require __DIR__.'/user.php';
 //     return view('indexImport');
 // });
 // Route::post('/imported-schools/import', [ImportedLrhubController::class, 'importCsv'])->name('imported_schools.import');
-
-
-

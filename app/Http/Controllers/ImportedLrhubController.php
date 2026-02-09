@@ -43,7 +43,6 @@ class ImportedLrhubController extends Controller
 
             try {
                 if (($handle = fopen($file->getRealPath(), 'r')) !== false) {
-                    // Get header row (skip BOM if present)
                     $header = fgetcsv($handle, 1000, ",");
 
                     // Trim header names (in case CSV has extra spaces)
