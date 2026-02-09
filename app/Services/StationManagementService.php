@@ -15,7 +15,7 @@ class StationManagementService
             ->where('region_id', $regionId)
             ->orderBy('division_name');
 
-        // Apply search filter if provided
+        // Apply search filter
         if ($search) {
             $query->where(function ($q) use ($search) {
                 $q->whereRaw('LOWER(division_name) LIKE ?', ["%{$search}%"])
@@ -35,7 +35,7 @@ class StationManagementService
             ->where('division_id', $divisionId)
             ->orderBy('district_name');
 
-        // Apply search filter if provided
+        // Apply search filter
         if ($search) {
             $query->where(function ($q) use ($search) {
                 $q->whereRaw('LOWER(district_name) LIKE ?', ["%{$search}%"])
@@ -45,7 +45,34 @@ class StationManagementService
             });
         }
 
-        return $query->paginate(15);
+        return $query->paginate(10);
+    }
+
+    /**
+     * Get districts with their schools for a division
+     * Returns all districts with their associated schools
+     */
+    public function getDistrictsWithSchools(string $divisionId, ?string $schoolSearch = null)
+    {
+        $query = District::query()
+            ->with(['schools' => function ($query) use ($schoolSearch) {
+                $query->orderBy('school_name');
+
+                // Apply school search filter if provided
+                if ($schoolSearch) {
+                    $query->where(function ($q) use ($schoolSearch) {
+                        $q->whereRaw('LOWER(school_name) LIKE ?', ["%{$schoolSearch}%"])
+                          ->orWhereRaw('LOWER(shortname) LIKE ?', ["%{$schoolSearch}%"])
+                          ->orWhereRaw('LOWER(school_type) LIKE ?', ["%{$schoolSearch}%"])
+                          ->orWhereRaw('LOWER(address) LIKE ?', ["%{$schoolSearch}%"])
+                          ->orWhereRaw('LOWER(email) LIKE ?', ["%{$schoolSearch}%"]);
+                    });
+                }
+            }])
+            ->where('division_id', $divisionId)
+            ->orderBy('district_name');
+
+        return $query->get();
     }
 
     public function getSchoolsByDivision(string $divisionId, ?string $search = null): LengthAwarePaginator
@@ -58,7 +85,7 @@ class StationManagementService
             })
             ->orderBy('school_name');
 
-        // Apply search filter if provided
+        // Apply search filter
         if ($search) {
             $query->where(function ($q) use ($search) {
                 $q->whereRaw('LOWER(school_name) LIKE ?', ["%{$search}%"])
@@ -69,7 +96,7 @@ class StationManagementService
             });
         }
 
-        return $query->paginate(15);
+        return $query->paginate(10);
     }
 
     public function getSchoolsByDistrict(string $districtId, ?string $search = null): LengthAwarePaginator
@@ -79,7 +106,7 @@ class StationManagementService
             ->where('district_id', $districtId)
             ->orderBy('school_name');
 
-        // Apply search filter if provided
+        // Apply search filter
         if ($search) {
             $query->where(function ($q) use ($search) {
                 $q->whereRaw('LOWER(school_name) LIKE ?', ["%{$search}%"])

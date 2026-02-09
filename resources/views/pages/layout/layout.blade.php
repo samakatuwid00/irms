@@ -4,6 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>@yield('title', 'LRMIS')</title>
+    <link rel="icon" type="image/png" href="{{ asset('assets/images/logo.png') }}">
+    <link rel="apple-touch-icon" href="{{ asset('assets/images/logo.png') }}">
 
     <!-- CSRF Token for forms -->
     <meta name="csrf-token" content="{{ csrf_token() }}">
@@ -48,7 +50,9 @@
                     />
 
                     <!-- Title -->
-                    <h2 class="text-xl font-semibold">iRIMS-V</h2>
+                    <h2 class="text-xl font-bold tracking-wide">
+                        <span class="text-[#0AC4E0]">i</span><span class="text-[#1A3263]">RIMS-</span><span class="text-[#DA3D20]">V</span>
+                    </h2>
                 </div>
 
                 <button id="close-sidebar" class="md:hidden text-gray-500 hover:text-gray-700">

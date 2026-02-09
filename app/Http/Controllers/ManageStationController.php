@@ -33,6 +33,7 @@ class ManageStationController extends BaseController
         $divisions = null;
         $districts = null;
         $schools = null;
+        $districtsWithSchools = null;
 
         // Region Level (level 4)
         if ($level === 4) {
@@ -45,7 +46,9 @@ class ManageStationController extends BaseController
             $schoolSearch = strtolower($request->query('school_search', ''));
 
             $districts = $this->stationService->getDistrictsByDivision($stationId, $districtSearch);
-            $schools = $this->stationService->getSchoolsByDivision($stationId, $schoolSearch);
+
+            // Get districts with their schools
+            $districtsWithSchools = $this->stationService->getDistrictsWithSchools($stationId, $schoolSearch);
         }
 
         // District Level (level 2)
@@ -53,7 +56,7 @@ class ManageStationController extends BaseController
             $schools = $this->stationService->getSchoolsByDistrict($stationId, $search);
         }
 
-        return view('pages.stations', compact('divisions', 'districts', 'schools'));
+        return view('pages.stations', compact('divisions', 'districts', 'schools', 'districtsWithSchools'));
     }
 
     public function addDivision(Request $request)
@@ -149,10 +152,11 @@ class ManageStationController extends BaseController
             'email' => 'nullable|email|max:255',
             'date_establish' => 'nullable|date',
             'legislative_school' => 'nullable|string|max:255',
-            'school_type' => 'nullable|in:primary,secondary,junior-high,senior-high',
+            'school_type' => 'nullable|in:ELEMENTARY,HIGH SCHOOL,INTEGRATED',
+            'district_id' => 'required|exists:districts,id',
         ]);
 
-        $this->stationService->createSchool($validated, Auth::user()->station_id);
+        $this->stationService->createSchool($validated, $validated['district_id']);
 
         return redirect()->route('stations')->with('success', 'School added successfully!');
     }
@@ -167,6 +171,7 @@ class ManageStationController extends BaseController
             'email' => 'nullable|email|max:255',
             'date_establish' => 'nullable|date',
             'legislative_school' => 'nullable|string|max:50',
+            'school_type' => 'nullable|in:ELEMENTARY,HIGH SCHOOL,INTEGRATED',
         ]);
 
         $this->stationService->updateSchool($school, $validated);
