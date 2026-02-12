@@ -266,13 +266,6 @@
                 Acquisition & Condition Details
             </h3>
 
-            <div class="flex justify-end">
-                <button type="button" id="addNonPrintAcquisitionBtn"
-                        class="px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-700">
-                    ➕ Add Acquisition
-                </button>
-            </div>
-
             <!-- Remarks -->
             <div>
                 <label class="block text-sm font-medium mb-1">
@@ -323,6 +316,13 @@
                         <input type="number" name="total_quantity" id="nonprintTotalQuantity" readonly class="w-full bg-gray-100 border rounded px-3 py-2 font-semibold">
                     </div>
                 </div>
+            </div>
+
+            <div class="flex justify-end">
+                <button type="button" id="addNonPrintAcquisitionBtn"
+                        class="px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-700">
+                    ➕ Add Acquisition
+                </button>
             </div>
     </div>
 
@@ -435,7 +435,7 @@
 
         // QUANTITY TOTAL CALCULATION
         const qtyInputs = form.querySelectorAll('.qty');
-        const totalField = form.querySelector('#totalQuantity');
+        const totalField = form.querySelector('#nonprintTotalQuantity');
 
         const calculateTotal = () => {
             let total = 0;
@@ -481,7 +481,7 @@
             damaged: () => form.querySelector('[name="damaged"]').value,
             lost: () => form.querySelector('[name="lost"]').value,
             condemnable: () => form.querySelector('[name="condemnable"]').value,
-            total_quantity: () => form.querySelector('#totalQuantity').value,
+            total_quantity: () => form.querySelector('#nonprintTotalQuantity').value,
         };
 
         const nonprintAcquisitionTableBody = form.querySelector('#nonprintAcquisitionTableBody');
