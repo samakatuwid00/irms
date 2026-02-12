@@ -1,8 +1,8 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\ManageUserController;
-use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\User\ManageUserController;
+use App\Http\Controllers\User\ProfileController;
 
 //MANAGE USER
 Route::get('/users', [ManageUserController::class, 'index'])->name('users');

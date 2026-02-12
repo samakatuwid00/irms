@@ -1,10 +1,10 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\AddResourceController;
-use App\Http\Controllers\EditResourceController;
-use App\Http\Controllers\PrintResourceController;
-use App\Http\Controllers\NonPrintResourceController;
+use App\Http\Controllers\Resource\AddResourceController;
+use App\Http\Controllers\Resource\EditResourceController;
+use App\Http\Controllers\Resource\PrintResourceController;
+use App\Http\Controllers\Resource\NonPrintResourceController;
 
 // RESOURCE NAVIGATIONS
 Route::get('/add-resources', [AddResourceController::class, 'index'])->name('add-resources');

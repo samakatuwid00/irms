@@ -1,8 +1,8 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\PrintResourceExportController;
-use App\Http\Controllers\NonPrintResourceExportController;
+use App\Http\Controllers\Resource\PrintResourceExportController;
+use App\Http\Controllers\Resource\NonPrintResourceExportController;
 
 Route::get('/print-resources/export', [PrintResourceExportController::class, 'export'])
     ->name('print-resources.export');

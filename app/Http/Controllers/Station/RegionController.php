@@ -1,17 +1,17 @@
 <?php
 
-namespace App\Http\Controllers;
-
-use App\Models\School;
+namespace App\Http\Controllers\Station;
+use App\Http\Controllers\Controller;
 
 use Illuminate\Http\Request;
+use App\Models\Region;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Foundation\Validation\ValidatesRequests;
 use Illuminate\Routing\Controller as BaseController;
 
-class SchoolController extends BaseController
+class RegionController extends BaseController
 {
     use AuthorizesRequests, ValidatesRequests;
 
@@ -22,13 +22,13 @@ class SchoolController extends BaseController
 
     public function index()
     {
-        $school = School::where('id', Auth::user()->station_id)->firstOrFail();
-        return view('pages.school-profile', compact('school'));
+        $region = Region::where('id', Auth::user()->station_id)->firstOrFail();
+        return view('pages.region-profile', compact('region'));
     }
 
     public function update(Request $request)
     {
-        $school = School::where('id', Auth::user()->station_id)->firstOrFail();
+        $region = Region::where('id', Auth::user()->station_id)->firstOrFail();
 
         if ($request->filled('date_establish')) {
             $request->merge([
@@ -37,7 +37,7 @@ class SchoolController extends BaseController
         }
 
         $validated = $request->validate([
-            'school_name' => 'required|string|max:255',
+            'region_name' => 'required|string|max:255',
             'email'       => 'required|email:rfc,dns|max:255',
 
             'shortname' => 'nullable|string|max:50',
@@ -53,44 +53,44 @@ class SchoolController extends BaseController
             ],
             'date_establish' => 'nullable|date',
             'address' => 'nullable|string|max:500',
-            'legislative_district' => 'nullable|string|max:255',
         ]);
 
-        $school->fill($validated);
+        $region->fill($validated);
 
-        if (!$school->isDirty()) {
+        if (!$region->isDirty()) {
             return redirect()
-                ->route('school-profile')
+                ->route('region-profile')
                 ->with('info', 'No changes were made.');
         }
 
-        $school->save();
 
-        return redirect()->route('school-profile')
-        ->with('success', 'School information updated successfully.');
+        $region->save();
+
+        return redirect()->route('region-profile')
+        ->with('success', 'Region information updated successfully.');
     }
 
     public function updateLogo(Request $request)
     {
-        $school = School::where('id', Auth::user()->station_id)->firstOrFail();
+        $region = Region::where('id', Auth::user()->station_id)->firstOrFail();
 
         $validated = $request->validate([
             'logo' => 'required|image|mimes:jpeg,jpg,png|max:2048',
         ]);
 
         // Delete old logo if exists
-        if ($school->logo && Storage::disk('public')->exists($school->logo)) {
-            Storage::disk('public')->delete($school->logo);
+        if ($region->logo && Storage::disk('public')->exists($region->logo)) {
+            Storage::disk('public')->delete($region->logo);
         }
 
         // Store new logo
-        $logoPath = $request->file('logo')->store('school-logo', 'public');
+        $logoPath = $request->file('logo')->store('region-logo', 'public');
 
-        // Update school logo
-        $school->logo = $logoPath;
-        $school->save();
+        // Update region logo
+        $region->logo = $logoPath;
+        $region->save();
 
-        return redirect()->route('school-profile')
-            ->with('success', 'School logo updated successfully.');
+        return redirect()->route('region-profile')
+            ->with('success', 'Region logo updated successfully.');
     }
 }

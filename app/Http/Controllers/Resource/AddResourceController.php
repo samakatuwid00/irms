@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Http\Controllers;
+namespace App\Http\Controllers\Resource;
 
 use App\Models\DivisionLibrary;
 use App\Models\NonPrintType;

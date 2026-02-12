@@ -1,8 +1,9 @@
 <?php
 
-namespace App\Http\Controllers;
+namespace App\Http\Controllers\Station;
+use App\Http\Controllers\Controller;
 
-use App\Models\Division;
+use App\Models\District;
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -11,7 +12,7 @@ use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Foundation\Validation\ValidatesRequests;
 use Illuminate\Routing\Controller as BaseController;
 
-class DivisionController extends BaseController
+class DistrictController extends BaseController
 {
     use AuthorizesRequests, ValidatesRequests;
 
@@ -22,13 +23,13 @@ class DivisionController extends BaseController
 
     public function index()
     {
-        $division = Division::where('id', Auth::user()->station_id)->firstOrFail();
-        return view('pages.division-profile', compact('division'));
+        $district = District::where('id', Auth::user()->station_id)->firstOrFail();
+        return view('pages.district-profile', compact('district'));
     }
 
     public function update(Request $request)
     {
-        $division = Division::where('id', Auth::user()->station_id)->firstOrFail();
+        $district = District::where('id', Auth::user()->station_id)->firstOrFail();
 
         if ($request->filled('date_establish')) {
             $request->merge([
@@ -37,7 +38,7 @@ class DivisionController extends BaseController
         }
 
         $validated = $request->validate([
-            'division_name' => 'required|string|max:255',
+            'district_name' => 'required|string|max:255',
             'email'       => 'required|email:rfc,dns|max:255',
 
             'shortname' => 'nullable|string|max:50',
@@ -56,41 +57,41 @@ class DivisionController extends BaseController
             'legislative_district' => 'nullable|string|max:255',
         ]);
 
-        $division->fill($validated);
+        $district->fill($validated);
 
-        if (!$division->isDirty()) {
+        if (!$district->isDirty()) {
             return redirect()
-                ->route('division-profile')
+                ->route('district-profile')
                 ->with('info', 'No changes were made.');
         }
 
-        $division->save();
+        $district->save();
 
-        return redirect()->route('division-profile')
-        ->with('success', 'Division information updated successfully.');
+        return redirect()->route('district-profile')
+        ->with('success', 'District information updated successfully.');
     }
 
     public function updateLogo(Request $request)
     {
-        $division = Division::where('id', Auth::user()->station_id)->firstOrFail();
+        $district = District::where('id', Auth::user()->station_id)->firstOrFail();
 
         $validated = $request->validate([
-            'logo' => 'required|image|mimes:jpeg,jpg,png|max:2048', // 2MB max
+            'logo' => 'required|image|mimes:jpeg,jpg,png|max:2048',
         ]);
 
         // Delete old logo if exists
-        if ($division->logo && Storage::disk('public')->exists($division->logo)) {
-            Storage::disk('public')->delete($division->logo);
+        if ($district->logo && Storage::disk('public')->exists($district->logo)) {
+            Storage::disk('public')->delete($district->logo);
         }
 
         // Store new logo
-        $logoPath = $request->file('logo')->store('division-logo', 'public');
+        $logoPath = $request->file('logo')->store('district-logo', 'public');
 
-        // Update division logo
-        $division->logo = $logoPath;
-        $division->save();
+        // Update district logo
+        $district->logo = $logoPath;
+        $district->save();
 
-        return redirect()->route('division-profile')
-            ->with('success', 'Division logo updated successfully.');
+        return redirect()->route('district-profile')
+            ->with('success', 'District logo updated successfully.');
     }
 }

@@ -1,8 +1,9 @@
 <?php
 
-namespace App\Http\Controllers;
+namespace App\Http\Controllers\Station;
+use App\Http\Controllers\Controller;
 
-use App\Models\District;
+use App\Models\School;
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -11,7 +12,7 @@ use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Foundation\Validation\ValidatesRequests;
 use Illuminate\Routing\Controller as BaseController;
 
-class DistrictController extends BaseController
+class SchoolController extends BaseController
 {
     use AuthorizesRequests, ValidatesRequests;
 
@@ -22,13 +23,13 @@ class DistrictController extends BaseController
 
     public function index()
     {
-        $district = District::where('id', Auth::user()->station_id)->firstOrFail();
-        return view('pages.district-profile', compact('district'));
+        $school = School::where('id', Auth::user()->station_id)->firstOrFail();
+        return view('pages.school-profile', compact('school'));
     }
 
     public function update(Request $request)
     {
-        $district = District::where('id', Auth::user()->station_id)->firstOrFail();
+        $school = School::where('id', Auth::user()->station_id)->firstOrFail();
 
         if ($request->filled('date_establish')) {
             $request->merge([
@@ -37,7 +38,7 @@ class DistrictController extends BaseController
         }
 
         $validated = $request->validate([
-            'district_name' => 'required|string|max:255',
+            'school_name' => 'required|string|max:255',
             'email'       => 'required|email:rfc,dns|max:255',
 
             'shortname' => 'nullable|string|max:50',
@@ -56,41 +57,41 @@ class DistrictController extends BaseController
             'legislative_district' => 'nullable|string|max:255',
         ]);
 
-        $district->fill($validated);
+        $school->fill($validated);
 
-        if (!$district->isDirty()) {
+        if (!$school->isDirty()) {
             return redirect()
-                ->route('district-profile')
+                ->route('school-profile')
                 ->with('info', 'No changes were made.');
         }
 
-        $district->save();
+        $school->save();
 
-        return redirect()->route('district-profile')
-        ->with('success', 'District information updated successfully.');
+        return redirect()->route('school-profile')
+        ->with('success', 'School information updated successfully.');
     }
 
     public function updateLogo(Request $request)
     {
-        $district = District::where('id', Auth::user()->station_id)->firstOrFail();
+        $school = School::where('id', Auth::user()->station_id)->firstOrFail();
 
         $validated = $request->validate([
             'logo' => 'required|image|mimes:jpeg,jpg,png|max:2048',
         ]);
 
         // Delete old logo if exists
-        if ($district->logo && Storage::disk('public')->exists($district->logo)) {
-            Storage::disk('public')->delete($district->logo);
+        if ($school->logo && Storage::disk('public')->exists($school->logo)) {
+            Storage::disk('public')->delete($school->logo);
         }
 
         // Store new logo
-        $logoPath = $request->file('logo')->store('district-logo', 'public');
+        $logoPath = $request->file('logo')->store('school-logo', 'public');
 
-        // Update district logo
-        $district->logo = $logoPath;
-        $district->save();
+        // Update school logo
+        $school->logo = $logoPath;
+        $school->save();
 
-        return redirect()->route('district-profile')
-            ->with('success', 'District logo updated successfully.');
+        return redirect()->route('school-profile')
+            ->with('success', 'School logo updated successfully.');
     }
 }

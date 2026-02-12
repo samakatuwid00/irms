@@ -1,16 +1,18 @@
 <?php
 
-namespace App\Http\Controllers;
+namespace App\Http\Controllers\Station;
+use App\Http\Controllers\Controller;
+
+use App\Models\Division;
 
 use Illuminate\Http\Request;
-use App\Models\Region;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Foundation\Validation\ValidatesRequests;
 use Illuminate\Routing\Controller as BaseController;
 
-class RegionController extends BaseController
+class DivisionController extends BaseController
 {
     use AuthorizesRequests, ValidatesRequests;
 
@@ -21,13 +23,13 @@ class RegionController extends BaseController
 
     public function index()
     {
-        $region = Region::where('id', Auth::user()->station_id)->firstOrFail();
-        return view('pages.region-profile', compact('region'));
+        $division = Division::where('id', Auth::user()->station_id)->firstOrFail();
+        return view('pages.division-profile', compact('division'));
     }
 
     public function update(Request $request)
     {
-        $region = Region::where('id', Auth::user()->station_id)->firstOrFail();
+        $division = Division::where('id', Auth::user()->station_id)->firstOrFail();
 
         if ($request->filled('date_establish')) {
             $request->merge([
@@ -36,7 +38,7 @@ class RegionController extends BaseController
         }
 
         $validated = $request->validate([
-            'region_name' => 'required|string|max:255',
+            'division_name' => 'required|string|max:255',
             'email'       => 'required|email:rfc,dns|max:255',
 
             'shortname' => 'nullable|string|max:50',
@@ -52,44 +54,44 @@ class RegionController extends BaseController
             ],
             'date_establish' => 'nullable|date',
             'address' => 'nullable|string|max:500',
+            'legislative_district' => 'nullable|string|max:255',
         ]);
 
-        $region->fill($validated);
+        $division->fill($validated);
 
-        if (!$region->isDirty()) {
+        if (!$division->isDirty()) {
             return redirect()
-                ->route('region-profile')
+                ->route('division-profile')
                 ->with('info', 'No changes were made.');
         }
 
+        $division->save();
 
-        $region->save();
-
-        return redirect()->route('region-profile')
-        ->with('success', 'Region information updated successfully.');
+        return redirect()->route('division-profile')
+        ->with('success', 'Division information updated successfully.');
     }
 
     public function updateLogo(Request $request)
     {
-        $region = Region::where('id', Auth::user()->station_id)->firstOrFail();
+        $division = Division::where('id', Auth::user()->station_id)->firstOrFail();
 
         $validated = $request->validate([
-            'logo' => 'required|image|mimes:jpeg,jpg,png|max:2048',
+            'logo' => 'required|image|mimes:jpeg,jpg,png|max:2048', // 2MB max
         ]);
 
         // Delete old logo if exists
-        if ($region->logo && Storage::disk('public')->exists($region->logo)) {
-            Storage::disk('public')->delete($region->logo);
+        if ($division->logo && Storage::disk('public')->exists($division->logo)) {
+            Storage::disk('public')->delete($division->logo);
         }
 
         // Store new logo
-        $logoPath = $request->file('logo')->store('region-logo', 'public');
+        $logoPath = $request->file('logo')->store('division-logo', 'public');
 
-        // Update region logo
-        $region->logo = $logoPath;
-        $region->save();
+        // Update division logo
+        $division->logo = $logoPath;
+        $division->save();
 
-        return redirect()->route('region-profile')
-            ->with('success', 'Region logo updated successfully.');
+        return redirect()->route('division-profile')
+            ->with('success', 'Division logo updated successfully.');
     }
 }

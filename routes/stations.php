@@ -1,11 +1,11 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\ManageStationController;
-use App\Http\Controllers\SchoolController;
-use App\Http\Controllers\DistrictController;
-use App\Http\Controllers\DivisionController;
-use App\Http\Controllers\RegionController;
+use App\Http\Controllers\Station\ManageStationController;
+use App\Http\Controllers\Station\SchoolController;
+use App\Http\Controllers\Station\DistrictController;
+use App\Http\Controllers\Station\DivisionController;
+use App\Http\Controllers\Station\RegionController;
 
 //MANAGE STATIONS
 Route::get('/stations', [ManageStationController::class, 'index'])->name('stations');
