@@ -1,17 +1,18 @@
 <?php
 
-namespace App\Services;
+namespace App\Services\Resource\Actions;
 
-use App\Models\NonprintAcquisition;
-use App\Models\NonprintMasterlist;
-use App\Models\NonprintResource;
-use App\Models\NonprintTitle;
+use App\Models\Author;
+use App\Models\PrintAcquisition;
+use App\Models\PrintMasterlist;
+use App\Models\PrintResource;
+use App\Models\PrintTitle;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
-class EditNonPrintResourceService
+class EditPrintResourceService
 {
     private const STATUS_MAP = [
         'usable' => 'USABLE',
@@ -21,38 +22,41 @@ class EditNonPrintResourceService
         'condemnable' => 'CONDEMNABLE',
     ];
 
-    public function updateNonPrintResource(string $id, array $data): array
+    public function updatePrintResource(string $id, array $data): array
     {
         $shouldDeleteResource = false;
-        $nonprintResource = null;
+        $printResource = null;
 
-        DB::transaction(function () use ($id, $data, &$shouldDeleteResource, &$nonprintResource) {
-            $nonprintResource = NonprintResource::findOrFail($id);
+        DB::transaction(function () use ($id, $data, &$shouldDeleteResource, &$printResource) {
+            $printResource = PrintResource::findOrFail($id);
 
             // Step 1: Update title
             $title = $this->updateOrCreateTitle($data['title']);
 
-            // Step 2: Handle image upload
+            // Step 2: Update authors
+            $this->updateAuthors($title, $data['authors'] ?? null);
+
+            // Step 3: Handle image upload
             $coverPath = $this->handleImageUpload(
-                $nonprintResource,
+                $printResource,
                 $data['image'] ?? null,
                 $data['title']
             );
 
-            // Step 3: Update non-print resource
-            $this->updateResourceData($nonprintResource, $title, $data, $coverPath);
+            // Step 4: Update print resource
+            $this->updateResourceData($printResource, $title, $data, $coverPath);
 
-            // Step 4: Update acquisitions
-            $this->updateAcquisitions($nonprintResource, $data['acquisitions']);
+            // Step 5: Update acquisitions
+            $this->updateAcquisitions($printResource, $data['acquisitions']);
 
-            // Step 5: Check if resource should be deleted
-            $nonprintResource->refresh();
-            $remainingAcquisitions = $nonprintResource->nonprintAcquisitions()->count();
+            // Step 6: Check if resource should be deleted
+            $printResource->refresh();
+            $remainingAcquisitions = $printResource->printAcquisitions()->count();
 
             if ($remainingAcquisitions === 0) {
-                $this->deleteResourceWithCover($nonprintResource);
+                $this->deleteResourceWithCover($printResource);
                 $shouldDeleteResource = true;
-                $nonprintResource = null;
+                $printResource = null;
             }
         });
 
@@ -63,34 +67,74 @@ class EditNonPrintResourceService
 
         return [
             'deleted' => $shouldDeleteResource,
-            'resource' => $nonprintResource,
+            'resource' => $printResource,
         ];
     }
 
-    // Update or create a non-print title
-    private function updateOrCreateTitle(string $titleName): NonprintTitle
+    // Update or create a print title
+    private function updateOrCreateTitle(string $titleName): PrintTitle
     {
         $titleName = ucwords(strtolower($titleName));
 
-        return NonprintTitle::firstOrCreate(
+        return PrintTitle::firstOrCreate(
             ['title' => $titleName],
             ['id' => (string) Str::uuid()]
         );
     }
 
-    // Handle image upload for non-print resource
-    private function handleImageUpload(NonprintResource $nonprintResource, $image, string $title): ? string
+    // Update authors for a title
+    private function updateAuthors(PrintTitle $title, ?string $authorsJson): void
     {
-        $coverPath = $nonprintResource->cover;
+        $authorNames = json_decode($authorsJson, true) ?? [];
+
+        if (empty($authorNames)) {
+            $title->authors()->detach();
+            return;
+        }
+
+        // Normalize author names
+        $normalizedNames = array_map(
+            fn($name) => ucwords(strtolower($name)),
+            $authorNames
+        );
+
+        // Batch fetch existing authors
+        $existingAuthors = Author::whereIn('author_name', $normalizedNames)
+            ->get()
+            ->keyBy('author_name');
+
+        $authorIds = [];
+
+        foreach ($normalizedNames as $name) {
+            if ($existingAuthors->has($name)) {
+                $authorIds[] = $existingAuthors->get($name)->id;
+            } else {
+                // Create new author
+                $author = Author::create([
+                    'id' => (string) Str::uuid(),
+                    'author_name' => $name,
+                ]);
+                $authorIds[] = $author->id;
+            }
+        }
+
+        // Sync authors with title
+        $title->authors()->sync($authorIds);
+    }
+
+    // Handle image upload for print resource
+    private function handleImageUpload(PrintResource $printResource, $image, string $title): ? string
+    {
+        $coverPath = $printResource->cover;
 
         if ($image) {
             // Delete old cover if it exists
-            if ($nonprintResource->cover && Storage::disk('public')->exists($nonprintResource->cover)) {
-                Storage::disk('public')->delete($nonprintResource->cover);
+            if ($printResource->cover && Storage::disk('public')->exists($printResource->cover)) {
+                Storage::disk('public')->delete($printResource->cover);
             }
 
             // Upload new cover
-            $coverPath = $this->storeImage($image, $title, 'nonprint_cover');
+            $coverPath = $this->storeImage($image, $title, 'print_cover');
         }
 
         return $coverPath;
@@ -120,38 +164,38 @@ class EditNonPrintResourceService
         return $fullPath;
     }
 
-    // Update non-print resource data
+    // Update print resource data
     private function updateResourceData(
-        NonprintResource $nonprintResource,
-        NonprintTitle $title,
+        PrintResource $printResource,
+        PrintTitle $title,
         array $data,
-        ? string $coverPath
+        ?string $coverPath
     ): void {
         $gradeLevelIds = !empty($data['subject_grade_levels'])
             ? implode(',', $data['subject_grade_levels'])
             : null;
 
-        $brandName = !empty($data['brand'])
-            ? ucwords(strtolower($data['brand']))
-            : 'brand';
+        $publisherName = !empty($data['publisher'])
+            ? ucwords(strtolower($data['publisher']))
+            : 'publisher';
 
-        $nonprintResource->update([
-            'nonprint_title_id' => $title->id,
-            'nonprint_type_id' => $data['type'],
-            'brand' => $brandName,
-            'code' => $data['code'] ?: 'code',
-            'version' => $data['version'] ?: 'version',
-            'model' => $data['model'] ?: 'model',
-            'url' => $data['url'] ?: 'url',
-            'size' => $data['size'] ?: 'size',
+        $printResource->update([
+            'print_title_id' => $title->id,
+            'print_type_id' => $data['type'],
+            'publisher' => $publisherName,
+            'volume' => $data['volume'] ?: 'volume',
+            'edition' => $data['edition'] ?: 'edition',
+            'copyright' => $data['copyright'] ?: 0,
+            'pages' => $data['pages'] ?: 0,
+            'isbn' => $data['isbn'] ?: 'isbn',
             'subject_grade_level_ids' => $gradeLevelIds,
             'library_id' => $data['library_id'],
             'cover' => $coverPath,
         ]);
     }
 
-    // Update acquisitions for a non-print resource
-    private function updateAcquisitions(NonprintResource $nonprintResource, string $acquisitionsJson): void
+    // Update acquisitions for a print resource
+    private function updateAcquisitions(PrintResource $printResource, string $acquisitionsJson): void
     {
         $acquisitions = json_decode($acquisitionsJson, true);
 
@@ -183,7 +227,7 @@ class EditNonPrintResourceService
             } else {
                 // Create new acquisition
                 $acquisitionId = $this->createNewAcquisition(
-                    $nonprintResource->id,
+                    $printResource->id,
                     $acquisitionData,
                     $totalQty,
                     $userId,
@@ -200,7 +244,7 @@ class EditNonPrintResourceService
         // Process bulk operations
         $this->processBulkMasterlistOperations($masterlistInserts, $masterlistDeletes);
         $this->deleteZeroQuantityAcquisitions($acquisitionsToDeleteZeroQty);
-        $this->deleteRemovedAcquisitions($nonprintResource, $submittedAcquisitionIds);
+        $this->deleteRemovedAcquisitions($printResource, $submittedAcquisitionIds);
     }
 
     // Update an existing acquisition
@@ -211,7 +255,7 @@ class EditNonPrintResourceService
         array &$masterlistDeletes,
         $now
     ): array {
-        $acquisition = NonprintAcquisition::findOrFail($acquisitionData['id']);
+        $acquisition = PrintAcquisition::findOrFail($acquisitionData['id']);
 
         // If total quantity is zero, mark for deletion
         if ($totalQty === 0) {
@@ -265,7 +309,7 @@ class EditNonPrintResourceService
 
     // Create a new acquisition
     private function createNewAcquisition(
-        string $nonprintResourceId,
+        string $printResourceId,
         array $acquisitionData,
         int $totalQty,
         $userId,
@@ -279,9 +323,9 @@ class EditNonPrintResourceService
 
         $acquisitionId = (string) Str::uuid();
 
-        NonprintAcquisition::create([
+        PrintAcquisition::create([
             'id' => $acquisitionId,
-            'nonprint_id' => $nonprintResourceId,
+            'print_id' => $printResourceId,
             'source' => $acquisitionData['source'],
             'date_acquired' => $acquisitionData['date_acquired'],
             'cost' => $acquisitionData['cost'] ?: 0,
@@ -304,8 +348,8 @@ class EditNonPrintResourceService
             for ($i = 0; $i < $qty; $i++) {
                 $masterlistInserts[] = [
                     'id' => (string) Str::uuid(),
-                    'nonprint_acquisition_id' => $acquisitionId,
-                    'status' => $statusName,
+                    'print_acquisition_id' => $acquisitionId,
+                    'status' => $statusName
                 ];
             }
         }
@@ -315,7 +359,7 @@ class EditNonPrintResourceService
 
     // Prepare masterlist changes for batch processing
     private function prepareMasterlistChanges(
-        NonprintAcquisition $acquisition,
+        PrintAcquisition $acquisition,
         array $oldQuantities,
         array $newQuantities,
         array &$masterlistInserts,
@@ -331,13 +375,13 @@ class EditNonPrintResourceService
                 for ($i = 0; $i < $diff; $i++) {
                     $masterlistInserts[] = [
                         'id' => (string) Str::uuid(),
-                        'nonprint_acquisition_id' => $acquisition->id,
+                        'print_acquisition_id' => $acquisition->id,
                         'status' => $statusName,
                     ];
                 }
             } elseif ($diff < 0) {
                 // Prepare entries for bulk delete
-                $entriesToDelete = NonprintMasterlist::where('nonprint_acquisition_id', $acquisition->id)
+                $entriesToDelete = PrintMasterlist::where('print_acquisition_id', $acquisition->id)
                     ->where('status', $statusName)
                     ->limit(abs($diff))
                     ->pluck('id')
@@ -354,13 +398,13 @@ class EditNonPrintResourceService
         // Bulk inserts
         if (!empty($masterlistInserts)) {
             foreach (array_chunk($masterlistInserts, 500) as $chunk) {
-                NonprintMasterlist::insert($chunk);
+                PrintMasterlist::insert($chunk);
             }
         }
 
         // Bulk deletes
         if (!empty($masterlistDeletes)) {
-            NonprintMasterlist::whereIn('id', $masterlistDeletes)->delete();
+            PrintMasterlist::whereIn('id', $masterlistDeletes)->delete();
         }
     }
 
@@ -368,39 +412,39 @@ class EditNonPrintResourceService
     private function deleteZeroQuantityAcquisitions(array $acquisitionIds): void
     {
         if (!empty($acquisitionIds)) {
-            NonprintMasterlist::whereIn('nonprint_acquisition_id', $acquisitionIds)->delete();
-            NonprintAcquisition::whereIn('id', $acquisitionIds)->delete();
+            PrintMasterlist::whereIn('print_acquisition_id', $acquisitionIds)->delete();
+            PrintAcquisition::whereIn('id', $acquisitionIds)->delete();
         }
     }
 
     // Delete acquisitions that were removed from the form
-    private function deleteRemovedAcquisitions(NonprintResource $nonprintResource, array $submittedIds): void
+    private function deleteRemovedAcquisitions(PrintResource $printResource, array $submittedIds): void
     {
-        $existingIds = $nonprintResource->nonprintAcquisitions->pluck('id')->toArray();
+        $existingIds = $printResource->printAcquisitions->pluck('id')->toArray();
         $idsToDelete = array_diff($existingIds, $submittedIds);
 
         if (!empty($idsToDelete)) {
-            NonprintMasterlist::whereIn('nonprint_acquisition_id', $idsToDelete)->delete();
-            NonprintAcquisition::whereIn('id', $idsToDelete)->delete();
+            PrintMasterlist::whereIn('print_acquisition_id', $idsToDelete)->delete();
+            PrintAcquisition::whereIn('id', $idsToDelete)->delete();
         }
     }
 
     // Delete resource with its cover image
-    private function deleteResourceWithCover(NonprintResource $nonprintResource): void
+    private function deleteResourceWithCover(PrintResource $printResource): void
     {
-        if ($nonprintResource->cover && Storage::disk('public')->exists($nonprintResource->cover)) {
-            Storage::disk('public')->delete($nonprintResource->cover);
+        if ($printResource->cover && Storage::disk('public')->exists($printResource->cover)) {
+            Storage::disk('public')->delete($printResource->cover);
         }
 
-        $nonprintResource->delete();
+        $printResource->delete();
     }
 
     // Update search vector for the resource
     private function updateSearchVector(string $id): void
     {
         DB::statement('
-            UPDATE nonprint_resources
-            SET search_vector = build_nonprint_resource_search_vector(id)
+            UPDATE print_resources
+            SET search_vector = build_print_resource_search_vector(id)
             WHERE id = ?
         ', [$id]);
     }

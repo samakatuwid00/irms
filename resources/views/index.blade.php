@@ -196,7 +196,7 @@
 
                     <div class="mb-5 sm:mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-0 text-xs sm:text-sm">
                         <div class="flex items-center">
-                            <input type="checkbox" id="notRobot" name="notRobot" class="mr-2 h-3.5 w-3.5 sm:h-4 sm:w-4 rounded border-gray-300 text-custom-yellow focus:ring-custom-yellow">
+                            <input type="checkbox" id="notRobot" name="notRobot" class="mr-2 h-3.5 w-3.5 sm:h-4 sm:w-4 rounded border-gray-300 text-custom-yellow focus:ring-custom-yellow" required>
                             <label for="notRobot" class="text-gray-600">I'm not a robot</label>
                         </div>
                         <a href="#" class="text-custom-teal hover:underline">Forgot password?</a>

@@ -7,7 +7,8 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Foundation\Validation\ValidatesRequests;
 use Illuminate\Routing\Controller as BaseController;
-use App\Services\PrintResourceService;
+
+use App\Services\Resource\Tables\PrintResourceService;
 
 class PrintResourceController extends BaseController
 {

@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Services;
+namespace App\Services\Resource\Tables;
 
 use App\Models\NonprintResource;
 use App\Models\School;

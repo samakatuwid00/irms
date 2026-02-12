@@ -1,8 +1,8 @@
 <?php
 
-namespace App\Services;
+namespace App\Services\Resource\Exports;
 
-use App\Models\NonprintResource;
+use App\Models\PrintResource;
 use App\Models\School;
 use App\Models\District;
 use App\Models\Division;
@@ -14,11 +14,11 @@ use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Cache;
 
-class ExportNonPrintResourceService
+class ExportPrintResourceService
 {
     /** Cache TTL constants */
-    private const CACHE_TTL_LIBRARIES = 1800;
-    private const CACHE_TTL_HIERARCHY = 7200;
+    private const CACHE_TTL_LIBRARIES = 1800; // 30 minutes
+    private const CACHE_TTL_HIERARCHY = 7200; // 2 hours
 
     /** Organizational hierarchy level constants */
     public const LEVEL_SCHOOL = 1;
@@ -37,7 +37,7 @@ class ExportNonPrintResourceService
             return collect();
         }
 
-        $query = NonprintResource::with(['nonprintTitle', 'type', 'nonprintAcquisitions'])
+        $query = PrintResource::with(['printTitle.authors', 'type', 'printAcquisitions'])
             ->whereIn('library_id', $libraryIds->toArray());
 
         // Apply search based on level
@@ -311,7 +311,7 @@ class ExportNonPrintResourceService
     }
 
     /**
-     * Apply full-text search using PostgreSQL's tsvector
+     * Apply search filters using PostgreSQL vector search
      */
     private function applySearch($query, string $search)
     {
@@ -321,7 +321,7 @@ class ExportNonPrintResourceService
             return $query;
         }
 
-        // Use PostgreSQL full-text search with ranking (same as main service)
+        // Use vector search (same as main service)
         return $query->whereRaw(
             "search_vector @@ plainto_tsquery('english', ?)",
             [$search]
@@ -332,7 +332,7 @@ class ExportNonPrintResourceService
     }
 
     /**
-     * Fallback search method using LIKE queries
+     * Fallback search method (in case vector search is not available)
      * This is kept for backward compatibility but should not be needed
      */
     private function applySearchFallback($query, string $search)
@@ -346,30 +346,31 @@ class ExportNonPrintResourceService
         $searchLower = '%' . strtolower($search) . '%';
 
         return $query->where(function ($q) use ($searchLower) {
-            // Search in direct resource fields
-            $q->whereRaw('LOWER(brand) LIKE ?', [$searchLower])
-            ->orWhereRaw('LOWER(code) LIKE ?', [$searchLower])
-            ->orWhereRaw('LOWER(version) LIKE ?', [$searchLower])
-            ->orWhereRaw('LOWER(url) LIKE ?', [$searchLower])
-            ->orWhereRaw('LOWER(size) LIKE ?', [$searchLower])
-            ->orWhereRaw('LOWER(model) LIKE ?', [$searchLower])
+            $q->where('isbn', 'ILIKE', $searchLower)
+            ->orWhere('publisher', 'ILIKE', $searchLower)
+            ->orWhere('copyright', 'ILIKE', $searchLower)
 
-            // Search in title
-            ->orWhereHas('nonprintTitle', fn($qt) =>
-                $qt->whereRaw('LOWER(title) LIKE ?', [$searchLower])
+            // Title search
+            ->orWhereHas('printTitle', fn($qt) =>
+                $qt->where('title', 'ILIKE', $searchLower)
             )
 
-            // Search in subjects and grade levels
+            // Author search
+            ->orWhereHas('printTitle.authors', fn($qa) =>
+                $qa->where('author_name', 'ILIKE', $searchLower)
+            )
+
+            // Subject/Grade search
             ->orWhereExists(function ($exists) use ($searchLower) {
                 $exists->select(DB::raw(1))
-                        ->from('subject_grade_levels as sgl')
-                        ->join('subjects as subj', 'sgl.subject_id', '=', 'subj.id')
-                        ->join('grade_levels as gl', 'sgl.grade_level_id', '=', 'gl.id')
-                        ->whereRaw("sgl.id::text = ANY(string_to_array(nonprint_resources.subject_grade_level_ids, ','))")
-                        ->where(function ($match) use ($searchLower) {
-                            $match->whereRaw('LOWER(subj.subject_name) LIKE ?', [$searchLower])
-                                ->orWhereRaw('LOWER(gl.grade) LIKE ?', [$searchLower]);
-                        });
+                    ->from('subject_grade_levels as sgl')
+                    ->join('subjects as subj', 'sgl.subject_id', '=', 'subj.id')
+                    ->join('grade_levels as gl', 'sgl.grade_level_id', '=', 'gl.id')
+                    ->whereRaw("sgl.id::text = ANY(string_to_array(print_resources.subject_grade_level_ids, ','))")
+                    ->where(function ($match) use ($searchLower) {
+                        $match->where('subj.subject_name', 'ILIKE', $searchLower)
+                            ->orWhere('gl.grade', 'ILIKE', $searchLower);
+                    });
             })
 
             // Combined library search (optimized with UNION ALL)
@@ -382,8 +383,8 @@ class ExportNonPrintResourceService
                         UNION ALL
                         SELECT id, library_name FROM region_libraries
                     ) as all_libraries')
-                    ->whereColumn('nonprint_resources.library_id', 'all_libraries.id')
-                    ->whereRaw('LOWER(all_libraries.library_name) LIKE ?', [$searchLower]);
+                    ->whereColumn('print_resources.library_id', 'all_libraries.id')
+                    ->where('all_libraries.library_name', 'ILIKE', $searchLower);
             });
         });
     }
@@ -417,5 +418,10 @@ class ExportNonPrintResourceService
      */
     public function clearLibraryCache(): void
     {
+        // Only clear library name caches (pattern: library_names_*)
+        // Don't use Cache::flush() as it clears ALL caches
+
+        // If you need more targeted clearing, you could track cache keys
+        // For now, this is a placeholder for manual cache management
     }
 }
