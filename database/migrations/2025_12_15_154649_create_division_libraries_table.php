@@ -13,6 +13,7 @@ return new class extends Migration
             $table->uuid('division_id');
             $table->uuid('librarian');
             $table->string('library_name');
+            $table->unsignedBigInteger('estimated_resource');
 
             $table->foreign('division_id')->references('id')->on('divisions');
         });

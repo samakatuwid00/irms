@@ -9,10 +9,11 @@ class SchoolLibrary extends Model
 {
     public $incrementing = false;
     protected $keyType = 'string';
-    protected $fillable = ['id', 'school_id', 'librarian', 'library_name'];
+    protected $fillable = ['id', 'school_id', 'librarian', 'library_name', 'estimated_resource'];
 
     protected $casts = [
         'id' => 'string',
+        'estimated_resource' => 'integer'
     ];
 
     public $timestamps = false;
