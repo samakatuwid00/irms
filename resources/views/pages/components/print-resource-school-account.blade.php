@@ -59,10 +59,61 @@
             </form>
         </div>
 
-        <!-- Export Button for School Resources -->
-        <div class="flex justify-end mt-4">
+        <!-- Button for School Resources -->
+        <div class="flex justify-between items-center mt-4">
+            <form action="{{ route('school-library.update-estimated-resource') }}" method="POST" class="flex items-center gap-3">
+                @csrf
+                @method('PATCH')
+
+                <label for="estimated_resource" class="text-sm font-medium text-gray-700">
+                    Estimated Resources:
+                </label>
+
+                <input
+                    type="number"
+                    name="estimated_resource"
+                    id="estimated_resource"
+                    min="0"
+                    value="{{ $schoolLibrary->estimated_resource ?? 0 }}"
+                    class="w-32 h-10 px-3 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    required
+                >
+
+                <button
+                    type="submit"
+                    class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm rounded-lg transition-colors"
+                >
+                    Save
+                </button>
+
+                <!-- Display percentage right next to input -->
+                <span class="text-gray-600 text-sm">
+                    (The total number of inputted resources is {{ $countPercent->pct_of_estimated ?? 0 }}% of the estimated resources)
+                </span>
+
+                @if(session('success'))
+                    <div x-data="{ show: true }"
+                        x-show="show"
+                        x-transition
+                        x-init="setTimeout(() => show = false, 3000)"
+                        class="flex items-center justify-between gap-2 px-3 py-2 text-sm text-green-800 bg-green-100 rounded-lg">
+
+                        <span>{{ session('success') }}</span>
+
+                        <button type="button" @click="show = false"
+                                class="ml-3 font-bold text-green-700 hover:text-green-900">
+                            ✕
+                        </button>
+                    </div>
+                @endif
+
+                @error('estimated_resource')
+                    <span class="text-sm text-red-600">{{ $message }}</span>
+                @enderror
+            </form>
+
             <a href="{{ route('print-resources.export', array_merge(request()->query(), ['tab' => 'school'])) }}"
-               class="inline-flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors">
+            class="inline-flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
                 </svg>

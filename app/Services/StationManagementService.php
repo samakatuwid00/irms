@@ -25,7 +25,7 @@ class StationManagementService
             });
         }
 
-        return $query->paginate(15);
+        return $query->paginate(5);
     }
 
     public function getDistrictsByDivision(string $divisionId, ?string $search = null): LengthAwarePaginator

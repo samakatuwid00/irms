@@ -5,6 +5,7 @@ use App\Http\Controllers\Resource\AddResourceController;
 use App\Http\Controllers\Resource\EditResourceController;
 use App\Http\Controllers\Resource\PrintResourceController;
 use App\Http\Controllers\Resource\NonPrintResourceController;
+use App\Http\Controllers\Resource\ManageEstimatedResourceCountController;
 
 // RESOURCE NAVIGATIONS
 Route::get('/add-resources', [AddResourceController::class, 'index'])->name('add-resources');
@@ -17,3 +18,7 @@ Route::post('/add-nonprint-resources', [AddResourceController::class, 'addNonPri
 Route::get('/edit-resource/{id}', [EditResourceController::class, 'index'])->name('edit-resource');
 Route::put('/update-print-resource/{id}', [EditResourceController::class, 'updatePrintResource'])->name('update-print-resource');
 Route::put('/update-nonprint-resource/{id}', [EditResourceController::class, 'updateNonPrintResource'])->name('update-nonprint-resource');
+
+//ESTIMATED COUNT
+Route::patch('/school-library/update-estimated-resource', [ManageEstimatedResourceCountController::class, 'updateEstimatedResource'])
+    ->name('school-library.update-estimated-resource');
