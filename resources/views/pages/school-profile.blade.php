@@ -386,7 +386,14 @@
                 <h3 class="text-lg font-semibold mb-2">Confirm Grade Offerings</h3>
                 <p class="text-sm text-gray-600 mb-3">You have selected the following grades:</p>
                 <div id="selectedGradesList" class="text-sm text-gray-700 mb-5 p-3 bg-gray-50 rounded-lg"></div>
-
+                <!-- Warning Section -->
+                <div class="bg-red-50 border border-red-200 text-red-700 rounded-lg p-3 mb-5">
+                    <p class="font-semibold mb-1">⚠ Important Notice</p>
+                    <ul class="list-disc pl-5 text-sm space-y-1">
+                        <li>Changes in grade offerings will immediately affect student allocations, enrollments and reports.</li>
+                        <li>These changes may also affect system-generated statistics and historical data consistency.</li>
+                    </ul>
+                </div>
                 <div class="flex justify-end gap-3">
                     <button onclick="closeGradesConfirmModal()" class="btn-secondary">Cancel</button>
                     <button type="button" onclick="submitGradesForm()" class="btn-primary">Yes, Save</button>
