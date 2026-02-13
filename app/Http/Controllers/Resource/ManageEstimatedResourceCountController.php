@@ -43,4 +43,30 @@ class ManageEstimatedResourceCountController extends BaseController
                 ->with('success', 'Estimated resource updated successfully.');
 
     }
+
+    public function updateEstimatedResourceNP(Request $request)
+    {
+        $request->validate([
+            'estimated_resource_np' => 'required|integer|min:0'
+        ]);
+
+        // Get the current user's school library
+        $user = Auth::user();
+        $stationId = (string) $user->station_id;
+        $schoolLibrary = SchoolLibrary::where('school_id', $stationId)->first();
+
+        if (!$schoolLibrary) {
+            return redirect()->back()->with('error', 'School library not found.');
+        }
+
+        // Update the estimated resource count
+        $schoolLibrary->update([
+            'estimated_resource_np' => $request->estimated_resource_np
+        ]);
+
+        return redirect()
+                ->route('nonprint-resources', ['tab' => 'school'])
+                ->with('success', 'Estimated nonprint resource updated successfully.');
+
+    }
 }

@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers\Resource;
 
+use App\Models\SchoolLibrary;
+use App\Models\EstimatedResourcePrecentageNP;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
@@ -28,7 +30,15 @@ class NonPrintResourceController extends BaseController
         $level = $user->userType?->level ?? 0;
         $stationId = (string) $user->station_id;
 
+        $schoolLibrary = SchoolLibrary::where('school_id', $stationId)->first();
+        $schoolEstimatedPercent = EstimatedResourcePrecentageNP::where('school_id', $stationId)->first();
+
         $data = $this->nonprintResourceService->getResourcesData($request, $level, $stationId);
+
+        $data = array_merge($data, [
+            'schoolLibrary' => $schoolLibrary,
+            'countPercent' => $schoolEstimatedPercent,
+        ]);
 
         return view('pages.nonprint-resources', $data);
     }

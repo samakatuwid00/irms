@@ -22,3 +22,6 @@ Route::put('/update-nonprint-resource/{id}', [EditResourceController::class, 'up
 //ESTIMATED COUNT
 Route::patch('/school-library/update-estimated-resource', [ManageEstimatedResourceCountController::class, 'updateEstimatedResource'])
     ->name('school-library.update-estimated-resource');
+
+Route::patch('/school-library/update-estimated-resource-np', [ManageEstimatedResourceCountController::class, 'updateEstimatedResourceNP'])
+    ->name('school-library.update-estimated-resource-np');
