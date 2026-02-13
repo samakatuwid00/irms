@@ -107,10 +107,16 @@
                     @elseif (Auth::user()->userType?->level === 1)
                         <input type="hidden" name="library_id" id="library_id" value='{{ $schoolLibrary->id }}' readonly required>
                     @endif
-
                     <div>
-                        <label class="block text-sm font-medium mb-1">Title</label>
-                        <input type="text" name="title" class="w-full border border-gray-300 rounded px-3 py-2">
+                        <label class="block text-sm font-medium mb-1">
+                            Title <span class="text-red-500">*</span>
+                        </label>
+                        <input
+                            type="text"
+                            name="title"
+                            required
+                            class="w-full border border-gray-300 rounded px-3 py-2"
+                        >
                     </div>
 
                     <div>
@@ -140,7 +146,7 @@
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div class="space-y-4">
                         <div>
-                            <label class="block text-sm mb-1">Type</label>
+                            <label class="block text-sm mb-1">Type<span class="text-red-500">*</span></label>
                                 <select name="type" class="w-full border border-gray-300 rounded px-3 py-2" required>
                                     <option selected disabled>Select type</option>
 
@@ -244,6 +250,7 @@
                             {{ $stage['label'] }}
                         </button>
                     @endforeach
+                    <span class="text-red-500">*</span>
                 </div>
 
                 {{-- ================= TAB CONTENTS ================= --}}
@@ -318,7 +325,7 @@
                 <!-- TOP ROW -->
                 <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
                     <div>
-                        <label class="block text-sm font-medium mb-1">Source</label>
+                        <label class="block text-sm font-medium mb-1">Source<span class="text-red-500">*</span></label>
                         <select id="source" name="source" class="w-full border border-gray-300 rounded px-3 py-2">
                             <option value="" selected disabled>Select source</option>
                             <option value="CO">DepEd - Central Office</option>
@@ -329,7 +336,7 @@
                         </select>
                     </div>
                     <div>
-                        <label class="block text-sm font-medium mb-1">Date Acquired</label>
+                        <label class="block text-sm font-medium mb-1">Date Acquired<span class="text-red-500">*</span></label>
                         <input type="date" name="date_acquired" class="w-full border border-gray-300 rounded px-3 py-2">
                     </div>
                     <div>
@@ -344,7 +351,7 @@
 
                 <!-- CONDITION QUANTITY -->
                 <div>
-                    <h4 class="text-sm font-semibold mb-3 text-gray-600">Condition & Quantity</h4>
+                    <h4 class="text-sm font-semibold mb-3 text-gray-600">Condition & Quantity <span class="text-red-500">*</span></h4>
                     <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4">
                         <div><label class="block text-xs mb-1">Usable</label><input type="number" name="usable" value="0" min="0" class="qty w-full border border-gray-300 rounded px-3 py-2"></div>
                         <div><label class="block text-xs mb-1">Partially Damaged</label><input type="number" name="partially_damaged" value="0" min="0" class="qty w-full border border-gray-300 rounded px-3 py-2"></div>

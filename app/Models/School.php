@@ -40,6 +40,16 @@ class School extends Model
         return $this->hasMany(SchoolLibrary::class, 'school_id');
     }
 
+    public function gradeOfferings(): HasMany
+    {
+        return $this->hasMany(GradeOffering::class, 'school_id', 'id');
+    }
+
+    public function populations(): HasMany
+    {
+        return $this->hasMany(Population::class, 'school_id', 'id');
+    }
+
     //Registration Block
     public static function getSchools(): JsonResponse
     {

@@ -29,6 +29,8 @@ Route::put('/district-profile/update-logo', [DistrictController::class, 'updateL
 Route::get('/school-profile', [SchoolController::class, 'index'])->name('school-profile');
 Route::put('/school-profile', [SchoolController::class, 'update'])->name('school.profile.update');
 Route::put('/school-profile/update-logo', [SchoolController::class, 'updateLogo'])->name('school.logo.update');
+Route::put('/school/grades', [SchoolController::class, 'updateGrades'])->name('school.grades.update');
+Route::put('/school/population', [SchoolController::class, 'updatePopulation'])->name('school.population.update');
 
 //MANAGE DIVISION
 Route::post('/divisions', [ManageStationController::class, 'addDivision'])->name('divisions.store');

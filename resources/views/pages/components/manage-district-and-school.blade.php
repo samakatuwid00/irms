@@ -510,10 +510,13 @@
                        class="w-full border rounded-lg px-4 py-2">
 
                 <select name="school_type" class="w-full border rounded-lg px-4 py-2">
-                    <option value="">Select School Type</option>
-                    <option value="ELEMENTARY">ELEMENTARY</option>
-                    <option value="HIGH SCHOOL">HIGH SCHOOL</option>
-                    <option value="INTEGRATED">INTEGRATED</option>
+                    <option value="" selected disabled>Select School Type</option>
+                    <option value="KINDER">Kinder Only</option>
+                    <option value="ELEMENTARY">Elementary</option>
+                    <option value="JHS">Junior High School</option>
+                    <option value="SHS"> Senior High School</option>
+                    <option value="JSHS">Junior and Senior High School</option>
+                    <option value="INTEGRATED">Integrated School</option>
                 </select>
 
                 <input name="shortname" placeholder="Short Name"
@@ -562,10 +565,13 @@
 
                 <label class="block text-sm font-medium text-gray-700 mb-1">School Type</label>
                 <select id="edit_school_type" name="school_type" class="w-full border rounded-lg px-4 py-2">
-                    <option value="">Select School Type</option>
-                    <option value="ELEMENTARY">ELEMENTARY</option>
-                    <option value="HIGH SCHOOL">HIGH SCHOOL</option>
-                    <option value="INTEGRATED">INTEGRATED</option>
+                    <option value="" selected disabled>Select School Type</option>
+                    <option value="KINDER">Kinder Only</option>
+                    <option value="ELEMENTARY">Elementary</option>
+                    <option value="JHS">Junior High School</option>
+                    <option value="SHS"> Senior High School</option>
+                    <option value="JSHS">Junior and Senior High School</option>
+                    <option value="INTEGRATED">Integrated School</option>
                 </select>
 
                 <label class="block text-sm font-medium text-gray-700 mb-1">Short Name</label>

@@ -76,8 +76,8 @@
             {{-- ================= RIGHT: SCHOOL INFO ================= --}}
             <div class="md:col-span-2">
 
-                {{-- Corrected form: method="POST" + proper action --}}
-                <form id="schoolForm" class="bg-white rounded-xl shadow p-6" action="{{ route('school.profile.update') }}"
+                {{-- School Information Form --}}
+                <form id="schoolForm" class="bg-white rounded-xl shadow p-6" action="{{ route('profile.update') }}"
                     method="POST">
                     @csrf
                     @method('PUT')
@@ -118,7 +118,7 @@
 
                         {{-- Legislative District --}}
                         <div>
-                            <label class="text-xs text-gray-500">Legislative Distrtict</label>
+                            <label class="text-xs text-gray-500">Legislative District</label>
                             <input type="text" name="legislative_district" value="{{ $school->legislative_district }}"
                                 class="input">
                             <p class="error"></p>
@@ -162,6 +162,209 @@
             </div>
         </div>
 
+        {{-- ================= SUBJECT GRADE OFFERINGS ================= --}}
+        <div class="bg-white rounded-xl shadow p-6">
+            <h3 class="text-lg font-semibold mb-4">Subject Grade Offerings</h3>
+            <p class="text-sm text-gray-600 mb-6">Select the grade levels your school offers</p>
+
+            <form id="gradeOfferingsForm" action="{{ route('school.grades.update') }}" method="POST">
+                @csrf
+                @method('PUT')
+
+                <div class="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-7 lg:grid-cols-14 gap-4 mb-6">
+                    {{-- Kindergarten --}}
+                    <div class="flex flex-col items-center">
+                        <label class="flex flex-col items-center cursor-pointer group">
+                            <input type="checkbox" name="K" value="yes"
+                                {{ old('K', $gradeOffering?->K ?? 'no') === 'yes' ? 'checked' : '' }}
+                                class="grade-checkbox w-5 h-5 rounded border-2 border-gray-300 text-blue-600
+                                       focus:ring-2 focus:ring-blue-500 transition">
+                            <span class="mt-2 text-sm font-medium text-gray-700 group-hover:text-blue-600 transition">Kinder</span>
+                        </label>
+                    </div>
+
+                    {{-- Grades 1-12 --}}
+                    @for ($i = 1; $i <= 12; $i++)
+                        <div class="flex flex-col items-center">
+                            <label class="flex flex-col items-center cursor-pointer group">
+                                <input type="checkbox" name="g{{ $i }}" value="yes"
+                                    {{ old('g'.$i, $gradeOffering?->{'g'.$i} ?? 'no') === 'yes' ? 'checked' : '' }}
+                                    class="grade-checkbox w-5 h-5 rounded border-2 border-gray-300 text-blue-600
+                                           focus:ring-2 focus:ring-blue-500 transition">
+                                <span class="mt-2 text-sm font-medium text-gray-700 group-hover:text-blue-600 transition">
+                                    Grade {{ $i }}
+                                </span>
+                            </label>
+                        </div>
+                    @endfor
+                </div>
+
+                <div class="flex justify-between items-center">
+                    <div class="flex gap-2">
+                        <button type="button" onclick="selectAllGrades()"
+                            class="text-sm text-blue-600 hover:text-blue-700 hover:underline transition">
+                            Select All
+                        </button>
+                        <span class="text-gray-300">|</span>
+                        <button type="button" onclick="deselectAllGrades()"
+                            class="text-sm text-blue-600 hover:text-blue-700 hover:underline transition">
+                            Deselect All
+                        </button>
+                    </div>
+
+                    <button type="button" id="saveGradesBtn" onclick="openGradesConfirmModal()"
+                        class="btn-primary opacity-50 cursor-not-allowed" disabled>
+                        Save Grade Offerings
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        {{-- ================= STUDENT POPULATION ================= --}}
+        <div class="bg-white rounded-xl shadow p-6">
+            <h3 class="text-lg font-semibold mb-4">Student Population</h3>
+            <p class="text-sm text-gray-600 mb-6">Manage student population data per school year</p>
+
+            {{-- School Year Selection --}}
+            <div class="mb-6">
+                <label class="text-sm font-medium text-gray-700 mb-2 block">Select School Year</label>
+                <select id="schoolYearSelect"
+                    class="w-full md:w-1/3 px-4 py-2 border-2 border-dashed border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none transition">
+                    <option value="">-- Select School Year --</option>
+                    @foreach($schoolYears as $sy)
+                        <option value="{{ $sy->id }}" {{ $selectedSyId == $sy->id ? 'selected' : '' }}>
+                            {{ $sy->year_start }} - {{ $sy->year_end }}
+                        </option>
+                    @endforeach
+                </select>
+            </div>
+
+            {{-- Population Form (shown when school year is selected) --}}
+            <div id="populationFormContainer" class="{{ $selectedSyId ? '' : 'hidden' }}">
+                <form id="populationForm" action="{{ route('school.population.update') }}" method="POST">
+                    @csrf
+                    @method('PUT')
+
+                    <input type="hidden" name="sy_id" id="sy_id" value="{{ $selectedSyId }}">
+
+                    {{-- Instructions --}}
+                    <div class="bg-blue-50 border-l-4 border-blue-500 p-4 mb-6 rounded">
+                        <p class="text-sm text-blue-800">
+                            <strong>Note:</strong> Only grades offered by your school will be shown below.
+                            Update your grade offerings above if you need to add or remove grades.
+                        </p>
+                    </div>
+
+                    {{-- Population Inputs Grid --}}
+                    <div class="space-y-4">
+                        @php
+                            $grades = [
+                                'K' => 'Kindergarten',
+                                'g1' => 'Grade 1',
+                                'g2' => 'Grade 2',
+                                'g3' => 'Grade 3',
+                                'g4' => 'Grade 4',
+                                'g5' => 'Grade 5',
+                                'g6' => 'Grade 6',
+                                'g7' => 'Grade 7',
+                                'g8' => 'Grade 8',
+                                'g9' => 'Grade 9',
+                                'g10' => 'Grade 10',
+                                'g11' => 'Grade 11',
+                                'g12' => 'Grade 12',
+                            ];
+                        @endphp
+
+                        @foreach($grades as $key => $label)
+                            @php
+                                $isOffered = $gradeOffering && $gradeOffering->{$key} === 'yes';
+                                $maleField = $key === 'K' ? 'k_m' : strtolower($key) . '_m';
+                                $femaleField = $key === 'K' ? 'k_f' : strtolower($key) . '_f';
+                                $totalField = $key === 'K' ? 'k_total' : strtolower($key) . '_total';
+                            @endphp
+
+                            @if($isOffered)
+                                <div class="population-row grid grid-cols-1 md:grid-cols-12 gap-4 items-center p-4 bg-gray-50 rounded-lg">
+                                    {{-- Grade Label --}}
+                                    <div class="md:col-span-3">
+                                        <label class="text-sm font-semibold text-gray-700">{{ $label }}</label>
+                                    </div>
+
+                                    {{-- Male Input --}}
+                                    <div class="md:col-span-3">
+                                        <label class="text-xs text-gray-500 mb-1 block">Male</label>
+                                        <input type="number"
+                                            name="{{ $maleField }}"
+                                            value="{{ old($maleField, $population->{$maleField} ?? 0) }}"
+                                            min="0"
+                                            class="population-input input"
+                                            data-grade="{{ $key }}"
+                                            data-type="male">
+                                    </div>
+
+                                    {{-- Female Input --}}
+                                    <div class="md:col-span-3">
+                                        <label class="text-xs text-gray-500 mb-1 block">Female</label>
+                                        <input type="number"
+                                            name="{{ $femaleField }}"
+                                            value="{{ old($femaleField, $population->{$femaleField} ?? 0) }}"
+                                            min="0"
+                                            class="population-input input"
+                                            data-grade="{{ $key }}"
+                                            data-type="female">
+                                    </div>
+
+                                    {{-- Total (Read-only) --}}
+                                    <div class="md:col-span-3">
+                                        <label class="text-xs text-gray-500 mb-1 block">Total</label>
+                                        <input type="number"
+                                            name="{{ $totalField }}"
+                                            value="{{ old($totalField, $population->{$totalField} ?? 0) }}"
+                                            readonly
+                                            class="grade-total input bg-gray-100 font-semibold"
+                                            data-grade="{{ $key }}">
+                                    </div>
+                                </div>
+                            @endif
+                        @endforeach
+
+                        {{-- Overall Total --}}
+                        <div class="grid grid-cols-1 md:grid-cols-12 gap-4 items-center p-4 bg-blue-50 rounded-lg border-2 border-blue-200">
+                            <div class="md:col-span-3">
+                                <label class="text-sm font-bold text-blue-800">TOTAL POPULATION</label>
+                            </div>
+                            <div class="md:col-span-3">
+                                <input type="number"
+                                    id="totalMale"
+                                    readonly
+                                    class="input bg-blue-100 text-blue-800 font-bold text-center">
+                            </div>
+                            <div class="md:col-span-3">
+                                <input type="number"
+                                    id="totalFemale"
+                                    readonly
+                                    class="input bg-blue-100 text-blue-800 font-bold text-center">
+                            </div>
+                            <div class="md:col-span-3">
+                                <input type="number"
+                                    id="grandTotal"
+                                    readonly
+                                    class="input bg-blue-100 text-blue-800 font-bold text-center">
+                            </div>
+                        </div>
+                    </div>
+
+                    {{-- Save Button --}}
+                    <div class="flex justify-end mt-6">
+                        <button type="button" id="savePopulationBtn" onclick="openPopulationConfirmModal()"
+                            class="btn-primary opacity-50 cursor-not-allowed" disabled>
+                            Save Population Data
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
         {{-- ================= CONFIRM MODAL ================= --}}
         <div id="confirmModal" class="fixed inset-0 hidden z-50 bg-black/50 flex items-center justify-center">
             <div class="bg-white rounded-xl shadow-lg p-6 w-full max-w-md">
@@ -177,83 +380,45 @@
             </div>
         </div>
 
+        {{-- ================= GRADES CONFIRM MODAL ================= --}}
+        <div id="gradesConfirmModal" class="fixed inset-0 hidden z-50 bg-black/50 flex items-center justify-center">
+            <div class="bg-white rounded-xl shadow-lg p-6 w-full max-w-md">
+                <h3 class="text-lg font-semibold mb-2">Confirm Grade Offerings</h3>
+                <p class="text-sm text-gray-600 mb-3">You have selected the following grades:</p>
+                <div id="selectedGradesList" class="text-sm text-gray-700 mb-5 p-3 bg-gray-50 rounded-lg"></div>
 
-        <!-- ================= SCHOOL YEAR CONTROLS ================= -->
-        <div class="bg-white rounded-xl shadow p-4 flex flex-col md:flex-row gap-4 md:items-end">
-
-            <!-- Filter School Year -->
-            <div>
-                <label class="text-xs text-gray-500">School Year</label>
-                <select class="mt-1 px-3 py-2 border rounded-lg text-sm">
-                    <option>2024 – 2025</option>
-                    <option>2023 – 2024</option>
-                    <option>2022 – 2023</option>
-                </select>
+                <div class="flex justify-end gap-3">
+                    <button onclick="closeGradesConfirmModal()" class="btn-secondary">Cancel</button>
+                    <button type="button" onclick="submitGradesForm()" class="btn-primary">Yes, Save</button>
+                </div>
             </div>
-
-            <!-- Filter Semester -->
-            <div>
-                <label class="text-xs text-gray-500">Semester</label>
-                <select class="mt-1 px-3 py-2 border rounded-lg text-sm">
-                    <option>1st Semester</option>
-                    <option>2nd Semester</option>
-                </select>
-            </div>
-
-            <!-- Add / Edit Button -->
-            <button class="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700">
-                Load / Edit Data
-            </button>
         </div>
 
-        <!-- ================= POPULATION TABLE ================= -->
-        <div class="bg-white rounded-xl shadow overflow-hidden">
-            <table class="w-full text-sm">
-                <thead class="bg-gray-100">
-                    <tr class="text-left text-gray-700">
-                        <th class="px-4 py-3">Grade Level</th>
-                        <th class="px-4 py-3 text-center">Male</th>
-                        <th class="px-4 py-3 text-center">Female</th>
-                        <th class="px-4 py-3 text-center">Total</th>
-                    </tr>
-                </thead>
+        {{-- ================= POPULATION CONFIRM MODAL ================= --}}
+        <div id="populationConfirmModal" class="fixed inset-0 hidden z-50 bg-black/50 flex items-center justify-center">
+            <div class="bg-white rounded-xl shadow-lg p-6 w-full max-w-md">
+                <h3 class="text-lg font-semibold mb-2">Confirm Population Data</h3>
+                <p class="text-sm text-gray-600 mb-3">You are about to save population data with the following totals:</p>
+                <div class="bg-gray-50 p-4 rounded-lg mb-5 space-y-2">
+                    <div class="flex justify-between text-sm">
+                        <span class="text-gray-700">Total Male:</span>
+                        <span id="confirmTotalMale" class="font-semibold text-blue-600">0</span>
+                    </div>
+                    <div class="flex justify-between text-sm">
+                        <span class="text-gray-700">Total Female:</span>
+                        <span id="confirmTotalFemale" class="font-semibold text-pink-600">0</span>
+                    </div>
+                    <div class="flex justify-between text-sm border-t pt-2">
+                        <span class="text-gray-800 font-semibold">Grand Total:</span>
+                        <span id="confirmGrandTotal" class="font-bold text-green-600">0</span>
+                    </div>
+                </div>
 
-                <tbody class="divide-y">
-
-                    @php
-                        $grades = ['Grade 7', 'Grade 8', 'Grade 9', 'Grade 10', 'Grade 11', 'Grade 12'];
-                    @endphp
-
-                    @foreach ($grades as $grade)
-                        <tr>
-                            <td class="px-4 py-3 font-medium">{{ $grade }}</td>
-
-                            <td class="px-4 py-3 text-center">
-                                <input type="number" value="0"
-                                    class="male w-20 text-center border rounded-lg px-2 py-1">
-                            </td>
-
-                            <td class="px-4 py-3 text-center">
-                                <input type="number" value="0"
-                                    class="female w-20 text-center border rounded-lg px-2 py-1">
-                            </td>
-
-                            <td class="px-4 py-3 text-center">
-                                <input type="number" value="0" readonly
-                                    class="total w-20 text-center bg-gray-100 border rounded-lg px-2 py-1">
-                            </td>
-                        </tr>
-                    @endforeach
-
-                </tbody>
-            </table>
-        </div>
-
-        <!-- ================= SAVE POPULATION ================= -->
-        <div class="flex justify-end">
-            <button class="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700">
-                Save Population
-            </button>
+                <div class="flex justify-end gap-3">
+                    <button onclick="closePopulationConfirmModal()" class="btn-secondary">Cancel</button>
+                    <button type="button" onclick="submitPopulationForm()" class="btn-primary">Yes, Save</button>
+                </div>
+            </div>
         </div>
 
     </div>
@@ -285,6 +450,7 @@
             border-radius: .5rem;
         }
     </style>
+
     <!-- ================= SCRIPTS ================= -->
     <script>
         const form = document.getElementById('schoolForm');
@@ -419,18 +585,180 @@
             }
         }
 
-        /* POPULATION AUTO TOTAL */
-        document.querySelectorAll('tbody tr').forEach(row => {
-            const male = row.querySelector('.male');
-            const female = row.querySelector('.female');
-            const total = row.querySelector('.total');
+        // ================= GRADE OFFERINGS LOGIC =================
+        const gradesForm = document.getElementById('gradeOfferingsForm');
+        const saveGradesBtn = document.getElementById('saveGradesBtn');
+        const gradesModal = document.getElementById('gradesConfirmModal');
+        const selectedGradesList = document.getElementById('selectedGradesList');
+        const gradeCheckboxes = document.querySelectorAll('.grade-checkbox');
 
-            function updateTotal() {
-                total.value = (parseInt(male.value) || 0) + (parseInt(female.value) || 0);
+        // Store original grade selections
+        const originalGrades = {};
+        gradeCheckboxes.forEach(cb => {
+            originalGrades[cb.name] = cb.checked;
+        });
+
+        // Enable/disable Save button for grades
+        gradesForm.addEventListener('change', toggleSaveGradesButton);
+
+        function hasGradeChanges() {
+            return Array.from(gradeCheckboxes).some(cb => cb.checked !== originalGrades[cb.name]);
+        }
+
+        function toggleSaveGradesButton() {
+            const dirty = hasGradeChanges();
+            saveGradesBtn.disabled = !dirty;
+            saveGradesBtn.classList.toggle('opacity-50', !dirty);
+            saveGradesBtn.classList.toggle('cursor-not-allowed', !dirty);
+        }
+
+        // Select/Deselect all grades
+        function selectAllGrades() {
+            gradeCheckboxes.forEach(cb => cb.checked = true);
+            toggleSaveGradesButton();
+        }
+
+        function deselectAllGrades() {
+            gradeCheckboxes.forEach(cb => cb.checked = false);
+            toggleSaveGradesButton();
+        }
+
+        // Grades modal logic
+        function openGradesConfirmModal() {
+            const selected = Array.from(gradeCheckboxes)
+                .filter(cb => cb.checked)
+                .map(cb => {
+                    if (cb.name === 'K') return 'Kindergarten';
+                    return `Grade ${cb.name.substring(1)}`;
+                });
+
+            if (selected.length === 0) {
+                selectedGradesList.innerHTML = '<span class="text-gray-500 italic">No grades selected</span>';
+            } else {
+                selectedGradesList.innerHTML = selected.join(', ');
             }
 
-            male.addEventListener('input', updateTotal);
-            female.addEventListener('input', updateTotal);
+            gradesModal.classList.remove('hidden');
+        }
+
+        function closeGradesConfirmModal() {
+            gradesModal.classList.add('hidden');
+        }
+
+        function submitGradesForm() {
+            gradesForm.submit();
+        }
+
+        // ================= POPULATION LOGIC =================
+        const schoolYearSelect = document.getElementById('schoolYearSelect');
+        const populationFormContainer = document.getElementById('populationFormContainer');
+        const populationForm = document.getElementById('populationForm');
+        const savePopulationBtn = document.getElementById('savePopulationBtn');
+        const populationModal = document.getElementById('populationConfirmModal');
+        const populationInputs = document.querySelectorAll('.population-input');
+
+        // Store original population data
+        const originalPopulation = {};
+        populationInputs.forEach(input => {
+            originalPopulation[input.name] = input.value;
+        });
+
+        // School year selection change
+        schoolYearSelect.addEventListener('change', function() {
+            const syId = this.value;
+            if (syId) {
+                // Redirect to reload with selected school year
+                window.location.href = `{{ route('school-profile') }}?sy_id=${syId}`;
+            } else {
+                populationFormContainer.classList.add('hidden');
+            }
+        });
+
+        // Calculate totals per grade
+        function calculateGradeTotal(grade) {
+            const maleInput = document.querySelector(`input[data-grade="${grade}"][data-type="male"]`);
+            const femaleInput = document.querySelector(`input[data-grade="${grade}"][data-type="female"]`);
+            const totalInput = document.querySelector(`input[data-grade="${grade}"].grade-total`);
+
+            if (maleInput && femaleInput && totalInput) {
+                const male = parseInt(maleInput.value) || 0;
+                const female = parseInt(femaleInput.value) || 0;
+                totalInput.value = male + female;
+            }
+        }
+
+        // Calculate overall totals
+        function calculateOverallTotals() {
+            let totalMale = 0;
+            let totalFemale = 0;
+
+            document.querySelectorAll('.population-input[data-type="male"]').forEach(input => {
+                totalMale += parseInt(input.value) || 0;
+            });
+
+            document.querySelectorAll('.population-input[data-type="female"]').forEach(input => {
+                totalFemale += parseInt(input.value) || 0;
+            });
+
+            const grandTotal = totalMale + totalFemale;
+
+            document.getElementById('totalMale').value = totalMale;
+            document.getElementById('totalFemale').value = totalFemale;
+            document.getElementById('grandTotal').value = grandTotal;
+
+            return { totalMale, totalFemale, grandTotal };
+        }
+
+        // Update totals on input change
+        populationInputs.forEach(input => {
+            input.addEventListener('input', function() {
+                const grade = this.getAttribute('data-grade');
+                calculateGradeTotal(grade);
+                calculateOverallTotals();
+                toggleSavePopulationButton();
+            });
+        });
+
+        // Check if population data has changed
+        function hasPopulationChanges() {
+            return Array.from(populationInputs).some(input => {
+                return input.value !== (originalPopulation[input.name] || '0');
+            });
+        }
+
+        // Toggle save button
+        function toggleSavePopulationButton() {
+            const dirty = hasPopulationChanges();
+            savePopulationBtn.disabled = !dirty;
+            savePopulationBtn.classList.toggle('opacity-50', !dirty);
+            savePopulationBtn.classList.toggle('cursor-not-allowed', !dirty);
+        }
+
+        // Open population confirmation modal
+        function openPopulationConfirmModal() {
+            const totals = calculateOverallTotals();
+            document.getElementById('confirmTotalMale').textContent = totals.totalMale;
+            document.getElementById('confirmTotalFemale').textContent = totals.totalFemale;
+            document.getElementById('confirmGrandTotal').textContent = totals.grandTotal;
+            populationModal.classList.remove('hidden');
+        }
+
+        function closePopulationConfirmModal() {
+            populationModal.classList.add('hidden');
+        }
+
+        function submitPopulationForm() {
+            populationForm.submit();
+        }
+
+        // Initialize totals on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            // Calculate totals for each grade
+            const grades = ['K', 'g1', 'g2', 'g3', 'g4', 'g5', 'g6', 'g7', 'g8', 'g9', 'g10', 'g11', 'g12'];
+            grades.forEach(grade => calculateGradeTotal(grade));
+
+            // Calculate overall totals
+            calculateOverallTotals();
         });
     </script>
 @endsection
