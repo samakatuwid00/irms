@@ -1,8 +1,8 @@
 
-import { initLevel3TabSwitching } from './resource-modules/level3-tabs.js';
-import { initLevel3DistrictSchoolCascade } from './resource-modules/level3-cascade.js';
-import { initLevel4Cascade } from './resource-modules/level4-cascade.js';
-import { initResetFilters } from './resource-modules/reset-filters.js';
+import { initLevel3TabSwitching } from './resource-table-modules/level3-tabs.js';
+import { initLevel3DistrictSchoolCascade } from './resource-table-modules/level3-cascade.js';
+import { initLevel4Cascade } from './resource-table-modules/level4-cascade.js';
+import { initResetFilters } from './resource-table-modules/reset-filters.js';
 
 // Get level from the page
 const levelElement = document.querySelector('[data-user-level]');

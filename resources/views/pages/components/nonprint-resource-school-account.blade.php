@@ -65,7 +65,7 @@
                 @csrf
                 @method('PATCH')
 
-                <label for="estimated_resource" class="text-sm font-medium text-gray-700">
+                <label for="estimated_resource_np" class="text-sm font-medium text-gray-700">
                     Estimated Resources:
                 </label>
 

@@ -14,6 +14,8 @@ export default defineConfig({
                 'resources/js/district-profile.js',
                 'resources/js/print-resources.js',
                 'resources/js/nonprint-resources.js',
+                'resources/js/add-print-resource.js',
+                'resources/js/add-nonprint-resource.js',
             ],
             refresh: true,
         }),
