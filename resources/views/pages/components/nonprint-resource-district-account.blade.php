@@ -68,7 +68,7 @@
         </div>
 
         <div class="bg-white rounded-xl shadow overflow-hidden mt-4">
-            <div class="overflow-x-auto max-h-[600px] overflow-y-auto">
+            <div class="overflow-x-auto max-h-150 overflow-y-auto">
                 <table class="w-full text-sm">
                     <thead class="bg-gray-100 text-gray-600 uppercase text-xs sticky top-0 z-10">
                         <tr>
