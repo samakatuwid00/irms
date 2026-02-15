@@ -9,6 +9,7 @@ export default defineConfig({
                 'resources/css/app.css',
                 'resources/js/app.js',
                 'resources/js/school-profile.js',
+                'resources/js/region-profile.js',
             ],
             refresh: true,
         }),
