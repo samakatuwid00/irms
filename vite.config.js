@@ -10,6 +10,8 @@ export default defineConfig({
                 'resources/js/app.js',
                 'resources/js/school-profile.js',
                 'resources/js/region-profile.js',
+                'resources/js/division-profile.js',
+                'resources/js/district-profile.js',
             ],
             refresh: true,
         }),
