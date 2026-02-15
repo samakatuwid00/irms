@@ -13,6 +13,19 @@
 
     @include('pages.partials.page-header')
 
+    {{-- Hidden data attributes for JavaScript modules --}}
+    <div id="print-resources-data"
+         data-user-level="{{ $level }}"
+         @if($level == 3 && isset($allSchools))
+         data-all-schools="{{ json_encode($allSchools) }}"
+         @endif
+         @if($level == 4)
+         data-all-districts="{{ json_encode($allDistricts ?? []) }}"
+         data-all-schools="{{ json_encode($allSchools ?? []) }}"
+         @endif
+         style="display: none;">
+    </div>
+
     <div class="space-y-4">
 
         {{-- <!-- ================= HEADER ================= -->
@@ -55,199 +68,7 @@
 
     </div>
 
-    <script>
-        const level = {{ $level }};
-
-        // Persisted selected values from request
-        const selectedDivision = "{{ request('division') }}";
-        const selectedDistrict = "{{ request('district') }}";
-        const selectedSchool   = "{{ request('school') }}";
-
-        /* =====================================================
-        LEVEL 3: TAB SWITCHING
-        ===================================================== */
-        if (level === 3) {
-            const tabButtons = document.querySelectorAll('.tab-btn');
-            const tabContents = document.querySelectorAll('.tab-content');
-
-            // Check for active tab from URL parameter or default to 'division'
-            const activeTab = new URLSearchParams(window.location.search).get('tab') || 'division';
-
-            // Function to switch tabs
-            function switchTab(tabName) {
-                // Update buttons
-                tabButtons.forEach(btn => {
-                    if (btn.dataset.tab === tabName) {
-                        btn.classList.add('border-blue-600', 'text-blue-600');
-                        btn.classList.remove('border-transparent', 'text-gray-600');
-                    } else {
-                        btn.classList.remove('border-blue-600', 'text-blue-600');
-                        btn.classList.add('border-transparent', 'text-gray-600');
-                    }
-                });
-
-                // Update content
-                tabContents.forEach(content => {
-                    if (content.id === `${tabName}-tab`) {
-                        content.classList.remove('hidden');
-                    } else {
-                        content.classList.add('hidden');
-                    }
-                });
-            }
-
-            // Initialize with active tab
-            switchTab(activeTab);
-
-            // Add click handlers
-            tabButtons.forEach(btn => {
-                btn.addEventListener('click', () => {
-                    switchTab(btn.dataset.tab);
-                });
-            });
-
-            // District → School cascade for School Library tab
-            const allSchools = @json($allSchools ?? []);
-            const districtSelect = document.getElementById('district');
-            const schoolSelect   = document.getElementById('school');
-
-            if (districtSelect && schoolSelect) {
-                const updateSchools = () => {
-                    const districtId = districtSelect.value;
-                    schoolSelect.innerHTML = '<option value="all">All Schools</option>';
-
-                    if (!districtId || districtId === 'all') return;
-
-                    allSchools
-                        .filter(s => s.district_id == districtId)
-                        .forEach(s => {
-                            const selected = s.id == selectedSchool ? 'selected' : '';
-                            schoolSelect.insertAdjacentHTML(
-                                'beforeend',
-                                `<option value="${s.id}" ${selected}>${s.school_name}</option>`
-                            );
-                        });
-                };
-
-                // Restore previous selection
-                if (selectedDistrict) {
-                    districtSelect.value = selectedDistrict;
-                    updateSchools();
-                }
-
-                districtSelect.addEventListener('change', () => {
-                    schoolSelect.value = 'all';
-                    updateSchools();
-                });
-            }
-
-            // Reset buttons
-            document.querySelector('.reset-division')?.addEventListener('click', function() {
-                window.location.href = window.location.pathname + '?tab=division';
-            });
-
-            document.querySelector('.reset-school')?.addEventListener('click', function() {
-                window.location.href = window.location.pathname + '?tab=school';
-            });
-        }
-
-        /* =====================================================
-        LEVEL 4 : DIVISION → DISTRICT → SCHOOL
-        ===================================================== */
-        if (level === 4) {
-            const allDistricts = @json($allDistricts ?? []);
-            const allSchools   = @json($allSchools ?? []);
-
-            const divisionSelect = document.getElementById('division');
-            const districtSelect = document.getElementById('district');
-            const schoolSelect   = document.getElementById('school');
-
-            if (divisionSelect && districtSelect && schoolSelect) {
-
-                const updateDistricts = () => {
-                    const divisionId = divisionSelect.value;
-
-                    districtSelect.innerHTML = '<option value="all">All Districts</option>';
-                    schoolSelect.innerHTML   = '<option value="all">All Schools</option>';
-
-                    if (!divisionId || divisionId === 'all') return;
-
-                    allDistricts
-                        .filter(d => d.division_id == divisionId)
-                        .forEach(d => {
-                            const selected = d.id == selectedDistrict ? 'selected' : '';
-                            districtSelect.insertAdjacentHTML(
-                                'beforeend',
-                                `<option value="${d.id}" ${selected}>${d.district_name}</option>`
-                            );
-                        });
-
-                    updateSchools();
-                };
-
-                const updateSchools = () => {
-                    const districtId = districtSelect.value;
-
-                    schoolSelect.innerHTML = '<option value="all">All Schools</option>';
-
-                    if (!districtId || districtId === 'all') return;
-
-                    allSchools
-                        .filter(s => s.district_id == districtId)
-                        .forEach(s => {
-                            const selected = s.id == selectedSchool ? 'selected' : '';
-                            schoolSelect.insertAdjacentHTML(
-                                'beforeend',
-                                `<option value="${s.id}" ${selected}>${s.school_name}</option>`
-                            );
-                        });
-                };
-
-                // Restore previous selections
-                if (selectedDivision) {
-                    divisionSelect.value = selectedDivision;
-                    updateDistricts();
-                }
-
-                divisionSelect.addEventListener('change', () => {
-                    districtSelect.value = 'all';
-                    schoolSelect.value   = 'all';
-                    updateDistricts();
-                });
-
-                districtSelect.addEventListener('change', () => {
-                    schoolSelect.value = 'all';
-                    updateSchools();
-                });
-            }
-        }
-
-        document.addEventListener('DOMContentLoaded', function () {
-            const levelSelect     = document.getElementById('level');
-            const divisionSelect  = document.getElementById('division');
-            const districtSelect  = document.getElementById('district');
-            const schoolSelect    = document.getElementById('school');
-            const searchInput     = document.getElementById('search');
-            const resetBtn        = document.getElementById('resetFilters');
-
-            if (resetBtn) {
-                resetBtn.addEventListener('click', () => {
-
-                    if (levelSelect)    levelSelect.value    = 'all';
-                    if (divisionSelect) divisionSelect.value = 'all';
-                    if (districtSelect) districtSelect.value = 'all';
-                    if (schoolSelect)   schoolSelect.value   = 'all';
-
-                    if (searchInput) searchInput.value = '';
-
-                    if (typeof updateDistricts === 'function') updateDistricts();
-                    if (typeof updateSchools === 'function')   updateSchools();
-
-                    window.location.href = window.location.pathname;
-                });
-            }
-        });
-    </script>
+    @vite('resources/js/print-resources.js')
 
     @include('pages.modals.view-print-modal')
 @endsection
