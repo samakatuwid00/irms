@@ -7,6 +7,14 @@
     <link rel="icon" type="image/png" href="{{ asset('assets/images/logo.png') }}">
     <link rel="apple-touch-icon" href="{{ asset('assets/images/logo.png') }}">
 
+    <!-- echarts -->
+    @vite(['resources/js/charts/availability.js'])
+    @vite(['resources/js/charts/ratio.js'])
+    @vite(['resources/js/charts/lr.js'])
+    @vite(['resources/js/charts/exdef.js'])
+    @vite(['resources/js/charts/heatmap.js'])
+    @vite(['resources/js/charts/visualization.js'])
+
     <!-- CSRF Token for forms -->
     <meta name="csrf-token" content="{{ csrf_token() }}">
 
