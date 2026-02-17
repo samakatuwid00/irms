@@ -3,10 +3,13 @@
 namespace App\Services\Resource\Actions;
 
 use App\Models\Author;
+use App\Models\DivisionLibrary;
 use App\Models\PrintAcquisition;
 use App\Models\PrintMasterlist;
 use App\Models\PrintResource;
 use App\Models\PrintTitle;
+use App\Models\RegionLibrary;
+use App\Models\SchoolLibrary;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
@@ -164,6 +167,15 @@ class EditPrintResourceService
         return $fullPath;
     }
 
+    // Resolve library_name from whichever table owns this library_id
+    private function resolveLibraryName(string $libraryId): string
+    {
+        return SchoolLibrary::find($libraryId)?->library_name
+            ?? DivisionLibrary::find($libraryId)?->library_name
+            ?? RegionLibrary::find($libraryId)?->library_name
+            ?? 'Unknown Library';
+    }
+
     // Update print resource data
     private function updateResourceData(
         PrintResource $printResource,
@@ -190,6 +202,7 @@ class EditPrintResourceService
             'isbn' => $data['isbn'] ?: 'isbn',
             'subject_grade_level_ids' => $gradeLevelIds,
             'library_id' => $data['library_id'],
+            'library_name' => $this->resolveLibraryName($data['library_id']),
             'cover' => $coverPath,
         ]);
     }

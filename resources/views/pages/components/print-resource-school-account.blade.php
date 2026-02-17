@@ -1,18 +1,18 @@
-<div x-data="{ activeTab: '{{ request('tab', 'school') }}' }" class="space-y-4">
+<div x-data="{ activeTab: new URLSearchParams(window.location.search).get('tab') || '{{ request('tab', 'school') }}' }" class="space-y-4">
     <h2 class="text-lg font-semibold">Library Resources</h2>
 
     <!-- Tab Navigation -->
     <div class="bg-white rounded-xl shadow">
         <div class="flex border-b border-gray-200">
             <button
-                @click="activeTab = 'school'"
+                @click="activeTab = 'school'; $nextTick(() => { const url = new URL(window.location); url.searchParams.set('tab', 'school'); window.history.replaceState({}, '', url); })"
                 :class="activeTab === 'school' ? 'border-blue-600 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'"
                 class="px-6 py-3 border-b-2 font-medium text-sm transition-colors"
             >
                 Your School Resources
             </button>
             <button
-                @click="activeTab = 'division'"
+                @click="activeTab = 'division'; $nextTick(() => { const url = new URL(window.location); url.searchParams.set('tab', 'division'); window.history.replaceState({}, '', url); })"
                 :class="activeTab === 'division' ? 'border-blue-600 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'"
                 class="px-6 py-3 border-b-2 font-medium text-sm transition-colors"
             >
@@ -345,23 +345,11 @@
             </div>
 
             <div class="p-4">
-                {{ $divisionResources->appends(request()->query())->links() }}
+                {{ $divisionResources->appends(array_merge(request()->query(), ['tab' => 'division']))->links() }}
             </div>
         </div>
     </div>
 </div>
-
-<script>
-    // Maintain active tab state on page load
-    document.addEventListener('DOMContentLoaded', function() {
-        const urlParams = new URLSearchParams(window.location.search);
-        const tab = urlParams.get('tab');
-        if (tab === 'division') {
-            // Alpine.js will handle the tab switching
-            window.dispatchEvent(new CustomEvent('set-active-tab', { detail: 'division' }));
-        }
-    });
-</script>
 
 <style>
     [x-cloak] {

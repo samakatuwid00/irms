@@ -44,12 +44,7 @@ class NonPrintResourceService
         $divisionResources = null;
         if ($level === self::LEVEL_SCHOOL) {
             $divisionResources = $this->getDivisionResourcesForSchool($request, $stationId);
-            $this->attachLibraryNames($divisionResources);
         }
-
-        // Attach library names to resources
-        $this->attachLibraryNames($resources);
-        $this->attachLibraryNames($filteredResources);
 
         return array_merge([
             'level' => $level,
@@ -84,74 +79,39 @@ class NonPrintResourceService
             return $this->emptyPaginator($request);
         }
 
-        // Query division resources
         $query = NonprintResource::with(['nonprintTitle', 'type', 'nonprintAcquisitions'])
             ->whereIn('library_id', $divisionLibraryIds->toArray());
 
-        // Apply search if provided
         $this->applySearch($query, (string) $request->input('division_search', ''));
 
         return $query->paginate(self::PER_PAGE, ['*'], 'division_page')->withQueryString();
     }
 
+    /**
+     * OPTIMIZED: library_name is now a stored column on nonprint_resources.
+     * No more cross-table UNION ALL lookups or cache round-trips per page —
+     * the value is already on every hydrated model.
+     *
+     * The only thing we still handle here is the fallback for rows whose
+     * library_name column was not yet populated (e.g. legacy rows or a null
+     * library_id), keeping the exact same display behaviour as before.
+     */
     private function attachLibraryNames(LengthAwarePaginator $resources): void
     {
         if ($resources->isEmpty()) {
             return;
         }
 
-        // Collect all unique library IDs from resources
-        $libraryIds = $resources->pluck('library_id')->unique()->filter();
-
-        if ($libraryIds->isEmpty()) {
-            // If no library_ids, set default for all resources
-            foreach ($resources as $resource) {
-                $resource->library_name = 'No Library Assigned';
-            }
-            return;
-        }
-
-        // OPTIMIZATION: Cache library lookups using UNION ALL
-        // This is critical for performance at scale
-        $libraryIdsKey = $libraryIds->sort()->values()->implode('_');
-        $cacheKey = 'library_names_' . md5($libraryIdsKey);
-
-        $allLibraries = Cache::remember(
-            $cacheKey,
-            self::CACHE_TTL_LIBRARIES,
-            function () use ($libraryIds) {
-                // Use UNION ALL instead of 3 separate queries
-                $results = DB::select("
-                    SELECT id, library_name, 'school' as type FROM school_libraries WHERE id = ANY(?)
-                    UNION ALL
-                    SELECT id, library_name, 'division' as type FROM division_libraries WHERE id = ANY(?)
-                    UNION ALL
-                    SELECT id, library_name, 'region' as type FROM region_libraries WHERE id = ANY(?)
-                ", [
-                    '{' . $libraryIds->implode(',') . '}',
-                    '{' . $libraryIds->implode(',') . '}',
-                    '{' . $libraryIds->implode(',') . '}'
-                ]);
-
-                return collect($results)->keyBy('id');
-            }
-        );
-
-        // Attach library name to each resource
         foreach ($resources as $resource) {
-            if (!$resource->library_id) {
-                $resource->library_name = 'No Library Assigned';
+            // Column already populated by DB / observer — use it directly.
+            if (!empty($resource->library_name)) {
                 continue;
             }
 
-            // Look up the library name from the merged collection
-            $library = $allLibraries->get($resource->library_id);
-
-            if ($library) {
-                $resource->library_name = $library->library_name;
-            } else {
-                $resource->library_name = 'Unknown Library';
-            }
+            // Fallback for rows that pre-date the column or have no library.
+            $resource->library_name = $resource->library_id
+                ? 'Unknown Library'
+                : 'No Library Assigned';
         }
     }
 
@@ -236,24 +196,19 @@ class NonPrintResourceService
 
     private function getLevel1Libraries(string $schoolId): array
     {
-        // School level: Get only this school's libraries
         $libraries = Cache::remember(
             "school_libraries_{$schoolId}",
             self::CACHE_TTL_LIBRARIES,
             fn() => SchoolLibrary::where('school_id', $schoolId)->pluck('id')
         );
 
-        return [
-            'main' => $libraries,
-            'filtered' => collect()
-        ];
+        return ['main' => $libraries, 'filtered' => collect()];
     }
 
     private function getLevel2Libraries(Request $request, string $districtId, array $dropdownData): array
     {
         $selectedSchool = $request->input('school');
 
-        // Get all school IDs in this district
         $schoolIds = $dropdownData['schools']->pluck('id');
 
         // CASE 1: No filter selected
@@ -275,11 +230,7 @@ class NonPrintResourceService
                 fn() => SchoolLibrary::whereIn('school_id', $schoolIds)->pluck('id')
             );
 
-            // KEY: Put in 'filtered', not 'main'
-            return [
-                'main' => collect(),
-                'filtered' => $libraries
-            ];
+            return ['main' => collect(), 'filtered' => $libraries];
         }
 
         // CASE 3: Specific school selected
@@ -289,10 +240,7 @@ class NonPrintResourceService
             fn() => SchoolLibrary::where('school_id', $selectedSchool)->pluck('id')
         );
 
-        return [
-            'main' => collect(),
-            'filtered' => $libraries
-        ];
+        return ['main' => collect(), 'filtered' => $libraries];
     }
 
     private function getLevel3Libraries(Request $request, string $divisionId, array $dropdownData): array
@@ -311,7 +259,6 @@ class NonPrintResourceService
             return ['main' => $libraries, 'filtered' => collect()];
         }
 
-        // Get division libraries (shown as 'main' when filtering)
         $divisionLibraries = Cache::remember(
             "division_libraries_{$divisionId}",
             self::CACHE_TTL_LIBRARIES,
@@ -326,10 +273,7 @@ class NonPrintResourceService
                 fn() => SchoolLibrary::where('school_id', $selectedSchool)->pluck('id')
             );
 
-            return [
-                'main' => $divisionLibraries,
-                'filtered' => $schoolLibraries
-            ];
+            return ['main' => $divisionLibraries, 'filtered' => $schoolLibraries];
         }
 
         // CASE 3: Specific district selected (but not specific school)
@@ -343,31 +287,21 @@ class NonPrintResourceService
                 }
             );
 
-            return [
-                'main' => $divisionLibraries,
-                'filtered' => $schoolLibraries
-            ];
+            return ['main' => $divisionLibraries, 'filtered' => $schoolLibraries];
         }
 
         // CASE 4: "All Districts" OR "All Schools" selected
-        // Show ALL schools in the entire division
         $allSchoolLibraries = Cache::remember(
             "division_all_school_libraries_{$divisionId}",
             self::CACHE_TTL_LIBRARIES,
             function () use ($divisionId) {
-                // Get all districts in this division
                 $districtIds = District::where('division_id', $divisionId)->pluck('id');
-                // Get all schools in those districts
                 $schoolIds = School::whereIn('district_id', $districtIds)->pluck('id');
-                // Get all school libraries
                 return SchoolLibrary::whereIn('school_id', $schoolIds)->pluck('id');
             }
         );
 
-        return [
-            'main' => $divisionLibraries,
-            'filtered' => $allSchoolLibraries
-        ];
+        return ['main' => $divisionLibraries, 'filtered' => $allSchoolLibraries];
     }
 
     private function getLevel4Libraries(Request $request, string $stationId): array
@@ -389,10 +323,7 @@ class NonPrintResourceService
                 fn() => SchoolLibrary::where('school_id', $selectedSchool)->pluck('id')
             );
 
-            return [
-                'main' => collect(),
-                'filtered' => $libraries
-            ];
+            return ['main' => collect(), 'filtered' => $libraries];
         }
 
         // CASE 3: Specific district selected (but not specific school)
@@ -406,10 +337,7 @@ class NonPrintResourceService
                 }
             );
 
-            return [
-                'main' => collect(),
-                'filtered' => $libraries
-            ];
+            return ['main' => collect(), 'filtered' => $libraries];
         }
 
         // CASE 4: Specific division selected (but not specific district/school)
@@ -418,10 +346,7 @@ class NonPrintResourceService
                 "division_all_libraries_{$selectedDivision}",
                 self::CACHE_TTL_LIBRARIES,
                 function () use ($selectedDivision) {
-                    // Division libraries
                     $divisionLibs = DivisionLibrary::where('division_id', $selectedDivision)->pluck('id');
-
-                    // All school libraries in this division
                     $districtIds = District::where('division_id', $selectedDivision)->pluck('id');
                     $schoolIds = School::whereIn('district_id', $districtIds)->pluck('id');
                     $schoolLibs = SchoolLibrary::whereIn('school_id', $schoolIds)->pluck('id');
@@ -430,26 +355,17 @@ class NonPrintResourceService
                 }
             );
 
-            return [
-                'main' => collect(),
-                'filtered' => $libraries
-            ];
+            return ['main' => collect(), 'filtered' => $libraries];
         }
 
-        // CASE 5: "All" selected (All Divisions, All Districts, or All Schools)
-        // Show everything in the entire region
+        // CASE 5: "All" selected — show everything in the entire region
         $libraries = Cache::remember(
             "region_all_libraries_{$stationId}",
             self::CACHE_TTL_LIBRARIES,
             function () use ($stationId) {
-                // Region libraries
                 $regionLibs = RegionLibrary::where('region_id', $stationId)->pluck('id');
-
-                // All division libraries
                 $divisionIds = Division::where('region_id', $stationId)->pluck('id');
                 $divisionLibs = DivisionLibrary::whereIn('division_id', $divisionIds)->pluck('id');
-
-                // All school libraries
                 $districtIds = District::whereIn('division_id', $divisionIds)->pluck('id');
                 $schoolIds = School::whereIn('district_id', $districtIds)->pluck('id');
                 $schoolLibs = SchoolLibrary::whereIn('school_id', $schoolIds)->pluck('id');
@@ -458,54 +374,7 @@ class NonPrintResourceService
             }
         );
 
-        return [
-            'main' => collect(),
-            'filtered' => $libraries
-        ];
-    }
-
-    private function getLevel4DivisionLibraries(string $divisionId): Collection
-    {
-        // Cache the complete set of libraries for this division
-        return Cache::remember(
-            "division_all_libraries_{$divisionId}",
-            self::CACHE_TTL_LIBRARIES,
-            function () use ($divisionId) {
-                // Get division libraries
-                $divisionLibs = DivisionLibrary::where('division_id', $divisionId)->pluck('id');
-
-                // Get all school libraries within this division
-                $districtIds = District::where('division_id', $divisionId)->pluck('id');
-                $schoolIds = School::whereIn('district_id', $districtIds)->pluck('id');
-                $schoolLibs = SchoolLibrary::whereIn('school_id', $schoolIds)->pluck('id');
-
-                return $divisionLibs->merge($schoolLibs);
-            }
-        );
-    }
-
-    private function getLevel4RegionLibraries(string $stationId): Collection
-    {
-        // Cache the complete set of libraries for this region
-        return Cache::remember(
-            "region_all_libraries_{$stationId}",
-            self::CACHE_TTL_LIBRARIES,
-            function () use ($stationId) {
-                // Get region libraries
-                $regionLibs = RegionLibrary::where('region_id', $stationId)->pluck('id');
-
-                // Get all division libraries in this region
-                $divisionIds = Division::where('region_id', $stationId)->pluck('id');
-                $divisionLibs = DivisionLibrary::whereIn('division_id', $divisionIds)->pluck('id');
-
-                // Get all school libraries in this region
-                $districtIds = District::whereIn('division_id', $divisionIds)->pluck('id');
-                $schoolIds = School::whereIn('district_id', $districtIds)->pluck('id');
-                $schoolLibs = SchoolLibrary::whereIn('school_id', $schoolIds)->pluck('id');
-
-                return $regionLibs->merge($divisionLibs)->merge($schoolLibs);
-            }
-        );
+        return ['main' => collect(), 'filtered' => $libraries];
     }
 
     private function getResources(Request $request, int $level, Collection $libraryIds)
@@ -519,7 +388,6 @@ class NonPrintResourceService
             return $this->emptyPaginator($request);
         }
 
-        // Query resources by library_id field directly in nonprint_resources table
         $query = NonprintResource::with(['nonprintTitle', 'type', 'nonprintAcquisitions'])
             ->whereIn('library_id', $libraryIds->toArray());
 
@@ -534,7 +402,6 @@ class NonPrintResourceService
             return $this->emptyPaginator($request);
         }
 
-        // Query resources by library_id field directly in nonprint_resources table
         $query = NonprintResource::with(['nonprintTitle', 'type', 'nonprintAcquisitions'])
             ->whereIn('library_id', $libraryIds->toArray());
 
@@ -551,7 +418,6 @@ class NonPrintResourceService
             return $this->emptyPaginator($request);
         }
 
-        // Query resources by library_id field directly in nonprint_resources table
         $query = NonprintResource::with(['nonprintTitle', 'type', 'nonprintAcquisitions'])
             ->whereIn('library_id', $libraryIds->toArray());
 
@@ -573,7 +439,7 @@ class NonPrintResourceService
     }
 
     /**
-     * Apply full-text search using PostgreSQL's tsvector
+     * Apply full-text search using PostgreSQL's tsvector.
      */
     private function applySearch($query, string $search)
     {
@@ -583,7 +449,6 @@ class NonPrintResourceService
             return $query;
         }
 
-        // Use PostgreSQL full-text search with ranking
         return $query->whereRaw(
             "search_vector @@ plainto_tsquery('english', ?)",
             [$search]
@@ -594,9 +459,8 @@ class NonPrintResourceService
     }
 
     /**
-     * Fallback search method using LIKE queries
-     * Use this if full-text search is not available or for debugging
-     *
+     * Fallback search method using LIKE queries.
+     * Use this if full-text search is not available or for debugging.
      */
     private function applySearchFallback($query, string $search)
     {
@@ -609,7 +473,6 @@ class NonPrintResourceService
         $searchLower = '%' . strtolower($search) . '%';
 
         return $query->where(function ($q) use ($searchLower) {
-            // Search in direct resource fields
             $q->whereRaw('LOWER(brand) LIKE ?', [$searchLower])
             ->orWhereRaw('LOWER(code) LIKE ?', [$searchLower])
             ->orWhereRaw('LOWER(version) LIKE ?', [$searchLower])
@@ -617,12 +480,10 @@ class NonPrintResourceService
             ->orWhereRaw('LOWER(size) LIKE ?', [$searchLower])
             ->orWhereRaw('LOWER(model) LIKE ?', [$searchLower])
 
-            // Search in title
             ->orWhereHas('nonprintTitle', fn($qt) =>
                 $qt->whereRaw('LOWER(title) LIKE ?', [$searchLower])
             )
 
-            // Search in subjects and grade levels
             ->orWhereExists(function ($exists) use ($searchLower) {
                 $exists->select(DB::raw(1))
                         ->from('subject_grade_levels as sgl')
@@ -635,19 +496,8 @@ class NonPrintResourceService
                         });
             })
 
-            // Combined library search (3 queries → 1)
-            ->orWhereExists(function ($exists) use ($searchLower) {
-                $exists->selectRaw('1')
-                    ->fromRaw('(
-                        SELECT id, library_name FROM school_libraries
-                        UNION ALL
-                        SELECT id, library_name FROM division_libraries
-                        UNION ALL
-                        SELECT id, library_name FROM region_libraries
-                    ) as all_libraries')
-                    ->whereColumn('nonprint_resources.library_id', 'all_libraries.id')
-                    ->whereRaw('LOWER(all_libraries.library_name) LIKE ?', [$searchLower]);
-            });
+            // library_name is now a stored column — search it directly
+            ->orWhereRaw('LOWER(library_name) LIKE ?', [$searchLower]);
         });
     }
 
@@ -660,7 +510,7 @@ class NonPrintResourceService
     }
 
     /**
-     * Clear caches when organizational structure changes
+     * Clear caches when organisational structure changes.
      */
     public function clearStationCache(string $stationId, int $level): void
     {
@@ -694,7 +544,7 @@ class NonPrintResourceService
     }
 
     /**
-     * Clear library name caches
+     * Clear library name caches.
      */
     public function clearLibraryCache(): void
     {

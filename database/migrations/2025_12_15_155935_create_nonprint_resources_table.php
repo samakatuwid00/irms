@@ -21,6 +21,7 @@ return new class extends Migration
             $table->string('subject_grade_level_ids');
             $table->timestamps();
             $table->uuid('library_id');
+            $table->string('library_name');
 
             $table->foreign('nonprint_title_id')->references('id')->on('nonprint_titles');
             $table->foreign('nonprint_type_id')->references('id')->on('nonprint_types');

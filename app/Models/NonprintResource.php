@@ -25,11 +25,10 @@ class NonprintResource extends Model
         'subject_grade_level_ids',
         'created_at',
         'updated_at',
-        'cover'
+        'cover',
+        'library_name',
     ];
     protected $table = 'nonprint_resources';
-
-    protected $appends = ['library_name'];
 
     public function nonprintTitle(): BelongsTo
     {
@@ -62,39 +61,12 @@ class NonprintResource extends Model
     // Fetch subject-grade levels
     public function subjects()
     {
-        if(!$this->subject_grade_level_ids) return collect();
+        if (!$this->subject_grade_level_ids) return collect();
         $ids = explode(',', $this->subject_grade_level_ids);
 
         return SubjectGradeLevel::with(['subject', 'gradeLevel'])
             ->whereIn('id', $ids)
             ->get();
-    }
-
-    public function getLibraryNameAttribute(): string
-    {
-        if (!$this->library_id) {
-            return 'No Library Assigned';
-        }
-
-        // Check school library
-        $schoolLibrary = SchoolLibrary::find($this->library_id);
-        if ($schoolLibrary) {
-            return $schoolLibrary->library_name;
-        }
-
-        // Check division library
-        $divisionLibrary = DivisionLibrary::find($this->library_id);
-        if ($divisionLibrary) {
-            return $divisionLibrary->library_name;
-        }
-
-        // Check region library
-        $regionLibrary = RegionLibrary::find($this->library_id);
-        if ($regionLibrary) {
-            return $regionLibrary->library_name;
-        }
-
-        return 'Unknown Library';
     }
 
     public function showDetails(): array
@@ -161,7 +133,7 @@ class NonprintResource extends Model
             'subjects' => $subjects,
             'acquisitions' => $acquisitions,
             'quantities' => $quantities,
-            'library_name' => $this->library_name,
+            'library_name' => $this->library_name ?? 'No Library Assigned',
             // 'edit_url' => route('update-nonprint-resource', $this->id)
         ];
     }

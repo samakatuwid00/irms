@@ -2,10 +2,13 @@
 
 namespace App\Services\Resource\Actions;
 
+use App\Models\DivisionLibrary;
 use App\Models\NonprintAcquisition;
 use App\Models\NonprintMasterlist;
 use App\Models\NonprintResource;
 use App\Models\NonprintTitle;
+use App\Models\RegionLibrary;
+use App\Models\SchoolLibrary;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
@@ -79,6 +82,15 @@ class AddNonPrintResourceService
         return $fullPath;
     }
 
+    // Resolve library_name from whichever table owns this library_id
+    private function resolveLibraryName(string $libraryId): string
+    {
+        return SchoolLibrary::find($libraryId)?->library_name
+            ?? DivisionLibrary::find($libraryId)?->library_name
+            ?? RegionLibrary::find($libraryId)?->library_name
+            ?? 'Unknown Library';
+    }
+
     // Create non-print resource
     private function createNonprintResource(array $data, string $titleId, ?string $coverPath): NonprintResource
     {
@@ -102,6 +114,7 @@ class AddNonPrintResourceService
             'model' => $data['model'] ?? 'model',
             'subject_grade_level_ids' => $gradeLevelIds,
             'library_id' => $data['library_id'],
+            'library_name' => $this->resolveLibraryName($data['library_id']),
             'cover' => $coverPath,
         ]);
     }
