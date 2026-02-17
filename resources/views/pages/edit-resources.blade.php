@@ -46,79 +46,15 @@
         </div>
     </div>
 
+    {{-- ── Inject page-level data for the tab-switcher entry point ── --}}
     <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            const tabButtons = document.querySelectorAll('.resource-tab-btn');
-            const printForm = document.getElementById('print-form');
-            const nonprintForm = document.getElementById('nonprint-form');
-            const printTab = document.getElementById('print-tab');
-            const nonprintTab = document.getElementById('nonprint-tab');
-
-            // Get current resource ID from URL
-            const resourceId = '{{ $printResource->id ?? $nonprintResource->id ?? "" }}';
-            const storageKey = `activeResourceTab_${resourceId}`;
-
-            // Function to activate a specific tab
-            function activateTab(tabType) {
-                // Reset all tabs
-                tabButtons.forEach(b => {
-                    b.classList.remove('border-blue-600', 'text-blue-600');
-                    b.classList.add('border-transparent', 'text-gray-600', 'hover:text-blue-600', 'hover:border-gray-300');
-                });
-
-                // Hide all forms
-                printForm.classList.add('hidden');
-                nonprintForm.classList.add('hidden');
-
-                // Activate the selected tab
-                if (tabType === 'nonprint') {
-                    nonprintTab.classList.remove('border-transparent', 'text-gray-600', 'hover:text-blue-600', 'hover:border-gray-300');
-                    nonprintTab.classList.add('border-blue-600', 'text-blue-600');
-                    nonprintForm.classList.remove('hidden');
-                    // Store active tab in localStorage with resource ID
-                    sessionStorage.setItem(storageKey, 'nonprint');
-                } else {
-                    printTab.classList.remove('border-transparent', 'text-gray-600', 'hover:text-blue-600', 'hover:border-gray-300');
-                    printTab.classList.add('border-blue-600', 'text-blue-600');
-                    printForm.classList.remove('hidden');
-                    // Store active tab in localStorage with resource ID
-                    sessionStorage.setItem(storageKey, 'print');
-                }
-            }
-
-            // Tab click handlers
-            tabButtons.forEach(btn => {
-                btn.addEventListener('click', () => {
-                    activateTab(btn.dataset.tab);
-                });
-            });
-
-            // Check URL parameter first, then sessionStorage for this specific resource, then resource availability
-            const urlParams = new URLSearchParams(window.location.search);
-            const tabParam = urlParams.get('tab');
-            const storedTab = sessionStorage.getItem(storageKey);
-            const hasPrintResource = {{ $printResource ? 'true' : 'false' }};
-            const hasNonprintResource = {{ $nonprintResource ? 'true' : 'false' }};
-
-            // Determine which tab to show
-            let initialTab = 'print'; // default
-
-            if (tabParam && (tabParam === 'print' || tabParam === 'nonprint')) {
-                // URL parameter takes highest priority
-                initialTab = tabParam;
-            } else if (storedTab && (storedTab === 'print' || storedTab === 'nonprint')) {
-                // Use stored tab if available for this specific resource
-                initialTab = storedTab;
-            } else if (!hasPrintResource && hasNonprintResource) {
-                // If only nonprint resource exists, show nonprint tab
-                initialTab = 'nonprint';
-            } else if (hasPrintResource && !hasNonprintResource) {
-                // If only print resource exists, show print tab
-                initialTab = 'print';
-            }
-
-            // Activate the determined tab
-            activateTab(initialTab);
-        });
+        window.__editResourcesData = {
+            resourceId:          '{{ $printResource->id ?? $nonprintResource->id ?? "" }}',
+            hasPrintResource:    {{ $printResource    ? 'true' : 'false' }},
+            hasNonprintResource: {{ $nonprintResource ? 'true' : 'false' }},
+            tabParam:            '{{ request()->query("tab", "") }}',
+        };
     </script>
+
+    @vite('resources/js/edit-resource-index.js')
 @endsection
