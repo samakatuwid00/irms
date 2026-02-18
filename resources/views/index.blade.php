@@ -115,6 +115,15 @@
             100% { filter: drop-shadow(0 0 20px rgba(255,255,255,1.0)); }
         }
         .logo-pulse { animation: glimmer 0.6s ease-out; }
+
+        /* Panel text fade transition */
+        .panel-text-transition {
+            transition: opacity 0.3s ease, transform 0.3s ease;
+        }
+        .panel-text-hidden {
+            opacity: 0;
+            transform: translateY(8px);
+        }
     </style>
 
     <div class="flex flex-col lg:flex-row w-full max-w-6xl mx-auto overflow-hidden rounded-none sm:rounded-2xl shadow-none sm:shadow-4xl min-h-screen lg:min-h-[600px]">
@@ -446,14 +455,18 @@
             <div class="relative z-10 flex flex-col h-full w-full text-white">
                 <div class="flex flex-col flex-1 justify-center items-center text-center">
                     <img id="mainLogo" src="{{ asset('assets/images/logo.png') }}" alt="Main Logo"
-                         class="h-20 w-20 sm:h-20 sm:w-28 lg:h-28 lg:w-36 rounded-full opacity-100 drop-shadow-[0_0_20px_rgba(255,255,255,1.0)] mb-3"
+                         class="h-20 w-20 sm:h-20 sm:w-28 lg:h-28 lg:w-36 rounded-full opacity-100 drop-shadow-[0_0_20px_rgba(255,255,255,1.0)]"
                          style="transition: transform 0.5s cubic-bezier(0.34,1.56,0.64,1);">
                     <h2 class="text-2xl sm:text-3xl lg:text-4xl font-bold tracking-wide mb-2">
                         <span class="text-[#b5e2ff]">i</span><span class="text-[#1A3263]">RIMS-</span><span class="text-[#DA3D20]">V</span>
                     </h2>
-                    <h1 class="text-3xl sm:text-4xl lg:text-5xl font-bold mb-3 sm:mb-4 leading-tight drop-shadow-md">Welcome back!</h1>
-                    <p class="text-sm sm:text-base text-white/95 max-w-xs sm:max-w-md lg:max-w-lg drop-shadow leading-relaxed px-4">
-                        An innovative, ICT-enabled platform that centralizes and tracks learning resources in Region V, providing real-time mapping, monitoring, and management across schools and divisions to enhance efficiency, transparency, and data-driven decision-making in Learning Resource Management.
+                    <h1 id="panelTitle"
+                        class="panel-text-transition text-3xl sm:text-4xl lg:text-5xl font-bold mb-3 sm:mb-4 leading-tight drop-shadow-md">
+                        Inventory System!
+                    </h1>
+                    <p id="panelDesc"
+                       class="panel-text-transition text-sm sm:text-base text-white/95 max-w-xs sm:max-w-md lg:max-w-lg drop-shadow leading-relaxed px-4">
+                        Centrally track and manage resources across schools and divisions with real-time data, full transparency, and integrated learning resource needs analysis.
                     </p>
                 </div>
                 <div class="flex justify-center items-center gap-3 sm:gap-4 lg:gap-6 pb-4 sm:pb-6 lg:pb-8 mt-6 lg:mt-0">
@@ -658,6 +671,8 @@
             const systemDescription = document.getElementById('systemDescription');
             const leftPanel = document.querySelector('.left-panel');
             const mainLogo = document.getElementById('mainLogo');
+            const panelTitle = document.getElementById('panelTitle');
+            const panelDesc = document.getElementById('panelDesc');
 
             const systemInfo = {
                 inventory: {
@@ -666,6 +681,8 @@
                     activeClass: 'bg-orange-500 text-white shadow-md',
                     inactiveClass: 'bg-transparent text-gray-600 hover:bg-gray-200',
                     panelTheme: 'theme-inventory',
+                    welcomeTitle: 'Inventory System',
+                    welcomeDesc: 'Centrally track and manage resources across schools and divisions with real-time data, full transparency, and integrated learning resource needs analysis.',
                 },
                 library: {
                     title: 'Sign In',
@@ -673,6 +690,8 @@
                     activeClass: 'bg-blue-500 text-white shadow-md',
                     inactiveClass: 'bg-transparent text-gray-600 hover:bg-gray-200',
                     panelTheme: 'theme-library',
+                    welcomeTitle: 'Library System',
+                    welcomeDesc: 'Manage, catalog, and provide seamless access to books and learning materials across all schools in Region V.',
                 },
                 allocation: {
                     title: 'Sign In',
@@ -680,15 +699,32 @@
                     activeClass: 'bg-green-500 text-white shadow-md',
                     inactiveClass: 'bg-transparent text-gray-600 hover:bg-gray-200',
                     panelTheme: 'theme-allocation',
+                    welcomeTitle: 'Allocation and Distribution System',
+                    welcomeDesc: 'Plan, distribute, and monitor the equitable allocation of learning resources across all divisions and schools.',
                 }
             };
 
             let currentSystem = 'inventory';
 
+            // Helper: animate panel text out → update → animate in
+            function updatePanelText(title, desc) {
+                // Fade out
+                panelTitle.classList.add('panel-text-hidden');
+                panelDesc.classList.add('panel-text-hidden');
+
+                setTimeout(() => {
+                    panelTitle.textContent = title;
+                    panelDesc.textContent = desc;
+
+                    // Fade in
+                    panelTitle.classList.remove('panel-text-hidden');
+                    panelDesc.classList.remove('panel-text-hidden');
+                }, 300);
+            }
+
             function switchSystem(system) {
                 if (system === currentSystem) return;
                 const info = systemInfo[system];
-                const prevInfo = systemInfo[currentSystem];
 
                 // Swap shape layers
                 const prevShapes = document.getElementById('shapes-' + currentSystem);
@@ -729,10 +765,13 @@
                     activeTab.classList.add('active');
                 }
 
-                // Update form and labels
+                // Update right-side form labels
                 systemInput.value = system;
                 systemTitle.textContent = info.title;
                 systemDescription.textContent = info.description;
+
+                // Update left panel welcome text with animation
+                updatePanelText(info.welcomeTitle, info.welcomeDesc);
 
                 currentSystem = system;
             }
