@@ -62,7 +62,7 @@
 
                     <img
                         id="imagePreview"
-                        src="{{ asset('assets/images/default.jpg') }}"
+                        src="{{ asset('assets/images/def.jpg') }}"
                         alt="Image preview"
                         class="w-full flex-1 object-cover rounded mb-4"
                     >
