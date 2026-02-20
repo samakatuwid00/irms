@@ -1,4 +1,3 @@
-
 function initMobileMenu() {
     const mobileMenuToggle = document.getElementById('mobile-menu-toggle');
     const mobileMenu = document.getElementById('mobile-menu');
@@ -7,7 +6,6 @@ function initMobileMenu() {
 
     if (!mobileMenuToggle || !mobileMenu) return;
 
-    // Toggle menu on button click
     mobileMenuToggle.addEventListener('click', () => {
         const isOpen = mobileMenu.classList.contains('open');
 
@@ -22,7 +20,6 @@ function initMobileMenu() {
         }
     });
 
-    // Close menu when clicking outside
     document.addEventListener('click', (e) => {
         if (!mobileMenu.contains(e.target) && !mobileMenuToggle.contains(e.target)) {
             if (mobileMenu.classList.contains('open')) {
@@ -33,7 +30,6 @@ function initMobileMenu() {
         }
     });
 
-    // Close menu when navigating to a page
     const mobileLinks = mobileMenu.querySelectorAll('a');
     mobileLinks.forEach(link => {
         link.addEventListener('click', () => {
@@ -62,6 +58,23 @@ function initMobileResourcesSubmenu() {
 }
 
 /**
+ * Initialize mobile add resource submenu toggle
+ */
+function initMobileAddResourceSubmenu() {
+    const toggle = document.getElementById('mobile-add-resource-toggle');
+    const submenu = document.getElementById('mobile-add-resource-submenu');
+    const chevron = document.getElementById('mobile-add-resource-chevron');
+
+    if (!toggle || !submenu) return;
+
+    toggle.addEventListener('click', (e) => {
+        e.preventDefault();
+        submenu.classList.toggle('hidden');
+        chevron.classList.toggle('rotate-180');
+    });
+}
+
+/**
  * Initialize desktop FAB (Floating Action Button) menu
  */
 function initFabMenu() {
@@ -71,7 +84,6 @@ function initFabMenu() {
 
     if (!fabButton || !menuItems || !fabIcon) return;
 
-    // Toggle menu on FAB button click
     fabButton.addEventListener('click', () => {
         const isOpen = menuItems.classList.contains('opacity-100');
 
@@ -88,7 +100,6 @@ function initFabMenu() {
         }
     });
 
-    // Close FAB menu when clicking outside
     document.addEventListener('click', (e) => {
         if (!fabButton.contains(e.target) && !menuItems.contains(e.target)) {
             if (menuItems.classList.contains('opacity-100')) {
@@ -100,7 +111,6 @@ function initFabMenu() {
         }
     });
 
-    // Initialize tooltips for FAB menu items
     initFabTooltips(menuItems);
 }
 
@@ -137,7 +147,6 @@ function initAccountDropdown() {
 
     if (!toggle || !menu) return;
 
-    // Toggle dropdown on button click
     toggle.addEventListener('click', (e) => {
         e.stopPropagation();
         const isOpen = !menu.classList.contains('hidden');
@@ -154,12 +163,10 @@ function initAccountDropdown() {
         }
     });
 
-    // Prevent closing when clicking inside menu
     menu.addEventListener('click', (e) => {
         e.stopPropagation();
     });
 
-    // Close dropdown when clicking outside
     document.addEventListener('click', () => {
         menu.classList.add('hidden', 'opacity-0');
         chevron.classList.remove('rotate-180');
@@ -182,7 +189,6 @@ function initResourcesAccordion() {
     const resourceAccordion = document.getElementById('resource-accordion-collapse');
     if (!resourceAccordion) return;
 
-    // Check if we're on a resources page
     const isResourcesPage =
         window.location.pathname.includes('print-resources') ||
         window.location.pathname.includes('nonprint-resources');
@@ -193,15 +199,33 @@ function initResourcesAccordion() {
 }
 
 /**
+ * Keep add resource accordion open on relevant pages
+ */
+function initAddResourceAccordion() {
+    const el = document.getElementById('add-resource-accordion-collapse');
+    if (!el) return;
+
+    const isAddResourcePage =
+        window.location.pathname.includes('add-print-resource') ||
+        window.location.pathname.includes('add-nonprint-resource');
+
+    if (isAddResourcePage) {
+        el.classList.remove('hidden');
+    }
+}
+
+/**
  * Initialize all layout components
  */
 export function initLayout() {
     initMobileMenu();
     initMobileResourcesSubmenu();
+    initMobileAddResourceSubmenu();
     initFabMenu();
     initAccountDropdown();
     initPreline();
     initResourcesAccordion();
+    initAddResourceAccordion();
 }
 
 // Auto-initialize when DOM is ready

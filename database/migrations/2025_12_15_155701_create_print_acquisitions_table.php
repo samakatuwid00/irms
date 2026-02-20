@@ -30,6 +30,9 @@ return new class extends Migration
             $table->foreign('print_id')->references('id')->on('print_resources');
             $table->foreign('encoded_by')->references('id')->on('users');
             $table->foreign('curriculum_id')->references('id')->on('curriculums');
+
+            $table->uuid('library_id');
+            $table->string('library_name');
         });
     }
 

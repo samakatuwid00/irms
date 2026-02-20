@@ -30,9 +30,10 @@ class PrintResource extends Model
         'subject_grade_level_ids',
         'created_at',
         'updated_at',
-        'library_id',
         'cover',
-        'library_name',
+        'uniqueness_hash',
+        'status',
+        'station_type'
     ];
 
 

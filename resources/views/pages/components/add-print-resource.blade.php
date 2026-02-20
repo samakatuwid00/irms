@@ -48,6 +48,10 @@
         </div>
     @endif
 
+    {{--
+        No `name="library_id"` on any top-level input anymore.
+        Library is now captured per-acquisition inside the acquisitions JSON.
+    --}}
     <form id="print" action="{{ route('add-print-resource') }}" class="resource-form space-y-8" method="POST" enctype="multipart/form-data">
         @csrf
 
@@ -88,25 +92,11 @@
                 </div>
             </div>
 
-             {{-- RIGHT: INPUTS --}}
+            {{-- RIGHT: INPUTS --}}
             <div class="md:col-span-2 space-y-6">
 
-                 {{-- Title / Author / Publisher --}}
+                {{-- Title / Author / Publisher --}}
                 <div class="space-y-4">
-                    @if (Auth::user()->userType?->level === 3)
-                        <div>
-                            <label class="block text-sm font-medium mb-1">Library</label>
-                            <select name="library_id" class="w-full border rounded px-3 py-2" required>
-                                @foreach ($divisionLibraries as $library)
-                                    <option value="{{ $library->id }}">{{ $library->library_name }}</option>
-                                @endforeach
-                            </select>
-                        </div>
-                    @elseif (Auth::user()->userType?->level === 4)
-                        <input type="hidden" name="library_id" id="library_id" value='{{ $regionLibrary->id }}' readonly required>
-                    @elseif (Auth::user()->userType?->level === 1)
-                        <input type="hidden" name="library_id" id="library_id" value='{{ $schoolLibrary->id }}' readonly required>
-                    @endif
                     <div>
                         <label class="block text-sm font-medium mb-1">
                             Title <span class="text-red-500">*</span>
@@ -122,7 +112,7 @@
                     <div>
                         <label class="block text-sm font-medium mb-1">Authors</label>
 
-                         {{-- Visible input --}}
+                        {{-- Visible input --}}
                         <div class="flex flex-wrap gap-2 border border-gray-300 rounded px-2 py-2" id="author-wrapper">
                             <input
                                 type="text"
@@ -132,8 +122,8 @@
                             >
                         </div>
 
-                         {{-- Hidden input (stores array)  --}}
-                        <input type="hidden" name="authors" id="authors-hidden" required readonly>
+                        {{-- Hidden input (stores array) --}}
+                        <input type="hidden" name="authors" id="authors-hidden" readonly>
                     </div>
 
                     <div>
@@ -142,20 +132,19 @@
                     </div>
                 </div>
 
-                 {{-- Two Columns  --}}
+                {{-- Two Columns --}}
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div class="space-y-4">
                         <div>
                             <label class="block text-sm mb-1">Type<span class="text-red-500">*</span></label>
-                                <select name="type" class="w-full border border-gray-300 rounded px-3 py-2" required>
-                                    <option selected disabled>Select type</option>
-
-                                    @foreach ($printTypes as $type)
-                                        <option value="{{ $type->id }}">
-                                            {{ $type->type_name }}
-                                        </option>
-                                    @endforeach
-                                </select>
+                            <select name="type" class="w-full border border-gray-300 rounded px-3 py-2" required>
+                                <option selected disabled>Select type</option>
+                                @foreach ($printTypes as $type)
+                                    <option value="{{ $type->id }}">
+                                        {{ $type->type_name }}
+                                    </option>
+                                @endforeach
+                            </select>
                         </div>
 
                         <div>
@@ -195,45 +184,27 @@
         @php
         $stages = [
             'S1' => [
-                'tab' => 'stage1',
-                'label' => 'Key Stage 1',
-                'grades' => [
-                    0 => 'K',
-                    1 => '1',
-                    2 => '2',
-                    3 => '3',
-                ],
+                'tab'    => 'stage1',
+                'label'  => 'Key Stage 1',
+                'grades' => [0 => 'K', 1 => '1', 2 => '2', 3 => '3'],
             ],
             'ES' => [
-                'tab' => 'stage2',
-                'label' => 'Key Stage 2',
-                'grades' => [
-                    4 => '4',
-                    5 => '5',
-                    6 => '6',
-                ],
+                'tab'    => 'stage2',
+                'label'  => 'Key Stage 2',
+                'grades' => [4 => '4', 5 => '5', 6 => '6'],
             ],
             'JHS' => [
-                'tab' => 'jhs',
-                'label' => 'Junior High',
-                'grades' => [
-                    7 => '7',
-                    8 => '8',
-                    9 => '9',
-                    10 => '10',
-                ],
+                'tab'    => 'jhs',
+                'label'  => 'Junior High',
+                'grades' => [7 => '7', 8 => '8', 9 => '9', 10 => '10'],
             ],
             'SHS' => [
-                'tab' => 'shs',
-                'label' => 'Senior High',
-                'grades' => [
-                    11 => '11',
-                    12 => '12',
-                ],
+                'tab'    => 'shs',
+                'label'  => 'Senior High',
+                'grades' => [11 => '11', 12 => '12'],
             ],
         ];
 
-        // Group data: [key_stage][subject_name][]
         $grouped = $subjectGradeLevels->groupBy(['key_stage', 'subject_name']);
         @endphp
 
@@ -250,7 +221,6 @@
                             {{ $stage['label'] }}
                         </button>
                     @endforeach
-                    <span class="text-red-500">*</span>
                 </div>
 
                 {{-- ================= TAB CONTENTS ================= --}}
@@ -277,7 +247,6 @@
                             <tbody>
                                 @foreach ($grouped[$stageKey] ?? [] as $subject => $rows)
                                     @php
-                                        // Map grade sort_order → subject_grade_level row
                                         $gradeMap = collect($rows)->keyBy('sort_order');
                                     @endphp
 
@@ -309,103 +278,162 @@
 
         {{-- ========================= 3RD GROUP (ACQUISITION & CONDITION) ========================== --}}
         <div class="bg-gray-50 border border-gray-300 rounded-xl p-6 space-y-6">
-                <h3 class="text-lg font-semibold text-gray-700">
-                    Acquisition & Condition Details
-                </h3>
+            <h3 class="text-lg font-semibold text-gray-700">
+                Acquisition & Condition Details
+            </h3>
 
-                <!-- Remarks -->
+            {{-- ---- LIBRARY (per-acquisition) ---- --}}
+            @php $userLevel = Auth::user()->userType?->level; @endphp
+
+            @if ($userLevel === 1)
+                {{--
+                    School account: library is fixed and needs no user interaction.
+                    Both inputs are hidden; the inline sync script below still fires
+                    so AcquisitionManager picks up the correct id + name values.
+                --}}
+                <input
+                    type="hidden"
+                    id="acq_library_id"
+                    value="{{ $schoolLibrary->id ?? '' }}"
+                    data-name="{{ $schoolLibrary->library_name ?? '' }}"
+                >
+                <input type="hidden" id="acq_library_name">
+
+            @else
+                {{--
+                    Division / Region (and any other) accounts: show the label
+                    and the appropriate control so they can choose / see their library.
+                --}}
                 <div>
                     <label class="block text-sm font-medium mb-1">
-                        Remarks <span class="text-xs text-gray-500">(will be saved with each acquisition)</span>
+                        Library <span class="text-red-500">*</span>
+                        <span class="text-xs font-normal text-gray-400">(saved with each acquisition)</span>
                     </label>
-                    <textarea name="remarks" rows="3" class="w-full border border-gray-300 rounded px-3 py-2"
-                            placeholder="Any notes, condition details, or special remarks for this batch..."></textarea>
-                </div>
 
-                <!-- TOP ROW -->
-                <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
-                    <div>
-                        <label class="block text-sm font-medium mb-1">Source<span class="text-red-500">*</span></label>
-                        <select id="source" name="source" class="w-full border border-gray-300 rounded px-3 py-2">
-                            <option value="" selected disabled>Select source</option>
-                            <option value="CO">DepEd - Central Office</option>
-                            <option value="RO">Regional Office</option>
-                            <option value="SDO">Schools Division Office</option>
-                            <option value="LOCAL">Locally Developed</option>
-                            <option value="DONATED">DONATED</option>
+                    @if ($userLevel === 3)
+                        {{-- Division users pick from their libraries --}}
+                        <select
+                            id="acq_library_id"
+                            class="w-full border border-gray-300 rounded px-3 py-2"
+                        >
+                            <option value="" disabled selected>Select library</option>
+                            @foreach ($divisionLibraries as $library)
+                                <option
+                                    value="{{ $library->id }}"
+                                    data-name="{{ $library->library_name }}"
+                                >{{ $library->library_name }}</option>
+                            @endforeach
                         </select>
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium mb-1">Date Acquired<span class="text-red-500">*</span></label>
-                        <input type="date" name="date_acquired" class="w-full border border-gray-300 rounded px-3 py-2">
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium mb-1">Cost</label>
-                        <input type="number" step="0.01" name="cost" class="w-full border border-gray-300 rounded px-3 py-2">
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium mb-1">IAR No.</label>
-                        <input type="text" name="iar" class="w-full border border-gray-300 rounded px-3 py-2">
-                    </div>
-                </div>
 
-                <!-- CONDITION QUANTITY -->
+                    @elseif ($userLevel === 4)
+                        {{-- Region users have one fixed library — show read-only display --}}
+                        <input
+                            type="hidden"
+                            id="acq_library_id"
+                            value="{{ $regionLibrary->id ?? '' }}"
+                            data-name="{{ $regionLibrary->library_name ?? '' }}"
+                        >
+                        <p class="text-sm text-gray-700 border border-gray-200 bg-white rounded px-3 py-2">
+                            {{ $regionLibrary->library_name ?? 'Region Library' }}
+                        </p>
+                    @endif
+
+                    <input type="hidden" id="acq_library_name">
+                </div>
+            @endif
+
+            {{-- Remarks --}}
+            <div>
+                <label class="block text-sm font-medium mb-1">
+                    Remarks <span class="text-xs text-gray-500">(will be saved with each acquisition)</span>
+                </label>
+                <textarea name="remarks" rows="3" class="w-full border border-gray-300 rounded px-3 py-2"
+                        placeholder="Any notes, condition details, or special remarks for this batch..."></textarea>
+            </div>
+
+            {{-- TOP ROW --}}
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
                 <div>
-                    <h4 class="text-sm font-semibold mb-3 text-gray-600">Condition & Quantity <span class="text-red-500">*</span></h4>
-                    <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4">
-                        <div><label class="block text-xs mb-1">Usable</label><input type="number" name="usable" value="0" min="0" class="qty w-full border border-gray-300 rounded px-3 py-2"></div>
-                        <div><label class="block text-xs mb-1">Partially Damaged</label><input type="number" name="partially_damaged" value="0" min="0" class="qty w-full border border-gray-300 rounded px-3 py-2"></div>
-                        <div><label class="block text-xs mb-1">Damaged</label><input type="number" name="damaged" value="0" min="0" class="qty w-full border border-gray-300 rounded px-3 py-2"></div>
-                        <div><label class="block text-xs mb-1">Lost</label><input type="number" name="lost" value="0" min="0" class="qty w-full border border-gray-300 rounded px-3 py-2"></div>
-                        <div><label class="block text-xs mb-1">Condemnable</label><input type="number" name="condemnable" value="0" min="0" class="qty w-full border border-gray-300 rounded px-3 py-2"></div>
-                        <div class="md:col-span-2">
-                            <label class="block text-xs mb-1">Total Quantity</label>
-                            <input type="number" name="total_quantity" id="totalQuantity" readonly class="w-full bg-gray-100 border border-gray-300 rounded px-3 py-2 font-semibold">
-                        </div>
+                    <label class="block text-sm font-medium mb-1">Source<span class="text-red-500">*</span></label>
+                    <select id="source" name="source" class="w-full border border-gray-300 rounded px-3 py-2">
+                        <option value="" selected disabled>Select source</option>
+                        <option value="CO">DepEd - Central Office</option>
+                        <option value="RO">Regional Office</option>
+                        <option value="SDO">Schools Division Office</option>
+                        <option value="LOCAL">Locally Developed</option>
+                        <option value="DONATED">DONATED</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium mb-1">Date Acquired<span class="text-red-500">*</span></label>
+                    <input type="date" name="date_acquired" class="w-full border border-gray-300 rounded px-3 py-2">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium mb-1">Cost</label>
+                    <input type="number" step="0.01" name="cost" class="w-full border border-gray-300 rounded px-3 py-2">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium mb-1">IAR No.</label>
+                    <input type="text" name="iar" class="w-full border border-gray-300 rounded px-3 py-2">
+                </div>
+            </div>
+
+            {{-- CONDITION QUANTITY --}}
+            <div>
+                <h4 class="text-sm font-semibold mb-3 text-gray-600">Condition & Quantity <span class="text-red-500">*</span></h4>
+                <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4">
+                    <div><label class="block text-xs mb-1">Usable</label><input type="number" name="usable" value="0" min="0" class="qty w-full border border-gray-300 rounded px-3 py-2"></div>
+                    <div><label class="block text-xs mb-1">Partially Damaged</label><input type="number" name="partially_damaged" value="0" min="0" class="qty w-full border border-gray-300 rounded px-3 py-2"></div>
+                    <div><label class="block text-xs mb-1">Damaged</label><input type="number" name="damaged" value="0" min="0" class="qty w-full border border-gray-300 rounded px-3 py-2"></div>
+                    <div><label class="block text-xs mb-1">Lost</label><input type="number" name="lost" value="0" min="0" class="qty w-full border border-gray-300 rounded px-3 py-2"></div>
+                    <div><label class="block text-xs mb-1">Condemnable</label><input type="number" name="condemnable" value="0" min="0" class="qty w-full border border-gray-300 rounded px-3 py-2"></div>
+                    <div class="md:col-span-2">
+                        <label class="block text-xs mb-1">Total Quantity</label>
+                        <input type="number" name="total_quantity" id="totalQuantity" readonly class="w-full bg-gray-100 border border-gray-300 rounded px-3 py-2 font-semibold">
                     </div>
                 </div>
-
-                <div class="flex justify-end">
-                    <button type="button" id="addAcquisitionBtn"
-                            class="px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-700">
-                        ➕ Add Acquisition
-                    </button>
-                </div>
             </div>
 
-            {{-- =========================
-                ACQUISITION LIST
-            ========================== --}}
-            <div class="mt-6">
-                <h3 class="text-lg font-semibold mb-3 text-gray-700">Acquisition List</h3>
-                <div class="overflow-x-auto">
-                    <table class="w-full border border-gray-300 text-sm">
-                        <thead class="bg-gray-100">
-                            <tr>
-                                <th class="border border-gray-300 px-2 py-1">Source</th>
-                                <th class="border border-gray-300 px-2 py-1">Date</th>
-                                <th class="border border-gray-300 px-2 py-1">Cost</th>
-                                <th class="border border-gray-300 px-2 py-1">IAR</th>
-                                <th class="border border-gray-300 px-2 py-1">Remarks</th>
-                                <th class="border border-gray-300 px-2 py-1">Usable</th>
-                                <th class="border border-gray-300 px-2 py-1">PD</th>
-                                <th class="border border-gray-300 px-2 py-1">Damaged</th>
-                                <th class="border border-gray-300 px-2 py-1">Lost</th>
-                                <th class="border border-gray-300 px-2 py-1">Cond.</th>
-                                <th class="border border-gray-300 px-2 py-1">Total</th>
-                                <th class="border border-gray-300 px-2 py-1">Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody id="acquisitionTableBody">
-                            <tr><td colspan="12" class="text-center text-gray-400 py-3">No acquisitions added</td></tr>
-                        </tbody>
-                    </table>
-                </div>
+            <div class="flex justify-end">
+                <button type="button" id="addAcquisitionBtn"
+                        class="px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-700">
+                    ➕ Add Acquisition
+                </button>
             </div>
+        </div>
 
-            <input type="hidden" name="acquisitions" id="acquisitionsInput">
+        {{-- ========================= ACQUISITION LIST ========================== --}}
+        <div class="mt-6">
+            <h3 class="text-lg font-semibold mb-3 text-gray-700">Acquisition List</h3>
+            <div class="overflow-x-auto">
+                <table class="w-full border border-gray-300 text-sm">
+                    <thead class="bg-gray-100">
+                        <tr>
+                            <th class="border border-gray-300 px-2 py-1 text-left">Library</th>
+                            <th class="border border-gray-300 px-2 py-1">Source</th>
+                            <th class="border border-gray-300 px-2 py-1">Date</th>
+                            <th class="border border-gray-300 px-2 py-1">Cost</th>
+                            <th class="border border-gray-300 px-2 py-1">IAR</th>
+                            <th class="border border-gray-300 px-2 py-1">Remarks</th>
+                            <th class="border border-gray-300 px-2 py-1">Usable</th>
+                            <th class="border border-gray-300 px-2 py-1">PD</th>
+                            <th class="border border-gray-300 px-2 py-1">Damaged</th>
+                            <th class="border border-gray-300 px-2 py-1">Lost</th>
+                            <th class="border border-gray-300 px-2 py-1">Cond.</th>
+                            <th class="border border-gray-300 px-2 py-1">Total</th>
+                            <th class="border border-gray-300 px-2 py-1">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="acquisitionTableBody">
+                        <tr><td colspan="13" class="text-center text-gray-400 py-3">No acquisitions added</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
 
-        <!-- SUBMIT -->
+        <input type="hidden" name="acquisitions" id="acquisitionsInput">
+
+        {{-- SUBMIT --}}
         <div class="flex justify-end">
             <button type="submit" id="savePrintBtn" class="px-6 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed">
                 <span id="savePrintText">Save Print Resource</span>
@@ -415,5 +443,35 @@
             </button>
         </div>
     </form>
+
+    {{--
+        Sync library name into the hidden companion whenever the select changes.
+        Works for all account types:
+          - Level 1 (school): both inputs are hidden; fires once on load to
+            populate acq_library_name from the data-name attribute.
+          - Level 3 (division): fires on SELECT change + on load.
+          - Level 4 (region): both inputs are hidden; fires once on load.
+    --}}
+    <script>
+    (function () {
+        const libSelect = document.getElementById('acq_library_id');
+        const libName   = document.getElementById('acq_library_name');
+
+        if (!libSelect || !libName) return;
+
+        function syncName() {
+            if (libSelect.tagName === 'SELECT') {
+                const opt = libSelect.options[libSelect.selectedIndex];
+                libName.value = opt ? (opt.dataset.name || opt.text || '') : '';
+            } else {
+                // hidden input — name is in data-name attribute
+                libName.value = libSelect.dataset.name || '';
+            }
+        }
+
+        libSelect.addEventListener('change', syncName);
+        syncName(); // populate on page load for hidden-input cases (school / region)
+    })();
+    </script>
 
     @vite(['resources/js/add-print-resource.js'])

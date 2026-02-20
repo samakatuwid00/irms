@@ -4,12 +4,9 @@ namespace App\Http\Controllers\Resource;
 
 use App\Models\DivisionLibrary;
 use App\Models\NonPrintType;
-use App\Models\PrintType;
 use App\Models\RegionLibrary;
 use App\Models\SchoolLibrary;
 use App\Models\SubjectGradeLevel;
-
-use App\Services\Resource\Actions\AddPrintResourceService;
 use App\Services\Resource\Actions\AddNonPrintResourceService;
 
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
@@ -18,19 +15,15 @@ use Illuminate\Http\Request;
 use Illuminate\Routing\Controller as BaseController;
 use Illuminate\Support\Facades\Auth;
 
-class AddResourceController extends BaseController
+class AddNonPrintResourceController extends BaseController
 {
     use AuthorizesRequests, ValidatesRequests;
 
-    protected $printResourceService;
     protected $nonPrintResourceService;
 
-    public function __construct(
-        AddPrintResourceService $printResourceService,
-        AddNonPrintResourceService $nonPrintResourceService
-    ) {
+    public function __construct(AddNonPrintResourceService $nonPrintResourceService)
+    {
         $this->middleware('auth');
-        $this->printResourceService = $printResourceService;
         $this->nonPrintResourceService = $nonPrintResourceService;
     }
 
@@ -66,14 +59,12 @@ class AddResourceController extends BaseController
             ->orderBy('grade_levels.sort_order')
             ->get();
 
-        $printTypes    = PrintType::all();
         $nonprintTypes = NonPrintType::all();
 
-        return view('pages.add-resources',
+        return view('pages.add-nonprint-resource',
             compact(
                 'user',
                 'subjectGradeLevels',
-                'printTypes',
                 'nonprintTypes',
                 'divisionLibraries',
                 'regionLibrary',
@@ -82,35 +73,7 @@ class AddResourceController extends BaseController
         );
     }
 
-    public function addPrintResource(Request $request)
-    {
-        $validated = $request->validate([
-            'title'                => 'required|string|max:255',
-            'authors'              => 'nullable|string',
-            'type'                 => 'required|exists:print_types,id',
-            'publisher'            => 'nullable|string|max:255',
-            'volume'               => 'nullable|string|max:50',
-            'edition'              => 'nullable|string|max:50',
-            'copyright'            => 'nullable|integer',
-            'isbn'                 => 'nullable|string|max:50',
-            'pages'                => 'nullable|integer',
-            'subject_grade_levels' => 'nullable|array',
-            'acquisitions'         => 'required|string',
-            'image'                => 'nullable|image|mimes:jpeg,png,jpg|max:5120',
-        ]);
-
-        if ($request->hasFile('image')) {
-            $validated['image'] = $request->file('image');
-        }
-
-        $this->printResourceService->addPrintResource($validated);
-
-        return redirect()
-            ->route('add-resources')
-            ->with('success', 'Print resource successfully added.');
-    }
-
-    public function addNonPrintResource(Request $request)
+    public function store(Request $request)
     {
         $validated = $request->validate([
             'title'                => 'required|string|max:255',
@@ -134,7 +97,7 @@ class AddResourceController extends BaseController
         $this->nonPrintResourceService->addNonPrintResource($validated);
 
         return redirect()
-            ->route('add-resources')
+            ->route('nonprint-resource.create')
             ->with('success', 'Non-Print resource successfully added.');
     }
 }

@@ -8,11 +8,13 @@ use App\Models\NonprintTitle;
 use App\Models\SchoolLibrary;
 use App\Models\DivisionLibrary;
 use App\Models\RegionLibrary;
+use App\Models\PrintAcquisition;
 use App\Observers\PrintTitleObserver;
 use App\Observers\NonPrintTitleObserver;
 use App\Observers\SchoolLibraryObserver;
 use App\Observers\DivisionLibraryObserver;
 use App\Observers\RegionLibraryObserver;
+use App\Observers\PrintAcquisitionObserver;
 
 
 class AppServiceProvider extends ServiceProvider
@@ -24,6 +26,9 @@ class AppServiceProvider extends ServiceProvider
     {
         // Register observers for Print Resources
         PrintTitle::observe(PrintTitleObserver::class);
+
+        // Register observers for Print Acquisitions
+        PrintAcquisition::observe(PrintAcquisitionObserver::class);
 
         // Register observers for Non-Print Resources
         NonprintTitle::observe(NonPrintTitleObserver::class);

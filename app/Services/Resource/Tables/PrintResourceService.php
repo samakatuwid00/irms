@@ -73,7 +73,9 @@ class PrintResourceService
         }
 
         $query = PrintResource::with(['printTitle.authors', 'type', 'printAcquisitions'])
-            ->whereIn('library_id', $divisionLibraryIds->toArray());
+            ->whereHas('printAcquisitions', function ($q) use ($divisionLibraryIds) {
+                $q->whereIn('library_id', $divisionLibraryIds->toArray());
+            });
 
         $this->applySearch($query, (string) $request->input('division_search', ''));
 
@@ -81,13 +83,11 @@ class PrintResourceService
     }
 
     /**
-     * OPTIMIZED: library_name is now a stored column on print_resources.
-     * No more cross-table UNION ALL lookups or cache round-trips per page —
-     * the value is already on every hydrated model.
-     *
-     * The only thing we still handle here is the fallback for rows whose
-     * library_name column was not yet populated (e.g. legacy rows or a null
-     * library_id), keeping the exact same display behaviour as before.
+     * OPTIMIZED: library_name is now resolved from print_acquisitions.
+     * Each resource may have multiple acquisitions across different libraries;
+     * the first non-null library_name is used as the display label (consistent
+     * with the previous single-library behaviour). Rows with no acquisitions
+     * fall back gracefully.
      */
     private function attachLibraryNames(LengthAwarePaginator $resources): void
     {
@@ -96,15 +96,17 @@ class PrintResourceService
         }
 
         foreach ($resources as $resource) {
-            // Column already populated by DB / observer — use it directly.
-            if (!empty($resource->library_name)) {
-                continue;
-            }
+            // Derive library_name from the loaded acquisitions relation.
+            if (empty($resource->library_name)) {
+                $firstName = $resource->printAcquisitions
+                    ->whereNotNull('library_name')
+                    ->value('library_name');
 
-            // Fallback for rows that pre-date the column or have no library.
-            $resource->library_name = $resource->library_id
-                ? 'Unknown Library'
-                : 'No Library Assigned';
+                $resource->library_name = $firstName
+                    ?? ($resource->printAcquisitions->isNotEmpty()
+                        ? 'Unknown Library'
+                        : 'No Library Assigned');
+            }
         }
     }
 
@@ -401,6 +403,26 @@ class PrintResourceService
         );
     }
 
+    // ─── Query Builders ───────────────────────────────────────────────────────
+
+    /**
+     * Build a base PrintResource query scoped to the given library IDs.
+     *
+     * Because library_id now lives on print_acquisitions, we use
+     * whereHas() so that a resource is included only when it has at least
+     * one acquisition belonging to one of the supplied library IDs.
+     * The eager-loaded `printAcquisitions` relation is intentionally NOT
+     * filtered here so that all acquisitions for the resource are available
+     * to the model accessors (quantities, library_name, showDetails, etc.).
+     */
+    private function buildLibraryQuery(Collection $libraryIds)
+    {
+        return PrintResource::with(['printTitle.authors', 'type', 'printAcquisitions'])
+            ->whereHas('printAcquisitions', function ($q) use ($libraryIds) {
+                $q->whereIn('library_id', $libraryIds->toArray());
+            });
+    }
+
     private function getResources(Request $request, int $level, Collection $libraryIds)
     {
         if ($level === self::LEVEL_DIVISION) {
@@ -411,9 +433,7 @@ class PrintResourceService
             return $this->emptyPaginator($request);
         }
 
-        $query = PrintResource::with(['printTitle.authors', 'type', 'printAcquisitions'])
-            ->whereIn('library_id', $libraryIds->toArray());
-
+        $query = $this->buildLibraryQuery($libraryIds);
         $this->applySearch($query, (string) $request->input('search', ''));
 
         return $query->paginate(self::PER_PAGE)->withQueryString();
@@ -425,9 +445,7 @@ class PrintResourceService
             return $this->emptyPaginator($request);
         }
 
-        $query = PrintResource::with(['printTitle.authors', 'type', 'printAcquisitions'])
-            ->whereIn('library_id', $libraryIds->toArray());
-
+        $query = $this->buildLibraryQuery($libraryIds);
         $this->applySearch($query, (string) $request->input('division_search', ''));
 
         return $query->paginate(self::PER_PAGE)->withQueryString();
@@ -441,8 +459,7 @@ class PrintResourceService
             return $this->emptyPaginator($request);
         }
 
-        $query = PrintResource::with(['printTitle.authors', 'type', 'printAcquisitions'])
-            ->whereIn('library_id', $libraryIds->toArray());
+        $query = $this->buildLibraryQuery($libraryIds);
 
         $searchParam = $level === self::LEVEL_DIVISION ? 'school_search' : 'search';
         $this->applySearch($query, (string) $request->input($searchParam, ''));
@@ -460,6 +477,20 @@ class PrintResourceService
         };
     }
 
+    // ─── Search ───────────────────────────────────────────────────────────────
+
+    /**
+     * Apply full-text search using the search_vector column on print_acquisitions.
+     *
+     * We use a WHERE EXISTS subquery against print_acquisitions so the filter
+     * operates at the PrintResource level (one resource row per result) while
+     * the ts_rank is derived from the acquisition rows. Using EXISTS keeps the
+     * result set deduplicated — a resource with multiple acquisitions that all
+     * match still appears once.
+     *
+     * Ranking uses the MAX rank across all matching acquisitions so that the
+     * resource with the best-matching acquisition floats to the top.
+     */
     private function applySearch($query, string $search)
     {
         $search = trim($search);
@@ -468,15 +499,32 @@ class PrintResourceService
             return $query;
         }
 
-        return $query->whereRaw(
-            "search_vector @@ plainto_tsquery('english', ?)",
-            [$search]
-        )->orderByRaw(
-            "ts_rank(search_vector, plainto_tsquery('english', ?)) DESC",
+        // Filter: resource must have at least one acquisition matching the FTS query.
+        $query->whereExists(function ($sub) use ($search) {
+            $sub->select(DB::raw(1))
+                ->from('print_acquisitions')
+                ->whereColumn('print_acquisitions.print_id', 'print_resources.id')
+                ->whereRaw(
+                    "print_acquisitions.search_vector @@ plainto_tsquery('english', ?)",
+                    [$search]
+                );
+        });
+
+        // Order: highest-ranking acquisition determines row order.
+        $query->orderByRaw(
+            "(SELECT MAX(ts_rank(pa.search_vector, plainto_tsquery('english', ?)))
+              FROM print_acquisitions pa
+              WHERE pa.print_id = print_resources.id) DESC",
             [$search]
         );
+
+        return $query;
     }
 
+    /**
+     * ILIKE fallback search (used when the FTS vector is unavailable / empty).
+     * Mirrors the old behaviour but targets print_acquisitions for library_name.
+     */
     private function applySearchFallback($query, string $search)
     {
         $search = trim($search);
@@ -488,34 +536,36 @@ class PrintResourceService
         $searchLower = '%' . strtolower($search) . '%';
 
         return $query->where(function ($q) use ($searchLower) {
-            $q->where('isbn', 'ILIKE', $searchLower)
-            ->orWhere('publisher', 'ILIKE', $searchLower)
-            ->orWhere('copyright', 'ILIKE', $searchLower)
+            $q->whereHas('printAcquisitions', function ($aq) use ($searchLower) {
+                    $aq->where('isbn', 'ILIKE', $searchLower)
+                       ->orWhere('publisher', 'ILIKE', $searchLower)
+                       ->orWhere('copyright', 'ILIKE', $searchLower)
+                       ->orWhere('library_name', 'ILIKE', $searchLower);
+                })
 
-            ->orWhereHas('printTitle', fn($qt) =>
-                $qt->where('title', 'ILIKE', $searchLower)
-            )
+                ->orWhereHas('printTitle', fn($qt) =>
+                    $qt->where('title', 'ILIKE', $searchLower)
+                )
 
-            ->orWhereHas('printTitle.authors', fn($qa) =>
-                $qa->where('author_name', 'ILIKE', $searchLower)
-            )
+                ->orWhereHas('printTitle.authors', fn($qa) =>
+                    $qa->where('author_name', 'ILIKE', $searchLower)
+                )
 
-            ->orWhereExists(function ($exists) use ($searchLower) {
-                $exists->select(DB::raw(1))
-                    ->from('subject_grade_levels as sgl')
-                    ->join('subjects as subj', 'sgl.subject_id', '=', 'subj.id')
-                    ->join('grade_levels as gl', 'sgl.grade_level_id', '=', 'gl.id')
-                    ->whereRaw("sgl.id::text = ANY(string_to_array(print_resources.subject_grade_level_ids, ','))")
-                    ->where(function ($match) use ($searchLower) {
-                        $match->where('subj.subject_name', 'ILIKE', $searchLower)
-                            ->orWhere('gl.grade', 'ILIKE', $searchLower);
-                    });
-            })
-
-            // library_name is now a stored column — search it directly
-            ->orWhere('library_name', 'ILIKE', $searchLower);
+                ->orWhereExists(function ($exists) use ($searchLower) {
+                    $exists->select(DB::raw(1))
+                        ->from('subject_grade_levels as sgl')
+                        ->join('subjects as subj', 'sgl.subject_id', '=', 'subj.id')
+                        ->join('grade_levels as gl', 'sgl.grade_level_id', '=', 'gl.id')
+                        ->whereRaw("sgl.id::text = ANY(string_to_array(print_resources.subject_grade_level_ids, ','))")
+                        ->where(function ($match) use ($searchLower) {
+                            $match->where('subj.subject_name', 'ILIKE', $searchLower)
+                                  ->orWhere('gl.grade', 'ILIKE', $searchLower);
+                        });
+                });
         });
     }
+
+    // ─── Helpers ──────────────────────────────────────────────────────────────
 
     private function emptyPaginator(Request $request)
     {
@@ -533,22 +583,23 @@ class PrintResourceService
         $patterns = match($level) {
             self::LEVEL_SCHOOL => [
                 "school_libraries_{$stationId}",
-                "school_division_libraries_{$stationId}"
-                ],
+                "school_division_libraries_{$stationId}",
+            ],
             self::LEVEL_DISTRICT => [
                 "schools_district_{$stationId}",
-                "district_school_libraries_{$stationId}"],
+                "district_school_libraries_{$stationId}",
+            ],
             self::LEVEL_DIVISION => [
                 "districts_division_{$stationId}",
                 "schools_division_{$stationId}",
                 "division_libraries_{$stationId}",
-                "division_all_libraries_{$stationId}"
+                "division_all_libraries_{$stationId}",
             ],
             self::LEVEL_REGION => [
                 "divisions_region_{$stationId}",
                 "region_all_libraries_{$stationId}",
                 "all_districts",
-                "all_schools"
+                "all_schools",
             ],
             default => []
         };
@@ -559,7 +610,7 @@ class PrintResourceService
     }
 
     /**
-     * Clear library name caches.
+     * Clear all library name caches.
      */
     public function clearLibraryCache(): void
     {

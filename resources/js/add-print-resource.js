@@ -32,31 +32,46 @@ export function initPrintResourceForm() {
 
     // Setup acquisition manager
     const acquisitionConfig = {
-        tableBodySelector: '#acquisitionTableBody',
+        tableBodySelector:  '#acquisitionTableBody',
         hiddenInputSelector: '#acquisitionsInput',
-        addButtonSelector: '#addAcquisitionBtn',
+        addButtonSelector:  '#addAcquisitionBtn',
         fields: {
-            source: '[name="source"]',
-            date_acquired: '[name="date_acquired"]',
-            cost: '[name="cost"]',
-            iar: '[name="iar"]',
-            remarks: '[name="remarks"]',
-            usable: '[name="usable"]',
+            // Library fields — captured per-acquisition so they go into the JSON
+            library_id:        '#acq_library_id',
+            library_name:      '#acq_library_name',
+            // Standard acquisition fields
+            source:            '[name="source"]',
+            date_acquired:     '[name="date_acquired"]',
+            cost:              '[name="cost"]',
+            iar:               '[name="iar"]',
+            remarks:           '[name="remarks"]',
+            usable:            '[name="usable"]',
             partially_damaged: '[name="partially_damaged"]',
-            damaged: '[name="damaged"]',
-            lost: '[name="lost"]',
-            condemnable: '[name="condemnable"]',
-            total_quantity: '#totalQuantity'
+            damaged:           '[name="damaged"]',
+            lost:              '[name="lost"]',
+            condemnable:       '[name="condemnable"]',
+            total_quantity:    '#totalQuantity',
         },
         onFieldsReset: calculateTotal,
-        onFieldsSet: calculateTotal
+        onFieldsSet:   calculateTotal,
     };
 
     const acquisitionManager = new AcquisitionManager(form, acquisitionConfig);
+
+    // Override validate to also require library_id
+    const originalValidate = acquisitionManager.validate.bind(acquisitionManager);
+    acquisitionManager.validate = function (acquisition) {
+        if (!acquisition.library_id) {
+            alert('Please select a library.');
+            return false;
+        }
+        return originalValidate(acquisition);
+    };
+
     acquisitionManager.setupEventDelegation();
 
     // Expose edit and delete functions to global scope for backwards compatibility
-    window.editPrintAcquisition = (index) => acquisitionManager.edit(index);
+    window.editPrintAcquisition  = (index) => acquisitionManager.edit(index);
     window.deletePrintAcquisition = (index) => acquisitionManager.delete(index);
 
     // Setup form submit with loading state

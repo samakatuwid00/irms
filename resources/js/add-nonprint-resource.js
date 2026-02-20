@@ -7,7 +7,7 @@ import {
     setupQuantityCalculation,
     setupFormSubmit
 } from './add-resource-modules/form-utils.js';
-import { AcquisitionManager } from './add-resource-modules/acquisition-manager.js';
+import { AcquisitionManager } from './add-resource-modules/acquisition-manager-nonprint.js';
 
 export function initNonPrintResourceForm() {
     const form = document.getElementById('nonprintForm');

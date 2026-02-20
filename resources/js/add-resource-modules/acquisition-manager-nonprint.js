@@ -46,16 +46,10 @@ export class AcquisitionManager {
             const selector = this.config.fields[key];
             const element = this.form.querySelector(selector);
             if (element) {
-                // Quantity fields reset to 0; library_name is read-only companion, skip;
-                // everything else clears to empty string
+                // Reset to 0 for quantity fields, empty string for others
                 if (key.includes('damaged') || key.includes('lost') || key.includes('condemnable') || key.includes('usable')) {
                     element.value = '0';
-                } else if (key === 'library_name') {
-                    // Leave alone — the inline sync script keeps it current
-                } else if (key === 'library_id' && element.tagName === 'SELECT') {
-                    element.selectedIndex = 0;
-                } else if (key !== 'library_id') {
-                    // Don't clear hidden library_id inputs (fixed value for school/region users)
+                } else {
                     element.value = '';
                 }
             }
@@ -74,26 +68,8 @@ export class AcquisitionManager {
         for (const key in this.config.fields) {
             const selector = this.config.fields[key];
             const element = this.form.querySelector(selector);
-            if (!element || acquisition[key] === undefined) continue;
-
-            if (key === 'library_id' && element.tagName === 'SELECT') {
-                element.value = acquisition[key] || '';
-                // Sync the companion name input
-                const nameEl = this.form.querySelector(this.config.fields['library_name']);
-                if (nameEl) {
-                    const opt = element.options[element.selectedIndex];
-                    nameEl.value = opt ? (opt.dataset.name || opt.text || '') : '';
-                }
-            } else if (key === 'library_name') {
-                // Only set if not already synced by the select handler above
-                if (!this.config.fields['library_id'] ||
-                    this.form.querySelector(this.config.fields['library_id'])?.tagName !== 'SELECT') {
-                    element.value = acquisition[key] || '';
-                }
-            } else {
-                element.value = acquisition[key] || (
-                    (key.includes('damaged') || key.includes('lost')) ? '0' : ''
-                );
+            if (element && acquisition[key] !== undefined) {
+                element.value = acquisition[key] || (key.includes('damaged') || key.includes('lost') ? '0' : '');
             }
         }
 
@@ -152,10 +128,10 @@ export class AcquisitionManager {
         this.editIndex = index;
         this.setFieldValues(acquisition);
 
-        // Scroll to library selector (first meaningful field)
-        const libraryField = this.form.querySelector(this.config.fields.library_id || this.config.fields.source);
-        if (libraryField) {
-            libraryField.scrollIntoView({ behavior: 'smooth' });
+        // Scroll to form
+        const sourceField = this.form.querySelector(this.config.fields.source);
+        if (sourceField) {
+            sourceField.scrollIntoView({ behavior: 'smooth' });
         }
     }
 
@@ -181,7 +157,7 @@ export class AcquisitionManager {
         if (this.acquisitions.length === 0) {
             this.tableBody.innerHTML = `
                 <tr>
-                    <td colspan="13" class="text-center text-gray-400 py-3">
+                    <td colspan="12" class="text-center text-gray-400 py-3">
                         No acquisitions added
                     </td>
                 </tr>
@@ -199,28 +175,23 @@ export class AcquisitionManager {
      * Create table row HTML
      */
     createRow(acquisition, index) {
-        const shortRemark = acquisition.remarks?.length > 30
-            ? acquisition.remarks.substring(0, 27) + '...'
+        const shortRemark = acquisition.remarks?.length > 40
+            ? acquisition.remarks.substring(0, 37) + '...'
             : (acquisition.remarks || '-');
-
-        const shortLibrary = acquisition.library_name?.length > 25
-            ? acquisition.library_name.substring(0, 22) + '...'
-            : (acquisition.library_name || '-');
 
         return `
             <tr>
-                <td class="border px-2 py-1 text-xs" title="${this._esc(acquisition.library_name)}">${this._esc(shortLibrary)}</td>
-                <td class="border px-2 py-1">${this._esc(acquisition.source)}</td>
-                <td class="border px-2 py-1">${this._esc(acquisition.date_acquired)}</td>
-                <td class="border px-2 py-1">${this._esc(acquisition.cost) || '-'}</td>
-                <td class="border px-2 py-1">${this._esc(acquisition.iar) || '-'}</td>
-                <td class="border px-2 py-1 text-xs">${this._esc(shortRemark)}</td>
-                <td class="border px-2 py-1 text-center">${acquisition.usable || 0}</td>
-                <td class="border px-2 py-1 text-center">${acquisition.partially_damaged || 0}</td>
-                <td class="border px-2 py-1 text-center">${acquisition.damaged || 0}</td>
-                <td class="border px-2 py-1 text-center">${acquisition.lost || 0}</td>
-                <td class="border px-2 py-1 text-center">${acquisition.condemnable || 0}</td>
-                <td class="border px-2 py-1 text-center font-semibold">${acquisition.total_quantity || 0}</td>
+                <td class="border px-2 py-1">${acquisition.source || ''}</td>
+                <td class="border px-2 py-1">${acquisition.date_acquired || ''}</td>
+                <td class="border px-2 py-1">${acquisition.cost || ''}</td>
+                <td class="border px-2 py-1">${acquisition.iar || ''}</td>
+                <td class="border px-2 py-1 text-xs">${shortRemark}</td>
+                <td class="border px-2 py-1">${acquisition.usable || 0}</td>
+                <td class="border px-2 py-1">${acquisition.partially_damaged || 0}</td>
+                <td class="border px-2 py-1">${acquisition.damaged || 0}</td>
+                <td class="border px-2 py-1">${acquisition.lost || 0}</td>
+                <td class="border px-2 py-1">${acquisition.condemnable || 0}</td>
+                <td class="border px-2 py-1 font-semibold">${acquisition.total_quantity || 0}</td>
                 <td class="border px-2 py-1 text-center">
                     <div class="flex justify-center gap-2">
                         <button type="button"
@@ -279,7 +250,7 @@ export class AcquisitionManager {
             if (!button) return;
 
             const action = button.dataset.action;
-            const index  = parseInt(button.dataset.index);
+            const index = parseInt(button.dataset.index);
 
             if (action === 'edit') {
                 this.edit(index);
@@ -287,14 +258,5 @@ export class AcquisitionManager {
                 this.delete(index);
             }
         });
-    }
-
-    /**
-     * Escape HTML to prevent XSS in table cells
-     */
-    _esc(str) {
-        const d = document.createElement('div');
-        d.appendChild(document.createTextNode(String(str ?? '')));
-        return d.innerHTML;
     }
 }
