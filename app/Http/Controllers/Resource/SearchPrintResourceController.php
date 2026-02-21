@@ -35,7 +35,7 @@ class SearchPrintResourceController extends BaseController
     {
         $user = Auth::user();
 
-        return view('pages.search-print-resource', compact('user'));
+        return view('pages.add-print-resource', compact('user'));
     }
 
     /**
@@ -224,7 +224,7 @@ class SearchPrintResourceController extends BaseController
             $schoolLibrary = SchoolLibrary::where('school_id', $stationId)->first();
         }
 
-        return view('pages.add-acquisition-to-resource', compact(
+        return view('pages.components.add-acquisition-to-resource', compact(
             'user',
             'resource',
             'subjects',
@@ -250,9 +250,9 @@ class SearchPrintResourceController extends BaseController
             $resource,
             $validated['acquisitions']
         );
-
         return redirect()
-            ->route('search-print-resource.index')
-            ->with('success', 'Acquisition successfully added to "' . ($resource->printTitle->title ?? 'resource') . '".');
-    }
+            ->route('print-resource.create')
+            ->with('success', 'Acquisition successfully added to "' . ($resource->printTitle->title ?? 'resource') . '".')
+            ->with('active_tab', 'tab-search');
+            }
 }

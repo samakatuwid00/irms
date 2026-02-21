@@ -42,28 +42,25 @@ Route::post('/add-nonprint-resource', [AddNonPrintResourceController::class, 'st
 // SEARCH PRINT RESOURCE
 // ============================================================
 
-// 1. Search page (main entry point)
-Route::get('/resources/search-print', [SearchPrintResourceController::class, 'index'])
-    ->name('search-print-resource.index');
 
 // 2. AJAX: search titles
-Route::get('/resources/search-print/query', [SearchPrintResourceController::class, 'search'])
+Route::get('/search-print/query', [SearchPrintResourceController::class, 'search'])
     ->name('search-print-resource.search');
 
 // 3. AJAX: get full details of a single PrintResource
-Route::get('/resources/search-print/{id}/details', [SearchPrintResourceController::class, 'show'])
+Route::get('/search-print/{id}/details', [SearchPrintResourceController::class, 'show'])
     ->name('search-print-resource.show');
 
 // 4. Add-acquisition form (pre-filled, read-only resource details — standalone page)
-Route::get('/resources/search-print/{id}/add', [SearchPrintResourceController::class, 'addForm'])
+Route::get('/search-print/{id}/add', [SearchPrintResourceController::class, 'addForm'])
     ->name('search-print-resource.add-form');
 
 // 5. Store acquisitions (standalone add-acquisition page)
-Route::post('/resources/search-print/{id}/add', [SearchPrintResourceController::class, 'store'])
+Route::post('/search-print/{id}/add', [SearchPrintResourceController::class, 'store'])
     ->name('search-print-resource.store');
 
 // 6. Store acquisitions (inline — from Search tab inside add-print-resource page)
-Route::post('/resources/search-print/{id}/add-inline', [SearchPrintResourceController::class, 'store'])
+Route::post('/search-print/{id}/add-inline', [SearchPrintResourceController::class, 'store'])
     ->name('search-print-resource.store-inline');
 
 // ============================================================

@@ -13,7 +13,7 @@
 
         {{-- Page Heading --}}
         <div class="flex items-center gap-3 mb-6">
-            <a href="{{ route('search-print-resource.index') }}"
+            <a href="{{ route('print-resource.create') }}"
                class="text-gray-400 hover:text-gray-700 transition-colors" title="Back to Search">
                 <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
@@ -284,7 +284,7 @@
 
             {{-- ========================= SUBMIT ========================= --}}
             <div class="flex items-center justify-between pt-2">
-                <a href="{{ route('search-print-resource.index') }}"
+                <a href="{{ route('print-resource.create') }}"
                    class="text-sm text-gray-500 hover:text-gray-700 underline">
                     ← Back to Search
                 </a>

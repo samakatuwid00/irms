@@ -17,15 +17,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const storageKey = `activeResourceTab_${resourceId}`;
 
-    // ── Tab activation ─────────────────────────────────────────────────────────
     function activateTab(tabType) {
-        // Reset all tabs
         tabButtons.forEach(b => {
             b.classList.remove('border-blue-600', 'text-blue-600');
             b.classList.add('border-transparent', 'text-gray-600', 'hover:text-blue-600', 'hover:border-gray-300');
         });
 
-        // Hide all forms
         printForm.classList.add('hidden');
         nonprintForm.classList.add('hidden');
 
@@ -42,21 +39,19 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // ── Click handlers ─────────────────────────────────────────────────────────
     tabButtons.forEach(btn => {
         btn.addEventListener('click', () => activateTab(btn.dataset.tab));
     });
 
-    // ── Determine initial tab ──────────────────────────────────────────────────
     const storedTab = sessionStorage.getItem(storageKey);
-    let initialTab  = 'print'; // default
+    let initialTab  = 'print';
 
     if (tabParam === 'print' || tabParam === 'nonprint') {
-        initialTab = tabParam;                           // URL param wins
+        initialTab = tabParam;
     } else if (storedTab === 'print' || storedTab === 'nonprint') {
-        initialTab = storedTab;                          // then sessionStorage
+        initialTab = storedTab;
     } else if (!hasPrintResource && hasNonprintResource) {
-        initialTab = 'nonprint';                         // then resource availability
+        initialTab = 'nonprint';
     }
 
     activateTab(initialTab);

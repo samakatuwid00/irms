@@ -10,584 +10,579 @@
 <div class="p-6 space-y-6">
     @include('pages.partials.page-header')
 
-{{-- =====================================================================
-     ADD PRINT RESOURCE
-     Three page-level tabs:
-       1. Search Existing  - search masterlist, add acquisition (existing flow)
-       2. Manual Add       - submit / edit a resource request
-       3. My Requests      - table of this user's submitted requests
-
-     When $editResource is present the Manual Add tab becomes an edit form:
-       - form action  -> PUT  /resources/add-print/{id}
-       - inputs       -> pre-filled from $editResource
-       - tab          -> automatically activated
-
-     Tab persistence:
-       - Active tab is saved to sessionStorage so it survives page refreshes
-       - Navigating away and back resets to the default (Search Existing)
-         because sessionStorage is scoped to the page session
-       - Edit mode always forces the Manual Add tab regardless of sessionStorage
-====================================================================== --}}
-
-{{-- ===== FLASH MESSAGES ===== --}}
-@if(session('success'))
-    <div class="mb-4 p-4 text-green-800 bg-green-100 border border-green-200 rounded flex justify-between items-center" id="flash-success">
-        <span>{{ session('success') }}</span>
-        <button type="button" class="text-green-800 font-bold hover:text-green-900" onclick="document.getElementById('flash-success').remove()">&times;</button>
-    </div>
-@endif
-@if(session('error'))
-    <div class="mb-4 p-4 text-red-800 bg-red-100 border border-red-200 rounded flex justify-between items-center" id="flash-error">
-        <span>{{ session('error') }}</span>
-        <button type="button" class="text-red-800 font-bold hover:text-red-900" onclick="document.getElementById('flash-error').remove()">&times;</button>
-    </div>
-@endif
-@if ($errors->any())
-    <div class="mb-4 p-4 bg-red-100 border border-red-200 rounded text-red-800 flex justify-between items-start" id="flash-validation">
-        <ul class="list-disc pl-5 flex-1">
-            @foreach ($errors->all() as $error)<li>{{ $error }}</li>@endforeach
-        </ul>
-        <button type="button" class="ml-4 text-red-800 font-bold hover:text-red-900" onclick="document.getElementById('flash-validation').remove()">&times;</button>
-    </div>
-@endif
-
-@php
-    $isEditing = isset($editResource);
-@endphp
-
-{{-- ===== PAGE-LEVEL TABS ===== --}}
-<div class="mb-6 border-b border-gray-200">
-    <nav class="-mb-px flex gap-6" id="pageTabs">
-        <button type="button" data-page-tab="tab-search"
-                class="page-tab-btn whitespace-nowrap pb-3 px-1 text-sm font-medium border-b-2 border-transparent text-gray-500 hover:text-gray-700">
-            Search Existing
-        </button>
-        <button type="button" data-page-tab="tab-add"
-                class="page-tab-btn whitespace-nowrap pb-3 px-1 text-sm font-medium border-b-2 border-transparent text-gray-500 hover:text-gray-700">
-            {{ $isEditing ? 'Edit Request' : 'Manual Add' }}
-        </button>
-        <button type="button" data-page-tab="tab-requests"
-                class="page-tab-btn whitespace-nowrap pb-3 px-1 text-sm font-medium border-b-2 border-transparent text-gray-500 hover:text-gray-700">
-            My Requests
-            @if(isset($pendingCount) && $pendingCount > 0)
-                <span class="ml-1 inline-flex items-center justify-center px-1.5 py-0.5 text-xs font-bold leading-none text-white bg-blue-500 rounded-full">{{ $pendingCount }}</span>
-            @endif
-        </button>
-    </nav>
-</div>
-
-{{-- =================================================================
-     TAB 1 - SEARCH EXISTING
-================================================================== --}}
-<div id="tab-search" class="page-tab-content hidden">
-    <div class="space-y-6">
-        <div>
-            <h2 class="text-base font-semibold text-gray-800">Search Existing Print Resources</h2>
-            <p class="text-sm text-gray-500 mt-1">
-                Search the masterlist by title or author, then add your acquisition records to an existing entry.
-                If no title is found, use the
-                <button type="button" data-page-tab="tab-add" class="page-tab-btn text-blue-600 underline hover:text-blue-800 font-normal">Manual Add</button>
-                tab to submit a new request.
-            </p>
+    {{-- ===== FLASH MESSAGES ===== --}}
+    @if(session('success'))
+        <div class="mb-4 p-4 text-green-800 bg-green-100 border border-green-200 rounded flex justify-between items-center" id="flash-success">
+            <span>{{ session('success') }}</span>
+            <button type="button" class="text-green-800 font-bold hover:text-green-900" onclick="document.getElementById('flash-success').remove()">&times;</button>
         </div>
-        <div>
-            <div class="flex gap-3">
-                <div class="relative flex-1">
-                    <input type="text" id="searchInput" placeholder="Type a title or author name..."
-                           class="w-full border border-gray-300 rounded-lg px-4 py-3 pr-10 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                           autocomplete="off">
-                    <span id="searchSpinner" class="absolute right-3 top-3.5 hidden">
-                        <svg class="animate-spin h-4 w-4 text-blue-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
-                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"/>
-                        </svg>
-                    </span>
-                </div>
-                <button id="searchBtn" class="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm font-medium transition-colors">Search</button>
-            </div>
-            <p class="text-xs text-gray-400 mt-1">Minimum 2 characters to search.</p>
+    @endif
+    @if(session('error'))
+        <div class="mb-4 p-4 text-red-800 bg-red-100 border border-red-200 rounded flex justify-between items-center" id="flash-error">
+            <span>{{ session('error') }}</span>
+            <button type="button" class="text-red-800 font-bold hover:text-red-900" onclick="document.getElementById('flash-error').remove()">&times;</button>
         </div>
-        <div id="resultsArea" class="hidden">
-            <div class="flex items-center justify-between mb-3">
-                <h3 class="text-sm font-semibold text-gray-600 uppercase tracking-wide">Search Results</h3>
-                <span id="resultCount" class="text-xs text-gray-400"></span>
-            </div>
-            <div id="resultsList" class="space-y-3"></div>
+    @endif
+    @if ($errors->any())
+        <div class="mb-4 p-4 bg-red-100 border border-red-200 rounded text-red-800 flex justify-between items-start" id="flash-validation">
+            <ul class="list-disc pl-5 flex-1">
+                @foreach ($errors->all() as $error)<li>{{ $error }}</li>@endforeach
+            </ul>
+            <button type="button" class="ml-4 text-red-800 font-bold hover:text-red-900" onclick="document.getElementById('flash-validation').remove()">&times;</button>
         </div>
-        <div id="emptyState" class="hidden text-center py-16 text-gray-400">
-            <svg class="mx-auto mb-4 h-14 w-14 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/>
-            </svg>
-            <p class="font-medium">No titles found</p>
-            <p class="text-sm mt-1">Try a different keyword or <button type="button" data-page-tab="tab-add" class="page-tab-btn text-blue-600 underline">submit a new request</button>.</p>
-        </div>
-        <div id="initialHint" class="text-center py-16 text-gray-400">
-            <svg class="mx-auto mb-4 h-14 w-14 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M21 21l-4.35-4.35M17 11A6 6 0 1 0 5 11a6 6 0 0 0 12 0z"/>
-            </svg>
-            <p class="font-medium">Start by searching for a title or author</p>
-        </div>
-    </div>
-</div>
-
-{{-- =================================================================
-     TAB 2 - MANUAL ADD  /  EDIT REQUEST  (same form, dual purpose)
-================================================================== --}}
-<div id="tab-add" class="page-tab-content hidden">
-
-    {{-- Context-sensitive header --}}
-    <div class="mb-5 flex items-start justify-between">
-        <div>
-            @if($isEditing)
-                <h2 class="text-base font-semibold text-gray-800">Edit Resource Request</h2>
-                <p class="text-sm text-gray-500 mt-1">Update the details of your pending submission.</p>
-            @else
-                <h2 class="text-base font-semibold text-gray-800">Submit a New Resource Request</h2>
-                <p class="text-sm text-gray-500 mt-1">Fill in the details below. Your submission will be reviewed before it appears in the masterlist.</p>
-            @endif
-        </div>
-        @if($isEditing)
-            <button type="button" data-page-tab="tab-requests"
-                    class="page-tab-btn text-sm text-blue-600 hover:underline flex items-center gap-1 mt-1">
-                &larr; Back to My Requests
-            </button>
-        @endif
-    </div>
-
-    {{-- ---- THE FORM ---- --}}
-    @if($isEditing)
-        <form id="print"
-              action="{{ route('print-resource.update', $editResource->id) }}"
-              class="resource-form space-y-8"
-              method="POST"
-              enctype="multipart/form-data">
-            @csrf
-            @method('PUT')
-    @else
-        <form id="print"
-              action="{{ route('print-resource.store') }}"
-              class="resource-form space-y-8"
-              method="POST"
-              enctype="multipart/form-data">
-            @csrf
     @endif
 
-        {{-- IMAGE + BASIC INFO --}}
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 items-stretch">
+    @php
+        $isEditing = isset($editResource);
+    @endphp
 
-            {{-- Image --}}
-            <div class="h-full">
-                <div class="h-full flex flex-col items-center justify-between border-2 border-dashed border-blue-500 rounded-lg p-4 text-center">
-                    @if($isEditing && $editResource->cover)
-                        <img id="imagePreview"
-                             src="{{ asset('storage/' . $editResource->cover) }}"
-                             data-default-src="{{ asset('storage/' . $editResource->cover) }}"
-                             alt="Image preview"
-                             class="w-full flex-1 object-cover rounded mb-4">
-                    @else
-                        <img id="imagePreview"
-                             src="{{ asset('assets/images/def.jpg') }}"
-                             data-default-src="{{ asset('assets/images/def.jpg') }}"
-                             alt="Image preview"
-                             class="w-full flex-1 object-cover rounded mb-4">
-                    @endif
-                    <input type="file" name="image" id="imageUpload" class="hidden" accept="image/*">
-                    <label for="imageUpload" class="cursor-pointer px-4 py-2 bg-blue-600 text-white text-sm rounded-md hover:bg-blue-700">
-                        {{ $isEditing ? 'Change Image' : 'Choose Image' }}
-                    </label>
-                    <p class="text-xs text-gray-500 mt-2">JPG, PNG &bull; Max 5MB{{ $isEditing ? '. Leave blank to keep current.' : '' }}</p>
-                </div>
+    {{-- ===== PAGE-LEVEL TABS ===== --}}
+    <div class="mb-6 border-b border-gray-200">
+        <nav class="-mb-px flex gap-6" id="pageTabs">
+            <button type="button" data-page-tab="tab-search"
+                    class="page-tab-btn whitespace-nowrap pb-3 px-1 text-sm font-medium border-b-2 border-transparent text-gray-500 hover:text-gray-700">
+                Search Existing
+            </button>
+            <button type="button" data-page-tab="tab-add"
+                    class="page-tab-btn whitespace-nowrap pb-3 px-1 text-sm font-medium border-b-2 border-transparent text-gray-500 hover:text-gray-700">
+                {{ $isEditing ? 'Edit Request' : 'Manual Add' }}
+            </button>
+            <button type="button" data-page-tab="tab-requests"
+                    class="page-tab-btn whitespace-nowrap pb-3 px-1 text-sm font-medium border-b-2 border-transparent text-gray-500 hover:text-gray-700">
+                My Requests
+                @if(isset($pendingCount) && $pendingCount > 0)
+                    <span class="ml-1 inline-flex items-center justify-center px-1.5 py-0.5 text-xs font-bold leading-none text-white bg-blue-500 rounded-full">{{ $pendingCount }}</span>
+                @endif
+            </button>
+        </nav>
+    </div>
+
+    {{-- =================================================================
+        TAB 1 - SEARCH EXISTING
+    ================================================================== --}}
+    <div id="tab-search" class="page-tab-content hidden">
+        <div class="space-y-6">
+            <div>
+                <h2 class="text-base font-semibold text-gray-800">Search Existing Print Resources</h2>
+                <p class="text-sm text-gray-500 mt-1">
+                    Search the masterlist by title or author, then add your acquisition records to an existing entry.
+                    If no title is found, use the
+                    <button type="button" data-page-tab="tab-add" class="page-tab-btn text-blue-600 underline hover:text-blue-800 font-normal">Manual Add</button>
+                    tab to submit a new request.
+                </p>
             </div>
-
-            {{-- Inputs --}}
-            <div class="md:col-span-2 space-y-6">
-                <div class="space-y-4">
-                    <div>
-                        <label class="block text-sm font-medium mb-1">Title <span class="text-red-500">*</span></label>
-                        <input type="text" name="title" required
-                               value="{{ old('title', $isEditing ? ($editResource->printTitle->title ?? '') : '') }}"
-                               class="w-full border border-gray-300 rounded px-3 py-2">
+            <div>
+                <div class="flex gap-3">
+                    <div class="relative flex-1">
+                        <input type="text" id="searchInput" placeholder="Type a title or author name..."
+                            class="w-full border border-gray-300 rounded-lg px-4 py-3 pr-10 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            autocomplete="off">
+                        <span id="searchSpinner" class="absolute right-3 top-3.5 hidden">
+                            <svg class="animate-spin h-4 w-4 text-blue-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+                                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"/>
+                            </svg>
+                        </span>
                     </div>
-                    <div>
-                        <label class="block text-sm font-medium mb-1">Authors</label>
-                        <div class="flex flex-wrap gap-2 border border-gray-300 rounded px-2 py-2" id="author-wrapper">
-                            <input type="text" id="author-input" class="flex-1 outline-none border-none" placeholder="Type author name and press Enter">
-                        </div>
-                        <input type="hidden" name="authors" id="authors-hidden" readonly>
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium mb-1">Publisher</label>
-                        <input type="text" name="publisher"
-                               value="{{ old('publisher', $isEditing ? $editResource->publisher : '') }}"
-                               class="w-full border border-gray-300 rounded px-3 py-2">
-                    </div>
+                    <button id="searchBtn" class="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm font-medium transition-colors">Search</button>
                 </div>
-
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div class="space-y-4">
-                        <div>
-                            <label class="block text-sm mb-1">Type <span class="text-red-500">*</span></label>
-                            <select name="type" required class="w-full border border-gray-300 rounded px-3 py-2">
-                                <option disabled {{ !$isEditing && !old('type') ? 'selected' : '' }}>Select type</option>
-                                @foreach ($printTypes as $type)
-                                    <option value="{{ $type->id }}"
-                                        {{ old('type', $isEditing ? $editResource->print_type_id : '') == $type->id ? 'selected' : '' }}>
-                                        {{ $type->type_name }}
-                                    </option>
-                                @endforeach
-                            </select>
-                        </div>
-                        <div>
-                            <label class="block text-sm mb-1">Volume</label>
-                            <input name="volume"
-                                   value="{{ old('volume', $isEditing ? $editResource->volume : '') }}"
-                                   class="w-full border border-gray-300 rounded px-3 py-2">
-                        </div>
-                        <div>
-                            <label class="block text-sm mb-1">Edition</label>
-                            <input name="edition"
-                                   value="{{ old('edition', $isEditing ? $editResource->edition : '') }}"
-                                   class="w-full border border-gray-300 rounded px-3 py-2">
-                        </div>
-                    </div>
-                    <div class="space-y-4">
-                        <div>
-                            <label class="block text-sm mb-1">Copyright</label>
-                            <input name="copyright" type="number"
-                                   value="{{ old('copyright', $isEditing ? $editResource->copyright : '') }}"
-                                   class="w-full border border-gray-300 rounded px-3 py-2">
-                        </div>
-                        <div>
-                            <label class="block text-sm mb-1">ISBN</label>
-                            <input name="isbn"
-                                   value="{{ old('isbn', $isEditing ? $editResource->isbn : '') }}"
-                                   class="w-full border border-gray-300 rounded px-3 py-2">
-                        </div>
-                        <div>
-                            <label class="block text-sm mb-1">Pages</label>
-                            <input name="pages" type="number"
-                                   value="{{ old('pages', $isEditing ? $editResource->pages : '') }}"
-                                   class="w-full border border-gray-300 rounded px-3 py-2">
-                        </div>
-                    </div>
+                <p class="text-xs text-gray-400 mt-1">Minimum 2 characters to search.</p>
+            </div>
+            <div id="resultsArea" class="hidden">
+                <div class="flex items-center justify-between mb-3">
+                    <h3 class="text-sm font-semibold text-gray-600 uppercase tracking-wide">Search Results</h3>
+                    <span id="resultCount" class="text-xs text-gray-400"></span>
                 </div>
+                <div id="resultsList" class="space-y-3"></div>
+            </div>
+            <div id="emptyState" class="hidden text-center py-16 text-gray-400">
+                <svg class="mx-auto mb-4 h-14 w-14 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/>
+                </svg>
+                <p class="font-medium">No titles found</p>
+                <p class="text-sm mt-1">Try a different keyword or <button type="button" data-page-tab="tab-add" class="page-tab-btn text-blue-600 underline">submit a new request</button>.</p>
+            </div>
+            <div id="initialHint" class="text-center py-16 text-gray-400">
+                <svg class="mx-auto mb-4 h-14 w-14 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M21 21l-4.35-4.35M17 11A6 6 0 1 0 5 11a6 6 0 0 0 12 0z"/>
+                </svg>
+                <p class="font-medium">Start by searching for a title or author</p>
             </div>
         </div>
+    </div>
 
-        {{-- SUBJECT-GRADE LEVEL --}}
-        @php
-            $stages = [
-                'S1'  => ['tab' => 'stage1', 'label' => 'Key Stage 1', 'grades' => [0=>'K',1=>'1',2=>'2',3=>'3']],
-                'ES'  => ['tab' => 'stage2', 'label' => 'Key Stage 2', 'grades' => [4=>'4',5=>'5',6=>'6']],
-                'JHS' => ['tab' => 'jhs',    'label' => 'Junior High',  'grades' => [7=>'7',8=>'8',9=>'9',10=>'10']],
-                'SHS' => ['tab' => 'shs',    'label' => 'Senior High',  'grades' => [11=>'11',12=>'12']],
-            ];
-            $grouped     = $subjectGradeLevels->groupBy(['key_stage', 'subject_name']);
-            $checkedIds  = old('subject_grade_levels', $isEditing ? ($editingSglIds ?? []) : []);
-        @endphp
+    {{-- =================================================================
+        TAB 2 - MANUAL ADD  /  EDIT REQUEST  (same form, dual purpose)
+    ================================================================== --}}
+    <div id="tab-add" class="page-tab-content hidden">
 
-        <div class="space-y-4">
-            <div class="flex gap-6 border-b border-gray-300">
-                @foreach ($stages as $stage)
-                    <button type="button"
-                            class="sgl-tab-btn {{ $loop->first ? 'active border-blue-600 text-blue-600' : 'border-transparent text-gray-600' }} whitespace-nowrap pb-2 px-1 text-sm font-medium border-b-2"
-                            data-sgl-tab="{{ $stage['tab'] }}">
-                        {{ $stage['label'] }}
-                    </button>
+        {{-- Context-sensitive header --}}
+        <div class="mb-5 flex items-start justify-between">
+            <div>
+                @if($isEditing)
+                    <h2 class="text-base font-semibold text-gray-800">Edit Resource Request</h2>
+                    <p class="text-sm text-gray-500 mt-1">Update the details of your pending submission.</p>
+                @else
+                    <h2 class="text-base font-semibold text-gray-800">Submit a New Resource Request</h2>
+                    <p class="text-sm text-gray-500 mt-1">Fill in the details below. Your submission will be reviewed before it appears in the masterlist.</p>
+                @endif
+            </div>
+            @if($isEditing)
+                <button type="button" data-page-tab="tab-requests"
+                        class="page-tab-btn text-sm text-blue-600 hover:underline flex items-center gap-1 mt-1">
+                    &larr; Back to My Requests
+                </button>
+            @endif
+        </div>
+
+        {{-- ---- THE FORM ---- --}}
+        @if($isEditing)
+            <form id="print"
+                action="{{ route('print-resource.update', $editResource->id) }}"
+                class="resource-form space-y-8"
+                method="POST"
+                enctype="multipart/form-data">
+                @csrf
+                @method('PUT')
+        @else
+            <form id="print"
+                action="{{ route('print-resource.store') }}"
+                class="resource-form space-y-8"
+                method="POST"
+                enctype="multipart/form-data">
+                @csrf
+        @endif
+
+            {{-- IMAGE + BASIC INFO --}}
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 items-stretch">
+
+                {{-- Image --}}
+                <div class="h-full">
+                    <div class="h-full flex flex-col items-center justify-between border-2 border-dashed border-blue-500 rounded-lg p-4 text-center">
+                        @if($isEditing && $editResource->cover)
+                            <img id="imagePreview"
+                                src="{{ asset('storage/' . $editResource->cover) }}"
+                                data-default-src="{{ asset('storage/' . $editResource->cover) }}"
+                                alt="Image preview"
+                                class="w-full flex-1 object-cover rounded mb-4">
+                        @else
+                            <img id="imagePreview"
+                                src="{{ asset('assets/images/def.jpg') }}"
+                                data-default-src="{{ asset('assets/images/def.jpg') }}"
+                                alt="Image preview"
+                                class="w-full flex-1 object-cover rounded mb-4">
+                        @endif
+                        <input type="file" name="image" id="imageUpload" class="hidden" accept="image/*">
+                        <label for="imageUpload" class="cursor-pointer px-4 py-2 bg-blue-600 text-white text-sm rounded-md hover:bg-blue-700">
+                            {{ $isEditing ? 'Change Image' : 'Choose Image' }}
+                        </label>
+                        <p class="text-xs text-gray-500 mt-2">JPG, PNG &bull; Max 5MB{{ $isEditing ? '. Leave blank to keep current.' : '' }}</p>
+                    </div>
+                </div>
+
+                {{-- Inputs --}}
+                <div class="md:col-span-2 space-y-6">
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-medium mb-1">Title <span class="text-red-500">*</span></label>
+                            <input type="text" name="title" required
+                                value="{{ old('title', $isEditing ? ($editResource->printTitle->title ?? '') : '') }}"
+                                class="w-full border border-gray-300 rounded px-3 py-2">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium mb-1">Authors</label>
+                            <div class="flex flex-wrap gap-2 border border-gray-300 rounded px-2 py-2" id="author-wrapper">
+                                <input type="text" id="author-input" class="flex-1 outline-none border-none" placeholder="Type author name and press Enter">
+                            </div>
+                            <input type="hidden" name="authors" id="authors-hidden" readonly>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium mb-1">Publisher</label>
+                            <input type="text" name="publisher"
+                                value="{{ old('publisher', $isEditing ? $editResource->publisher : '') }}"
+                                class="w-full border border-gray-300 rounded px-3 py-2">
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div class="space-y-4">
+                            <div>
+                                <label class="block text-sm mb-1">Type <span class="text-red-500">*</span></label>
+                                <select name="type" required class="w-full border border-gray-300 rounded px-3 py-2">
+                                    <option disabled {{ !$isEditing && !old('type') ? 'selected' : '' }}>Select type</option>
+                                    @foreach ($printTypes as $type)
+                                        <option value="{{ $type->id }}"
+                                            {{ old('type', $isEditing ? $editResource->print_type_id : '') == $type->id ? 'selected' : '' }}>
+                                            {{ $type->type_name }}
+                                        </option>
+                                    @endforeach
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-sm mb-1">Volume</label>
+                                <input name="volume"
+                                    value="{{ old('volume', $isEditing ? $editResource->volume : '') }}"
+                                    class="w-full border border-gray-300 rounded px-3 py-2">
+                            </div>
+                            <div>
+                                <label class="block text-sm mb-1">Edition</label>
+                                <input name="edition"
+                                    value="{{ old('edition', $isEditing ? $editResource->edition : '') }}"
+                                    class="w-full border border-gray-300 rounded px-3 py-2">
+                            </div>
+                        </div>
+                        <div class="space-y-4">
+                            <div>
+                                <label class="block text-sm mb-1">Copyright</label>
+                                <input name="copyright" type="number"
+                                    value="{{ old('copyright', $isEditing ? $editResource->copyright : '') }}"
+                                    class="w-full border border-gray-300 rounded px-3 py-2">
+                            </div>
+                            <div>
+                                <label class="block text-sm mb-1">ISBN</label>
+                                <input name="isbn"
+                                    value="{{ old('isbn', $isEditing ? $editResource->isbn : '') }}"
+                                    class="w-full border border-gray-300 rounded px-3 py-2">
+                            </div>
+                            <div>
+                                <label class="block text-sm mb-1">Pages</label>
+                                <input name="pages" type="number"
+                                    value="{{ old('pages', $isEditing ? $editResource->pages : '') }}"
+                                    class="w-full border border-gray-300 rounded px-3 py-2">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {{-- SUBJECT-GRADE LEVEL --}}
+            @php
+                $stages = [
+                    'S1'  => ['tab' => 'stage1', 'label' => 'Key Stage 1', 'grades' => [0=>'K',1=>'1',2=>'2',3=>'3']],
+                    'ES'  => ['tab' => 'stage2', 'label' => 'Key Stage 2', 'grades' => [4=>'4',5=>'5',6=>'6']],
+                    'JHS' => ['tab' => 'jhs',    'label' => 'Junior High',  'grades' => [7=>'7',8=>'8',9=>'9',10=>'10']],
+                    'SHS' => ['tab' => 'shs',    'label' => 'Senior High',  'grades' => [11=>'11',12=>'12']],
+                ];
+                $grouped     = $subjectGradeLevels->groupBy(['key_stage', 'subject_name']);
+                $checkedIds  = old('subject_grade_levels', $isEditing ? ($editingSglIds ?? []) : []);
+            @endphp
+
+            <div class="space-y-4">
+                <div class="flex gap-6 border-b border-gray-300">
+                    @foreach ($stages as $stage)
+                        <button type="button"
+                                class="sgl-tab-btn {{ $loop->first ? 'active border-blue-600 text-blue-600' : 'border-transparent text-gray-600' }} whitespace-nowrap pb-2 px-1 text-sm font-medium border-b-2"
+                                data-sgl-tab="{{ $stage['tab'] }}">
+                            {{ $stage['label'] }}
+                        </button>
+                    @endforeach
+                </div>
+
+                @foreach ($stages as $stageKey => $stage)
+                    <div id="{{ $stage['tab'] }}" class="sgl-tab-content {{ !$loop->first ? 'hidden' : '' }}">
+                        <table class="w-full border border-gray-300 text-sm">
+                            <thead class="bg-gray-100">
+                                <tr>
+                                    <th class="border border-gray-300 px-3 py-2 text-left w-72">Subject</th>
+                                    @foreach ($stage['grades'] as $gradeLabel)
+                                        <th class="border border-gray-300">{{ $gradeLabel }}</th>
+                                    @endforeach
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach ($grouped[$stageKey] ?? [] as $subject => $rows)
+                                    @php $gradeMap = collect($rows)->keyBy('sort_order'); @endphp
+                                    <tr>
+                                        <td class="border border-gray-300 px-3 py-2">{{ $subject }}</td>
+                                        @foreach ($stage['grades'] as $sortOrder => $label)
+                                            <td class="border border-gray-300 text-center">
+                                                @if ($gradeMap->has($sortOrder))
+                                                    <input type="checkbox"
+                                                        name="subject_grade_levels[]"
+                                                        value="{{ $gradeMap[$sortOrder]->subject_grade_level_id }}"
+                                                        {{ in_array($gradeMap[$sortOrder]->subject_grade_level_id, $checkedIds) ? 'checked' : '' }}>
+                                                @endif
+                                            </td>
+                                        @endforeach
+                                    </tr>
+                                @endforeach
+                            </tbody>
+                        </table>
+                    </div>
                 @endforeach
             </div>
 
-            @foreach ($stages as $stageKey => $stage)
-                <div id="{{ $stage['tab'] }}" class="sgl-tab-content {{ !$loop->first ? 'hidden' : '' }}">
-                    <table class="w-full border border-gray-300 text-sm">
-                        <thead class="bg-gray-100">
-                            <tr>
-                                <th class="border border-gray-300 px-3 py-2 text-left w-72">Subject</th>
-                                @foreach ($stage['grades'] as $gradeLabel)
-                                    <th class="border border-gray-300">{{ $gradeLabel }}</th>
-                                @endforeach
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @foreach ($grouped[$stageKey] ?? [] as $subject => $rows)
-                                @php $gradeMap = collect($rows)->keyBy('sort_order'); @endphp
-                                <tr>
-                                    <td class="border border-gray-300 px-3 py-2">{{ $subject }}</td>
-                                    @foreach ($stage['grades'] as $sortOrder => $label)
-                                        <td class="border border-gray-300 text-center">
-                                            @if ($gradeMap->has($sortOrder))
-                                                <input type="checkbox"
-                                                       name="subject_grade_levels[]"
-                                                       value="{{ $gradeMap[$sortOrder]->subject_grade_level_id }}"
-                                                       {{ in_array($gradeMap[$sortOrder]->subject_grade_level_id, $checkedIds) ? 'checked' : '' }}>
-                                            @endif
-                                        </td>
-                                    @endforeach
-                                </tr>
-                            @endforeach
-                        </tbody>
-                    </table>
-                </div>
-            @endforeach
-        </div>
-
-        {{-- SUBMIT / CANCEL --}}
-        <div class="flex justify-end gap-3">
-            @if($isEditing)
-                <button type="button" data-page-tab="tab-requests"
-                        class="page-tab-btn px-5 py-2 border border-gray-300 text-gray-700 rounded hover:bg-gray-50 text-sm">
-                    Cancel
+            {{-- SUBMIT / CANCEL --}}
+            <div class="flex justify-end gap-3">
+                @if($isEditing)
+                    <button type="button" data-page-tab="tab-requests"
+                            class="page-tab-btn px-5 py-2 border border-gray-300 text-gray-700 rounded hover:bg-gray-50 text-sm">
+                        Cancel
+                    </button>
+                @endif
+                <button type="submit" id="savePrintBtn"
+                        class="px-6 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed">
+                    <span id="savePrintText">{{ $isEditing ? 'Save Changes' : 'Submit Request' }}</span>
+                    <span id="savePrintLoading" class="hidden"><i class="fas fa-spinner fa-spin mr-2"></i>Saving...</span>
                 </button>
-            @endif
-            <button type="submit" id="savePrintBtn"
-                    class="px-6 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed">
-                <span id="savePrintText">{{ $isEditing ? 'Save Changes' : 'Submit Request' }}</span>
-                <span id="savePrintLoading" class="hidden"><i class="fas fa-spinner fa-spin mr-2"></i>Saving...</span>
-            </button>
-        </div>
+            </div>
 
-    </form>
-</div>
-
-{{-- =================================================================
-     TAB 3 - MY REQUESTS
-================================================================== --}}
-<div id="tab-requests" class="page-tab-content hidden">
-    <div class="space-y-4">
-        <div class="flex items-center justify-between">
-            <h3 class="text-base font-semibold text-gray-700">My Submitted Requests</h3>
-            <p class="text-xs text-gray-400">Pending requests can still be edited or deleted.</p>
-        </div>
-        <div class="overflow-x-auto rounded-lg border border-gray-200">
-            <table class="w-full text-sm">
-                <thead class="bg-gray-50 text-xs text-gray-500 uppercase tracking-wide">
-                    <tr>
-                        <th class="px-3 py-3 text-left w-10">Cover</th>
-                        <th class="px-3 py-3 text-left">Title</th>
-                        <th class="px-3 py-3 text-left">Author(s)</th>
-                        <th class="px-3 py-3 text-left">Type</th>
-                        <th class="px-3 py-3 text-left">Publisher</th>
-                        <th class="px-3 py-3 text-left">Edition</th>
-                        <th class="px-3 py-3 text-left">Copyright</th>
-                        <th class="px-3 py-3 text-center">Status</th>
-                        <th class="px-3 py-3 text-center">Date Submitted</th>
-                        <th class="px-3 py-3 text-center">Actions</th>
-                    </tr>
-                </thead>
-                <tbody class="divide-y divide-gray-100">
-                    @forelse($myRequests as $resource)
-                        <tr class="hover:bg-gray-50 transition-colors {{ $isEditing && $editResource->id === $resource->id ? 'bg-blue-50 ring-1 ring-blue-200' : '' }}">
-                            <td class="px-3 py-2">
-                                <img src="{{ $resource->cover ? asset('storage/' . $resource->cover) : asset('assets/images/def.jpg') }}"
-                                     alt="cover" class="w-9 h-12 object-cover rounded border border-gray-200 shadow-sm">
-                            </td>
-                            <td class="px-3 py-2 font-medium text-gray-900 max-w-[180px]">
-                                <span title="{{ $resource->printTitle->title ?? '' }}">{{ Str::limit($resource->printTitle->title ?? '-', 40) }}</span>
-                            </td>
-                            <td class="px-3 py-2 text-gray-600 max-w-[140px]">
-                                {{ Str::limit($resource->printTitle->authors->pluck('author_name')->join(', ') ?: '-', 35) }}
-                            </td>
-                            <td class="px-3 py-2 text-gray-600">{{ $resource->type->type_name ?? '-' }}</td>
-                            <td class="px-3 py-2 text-gray-600">{{ $resource->publisher ?? '-' }}</td>
-                            <td class="px-3 py-2 text-gray-600">{{ $resource->edition ?? '-' }}</td>
-                            <td class="px-3 py-2 text-gray-600">{{ $resource->copyright ?? '-' }}</td>
-                            <td class="px-3 py-2 text-center">
-                                @if($resource->status == 0)
-                                    <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">Pending</span>
-                                @elseif($resource->status == 1)
-                                    <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">Approved</span>
-                                @else
-                                    <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">Rejected</span>
-                                @endif
-                            </td>
-                            <td class="px-3 py-2 text-center text-gray-500 text-xs whitespace-nowrap">{{ $resource->created_at?->format('M d, Y') ?? '-' }}</td>
-                            <td class="px-3 py-2 text-center">
-                                <div class="flex justify-center gap-2">
-                                    @if($resource->status == 0)
-                                        <a href="{{ route('print-resource.edit', $resource->id) }}"
-                                           class="p-1.5 rounded hover:bg-blue-100 text-blue-600 transition-colors {{ $isEditing && $editResource->id === $resource->id ? 'bg-blue-100' : '' }}"
-                                           title="Edit">
-                                            <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                                                <path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.687a1.875 1.875 0 112.652 2.652L7.5 19.153 3 21l1.847-4.5L16.862 4.487z"/>
-                                            </svg>
-                                        </a>
-                                    @endif
-                                    <form action="{{ route('print-resource.destroy', $resource->id) }}" method="POST"
-                                          onsubmit="return confirm('Are you sure you want to delete this request? This will also remove the title and authors if no other resources reference them.')">
-                                        @csrf
-                                        @method('DELETE')
-                                        <button type="submit" class="p-1.5 rounded hover:bg-red-100 text-red-600 transition-colors" title="Delete">
-                                            <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                                                <path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6M9 7h6m2 0H7m3-3h4a1 1 0 011 1v1H9V5a1 1 0 011-1z"/>
-                                            </svg>
-                                        </button>
-                                    </form>
-                                </div>
-                            </td>
-                        </tr>
-                    @empty
-                        <tr>
-                            <td colspan="10" class="text-center text-gray-400 py-10">
-                                <svg class="mx-auto mb-3 h-10 w-10 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
-                                </svg>
-                                <p class="text-sm font-medium">No requests submitted yet.</p>
-                                <p class="text-xs mt-1">Use the <strong>Manual Add</strong> tab to submit your first request.</p>
-                            </td>
-                        </tr>
-                    @endforelse
-                </tbody>
-            </table>
-        </div>
-        @if($myRequests->hasPages())
-            <div class="mt-4">{{ $myRequests->appends(['active_tab' => 'tab-requests'])->links() }}</div>
-        @endif
+        </form>
     </div>
-</div>
 
-{{-- ===== DETAIL MODAL (Search Existing tab) ===== --}}
-<div id="detailModal" class="fixed inset-0 z-50 hidden overflow-y-auto" role="dialog" aria-modal="true">
-    <div id="modalBackdrop" class="fixed inset-0 bg-black/50 transition-opacity"></div>
-    <div class="relative min-h-screen flex items-start justify-center p-4 pt-10">
-        <div class="relative bg-white rounded-xl shadow-2xl w-full max-w-4xl z-10 mb-10">
-            <div class="flex items-center justify-between p-6 border-b border-gray-200">
-                <h3 class="text-lg font-semibold text-gray-800" id="modalTitle">Resource Details</h3>
-                <button id="closeModal" class="text-gray-400 hover:text-gray-600 transition-colors">
-                    <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+    {{-- =================================================================
+        TAB 3 - MY REQUESTS
+    ================================================================== --}}
+    <div id="tab-requests" class="page-tab-content hidden">
+        <div class="space-y-4">
+            <div class="flex items-center justify-between">
+                <h3 class="text-base font-semibold text-gray-700">My Submitted Requests</h3>
+                <p class="text-xs text-gray-400">Pending requests can still be edited or deleted.</p>
+            </div>
+            <div class="overflow-x-auto rounded-lg border border-gray-200">
+                <table class="w-full text-sm">
+                    <thead class="bg-gray-50 text-xs text-gray-500 uppercase tracking-wide">
+                        <tr>
+                            <th class="px-3 py-3 text-left w-10">Cover</th>
+                            <th class="px-3 py-3 text-left">Title</th>
+                            <th class="px-3 py-3 text-left">Author(s)</th>
+                            <th class="px-3 py-3 text-left">Type</th>
+                            <th class="px-3 py-3 text-left">Publisher</th>
+                            <th class="px-3 py-3 text-left">Edition</th>
+                            <th class="px-3 py-3 text-left">Copyright</th>
+                            <th class="px-3 py-3 text-center">Status</th>
+                            <th class="px-3 py-3 text-center">Date Submitted</th>
+                            <th class="px-3 py-3 text-center">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-100">
+                        @forelse($myRequests as $resource)
+                            <tr class="hover:bg-gray-50 transition-colors {{ $isEditing && $editResource->id === $resource->id ? 'bg-blue-50 ring-1 ring-blue-200' : '' }}">
+                                <td class="px-3 py-2">
+                                    <img src="{{ $resource->cover ? asset('storage/' . $resource->cover) : asset('assets/images/def.jpg') }}"
+                                        alt="cover" class="w-9 h-12 object-cover rounded border border-gray-200 shadow-sm">
+                                </td>
+                                <td class="px-3 py-2 font-medium text-gray-900 max-w-[180px]">
+                                    <span title="{{ $resource->printTitle->title ?? '' }}">{{ Str::limit($resource->printTitle->title ?? '-', 40) }}</span>
+                                </td>
+                                <td class="px-3 py-2 text-gray-600 max-w-[140px]">
+                                    {{ Str::limit($resource->printTitle->authors->pluck('author_name')->join(', ') ?: '-', 35) }}
+                                </td>
+                                <td class="px-3 py-2 text-gray-600">{{ $resource->type->type_name ?? '-' }}</td>
+                                <td class="px-3 py-2 text-gray-600">{{ $resource->publisher ?? '-' }}</td>
+                                <td class="px-3 py-2 text-gray-600">{{ $resource->edition ?? '-' }}</td>
+                                <td class="px-3 py-2 text-gray-600">{{ $resource->copyright ?? '-' }}</td>
+                                <td class="px-3 py-2 text-center">
+                                    @if($resource->status == 0)
+                                        <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">Pending</span>
+                                    @elseif($resource->status == 1)
+                                        <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">Approved</span>
+                                    @else
+                                        <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">Rejected</span>
+                                    @endif
+                                </td>
+                                <td class="px-3 py-2 text-center text-gray-500 text-xs whitespace-nowrap">{{ $resource->created_at?->format('M d, Y') ?? '-' }}</td>
+                                <td class="px-3 py-2 text-center">
+                                    <div class="flex justify-center gap-2">
+                                        @if($resource->status == 0)
+                                            <a href="{{ route('print-resource.edit', $resource->id) }}"
+                                            class="p-1.5 rounded hover:bg-blue-100 text-blue-600 transition-colors {{ $isEditing && $editResource->id === $resource->id ? 'bg-blue-100' : '' }}"
+                                            title="Edit">
+                                                <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.687a1.875 1.875 0 112.652 2.652L7.5 19.153 3 21l1.847-4.5L16.862 4.487z"/>
+                                                </svg>
+                                            </a>
+                                        @endif
+                                        <form action="{{ route('print-resource.destroy', $resource->id) }}" method="POST"
+                                            onsubmit="return confirm('Are you sure you want to delete this request? This will also remove the title and authors if no other resources reference them.')">
+                                            @csrf
+                                            @method('DELETE')
+                                            <button type="submit" class="p-1.5 rounded hover:bg-red-100 text-red-600 transition-colors" title="Delete">
+                                                <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6M9 7h6m2 0H7m3-3h4a1 1 0 011 1v1H9V5a1 1 0 011-1z"/>
+                                                </svg>
+                                            </button>
+                                        </form>
+                                    </div>
+                                </td>
+                            </tr>
+                        @empty
+                            <tr>
+                                <td colspan="10" class="text-center text-gray-400 py-10">
+                                    <svg class="mx-auto mb-3 h-10 w-10 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                                    </svg>
+                                    <p class="text-sm font-medium">No requests submitted yet.</p>
+                                    <p class="text-xs mt-1">Use the <strong>Manual Add</strong> tab to submit your first request.</p>
+                                </td>
+                            </tr>
+                        @endforelse
+                    </tbody>
+                </table>
+            </div>
+            @if($myRequests->hasPages())
+                <div class="mt-4">{{ $myRequests->appends(['active_tab' => 'tab-requests'])->links() }}</div>
+            @endif
+        </div>
+    </div>
+
+    {{-- ===== DETAIL MODAL (Search Existing tab) ===== --}}
+    <div id="detailModal" class="fixed inset-0 z-50 hidden overflow-y-auto" role="dialog" aria-modal="true">
+        <div id="modalBackdrop" class="fixed inset-0 bg-black/50 transition-opacity"></div>
+        <div class="relative min-h-screen flex items-start justify-center p-4 pt-10">
+            <div class="relative bg-white rounded-xl shadow-2xl w-full max-w-4xl z-10 mb-10">
+                <div class="flex items-center justify-between p-6 border-b border-gray-200">
+                    <h3 class="text-lg font-semibold text-gray-800" id="modalTitle">Resource Details</h3>
+                    <button id="closeModal" class="text-gray-400 hover:text-gray-600 transition-colors">
+                        <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                        </svg>
+                    </button>
+                </div>
+                <div id="modalLoading" class="flex justify-center items-center py-20">
+                    <svg class="animate-spin h-8 w-8 text-blue-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"/>
                     </svg>
-                </button>
-            </div>
-            <div id="modalLoading" class="flex justify-center items-center py-20">
-                <svg class="animate-spin h-8 w-8 text-blue-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
-                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"/>
-                </svg>
-            </div>
-            <div id="modalBody" class="hidden p-6 space-y-6">
-                <div class="flex gap-5">
-                    <div class="shrink-0">
-                        <img id="modalCover" src="" alt="Cover" class="w-28 h-40 object-cover rounded-lg border border-gray-200 shadow-sm">
+                </div>
+                <div id="modalBody" class="hidden p-6 space-y-6">
+                    <div class="flex gap-5">
+                        <div class="shrink-0">
+                            <img id="modalCover" src="" alt="Cover" class="w-28 h-40 object-cover rounded-lg border border-gray-200 shadow-sm">
+                        </div>
+                        <div class="flex-1 space-y-2">
+                            <h4 id="modalBookTitle" class="text-xl font-bold text-gray-900 leading-snug"></h4>
+                            <p class="text-sm text-gray-600"><span class="font-medium">Author(s):</span> <span id="modalAuthors"></span></p>
+                            <div class="pt-1">
+                                <p class="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Subject / Grade Level</p>
+                                <p id="modalSubjects" class="text-sm text-gray-700 leading-relaxed"></p>
+                            </div>
+                        </div>
                     </div>
-                    <div class="flex-1 space-y-2">
-                        <h4 id="modalBookTitle" class="text-xl font-bold text-gray-900 leading-snug"></h4>
-                        <p class="text-sm text-gray-600"><span class="font-medium">Author(s):</span> <span id="modalAuthors"></span></p>
-                        <div class="pt-1">
-                            <p class="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Subject / Grade Level</p>
-                            <p id="modalSubjects" class="text-sm text-gray-700 leading-relaxed"></p>
+                    <hr class="border-gray-200">
+                    <div>
+                        <p class="text-sm font-semibold text-gray-700 mb-3">Available Editions
+                            <span class="text-xs font-normal text-gray-400 ml-1">- click Add on the edition you want to copy to your library</span>
+                        </p>
+                        <div class="overflow-x-auto rounded-lg border border-gray-200">
+                            <table class="w-full text-sm">
+                                <thead class="bg-gray-50 text-xs text-gray-500 uppercase tracking-wide">
+                                    <tr>
+                                        <th class="px-3 py-2 text-left w-12">Cover</th>
+                                        <th class="px-3 py-2 text-left">Type</th>
+                                        <th class="px-3 py-2 text-left">Publisher</th>
+                                        <th class="px-3 py-2 text-left">Edition</th>
+                                        <th class="px-3 py-2 text-left">Volume</th>
+                                        <th class="px-3 py-2 text-left">Copyright</th>
+                                        <th class="px-3 py-2 text-left">ISBN</th>
+                                        <th class="px-3 py-2 text-left">Pages</th>
+                                        <th class="px-3 py-2 text-center">Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="modalEditionsBody" class="divide-y divide-gray-100 bg-white"></tbody>
+                            </table>
                         </div>
                     </div>
                 </div>
-                <hr class="border-gray-200">
-                <div>
-                    <p class="text-sm font-semibold text-gray-700 mb-3">Available Editions
-                        <span class="text-xs font-normal text-gray-400 ml-1">- click Add on the edition you want to copy to your library</span>
-                    </p>
-                    <div class="overflow-x-auto rounded-lg border border-gray-200">
-                        <table class="w-full text-sm">
-                            <thead class="bg-gray-50 text-xs text-gray-500 uppercase tracking-wide">
-                                <tr>
-                                    <th class="px-3 py-2 text-left w-12">Cover</th>
-                                    <th class="px-3 py-2 text-left">Type</th>
-                                    <th class="px-3 py-2 text-left">Publisher</th>
-                                    <th class="px-3 py-2 text-left">Edition</th>
-                                    <th class="px-3 py-2 text-left">Volume</th>
-                                    <th class="px-3 py-2 text-left">Copyright</th>
-                                    <th class="px-3 py-2 text-left">ISBN</th>
-                                    <th class="px-3 py-2 text-left">Pages</th>
-                                    <th class="px-3 py-2 text-center">Action</th>
-                                </tr>
-                            </thead>
-                            <tbody id="modalEditionsBody" class="divide-y divide-gray-100 bg-white"></tbody>
-                        </table>
-                    </div>
-                </div>
             </div>
         </div>
     </div>
-</div>
 
-{{-- ===== Seed edit-mode authors for JS ===== --}}
-@if($isEditing)
-<script>window.__editAuthors = @json($editingAuthors ?? []);</script>
-@endif
+    {{-- ===== Seed edit-mode authors for JS ===== --}}
+    @if($isEditing)
+    <script>window.__editAuthors = @json($editingAuthors ?? []);</script>
+    @endif
 
 <script>
 (function () {
-
-    /* ================================================================
-       PAGE TAB SWITCHER
-       - Clicking a tab saves the active tab to sessionStorage
-       - sessionStorage persists across page refreshes (F5 / Ctrl+R)
-       - sessionStorage is automatically cleared when the user navigates
-         to a different page, so returning later always resets to the
-         default tab (Search Existing) — no manual cleanup needed
-       - Edit mode always forces tab-add regardless of sessionStorage
-    ================================================================ */
+    // ────────────────────────────────────────────────
+    // PAGE-LEVEL TAB MANAGEMENT
+    // ────────────────────────────────────────────────
     const STORAGE_KEY     = 'addPrintResource_activeTab';
     const VALID_TABS      = ['tab-search', 'tab-add', 'tab-requests'];
     const pageTabBtns     = document.querySelectorAll('.page-tab-btn');
     const pageTabContents = document.querySelectorAll('.page-tab-content');
 
-    function activatePageTab(targetId, persist) {
-        // Default persist to true unless explicitly false
-        if (persist !== false) {
+    function activatePageTab(targetId, shouldSaveToStorage = true) {
+        if (!VALID_TABS.includes(targetId)) {
+            targetId = 'tab-search';
+        }
+
+        pageTabBtns.forEach(btn => {
+            const isActive = btn.dataset.pageTab === targetId;
+            btn.classList.toggle('border-blue-600', isActive);
+            btn.classList.toggle('text-blue-600',    isActive);
+            btn.classList.toggle('border-transparent', !isActive);
+            btn.classList.toggle('text-gray-500',    !isActive);
+        });
+
+        pageTabContents.forEach(content => {
+            content.classList.toggle('hidden', content.id !== targetId);
+        });
+
+        // Only save to storage on user interaction, not on forced redirect
+        if (shouldSaveToStorage) {
             sessionStorage.setItem(STORAGE_KEY, targetId);
         }
-        pageTabBtns.forEach(btn => {
-            const on = btn.dataset.pageTab === targetId;
-            btn.classList.toggle('border-blue-600',    on);
-            btn.classList.toggle('text-blue-600',      on);
-            btn.classList.toggle('border-transparent', !on);
-            btn.classList.toggle('text-gray-500',      !on);
-        });
-        pageTabContents.forEach(c => c.classList.toggle('hidden', c.id !== targetId));
     }
 
-    // Wire up all tab buttons
+    // Determine which tab to show on load
+    let initialTab = '{{ session('active_tab') }}' ||
+                     sessionStorage.getItem(STORAGE_KEY) ||
+                     'tab-search';
+
+    // Force search tab after adding acquisition (via flash data)
+    if ('{{ session('just_added_acquisition') }}' === '1') {
+        initialTab = 'tab-search';
+        // Optional: clear the flag so refresh doesn't force it again
+        // (but usually not needed since it's a one-time flash)
+    }
+
+    activatePageTab(initialTab, false);   // don't save yet — this is initial load
+
+    // Handle manual tab clicks → update storage
     pageTabBtns.forEach(btn => {
-        btn.addEventListener('click', () => activatePageTab(btn.dataset.pageTab));
+        btn.addEventListener('click', () => {
+            const tabId = btn.dataset.pageTab;
+            activatePageTab(tabId, true);   // save this choice
+        });
     });
 
-    // Determine which tab to show on load
-    @if($isEditing)
-        // Edit mode always opens the Manual Add tab; don't persist this so
-        // returning later (after save/cancel) goes back to whatever was saved.
-        activatePageTab('tab-add', false);
-    @else
-        // Restore from sessionStorage, falling back to tab-search.
-        // sessionStorage naturally resets when navigating away, so no
-        // manual cleanup is required.
-        const saved = sessionStorage.getItem(STORAGE_KEY);
-        activatePageTab(VALID_TABS.includes(saved) ? saved : 'tab-search', false);
-    @endif
-
-
-    /* ================================================================
-       SGL TABS (Subject / Grade Level tabs inside the form)
-    ================================================================ */
+    // ────────────────────────────────────────────────
+    // SGL TABS (Subject / Grade Level inside form)
+    // ────────────────────────────────────────────────
     const sglTabBtns     = document.querySelectorAll('.sgl-tab-btn');
     const sglTabContents = document.querySelectorAll('.sgl-tab-content');
 
+    function activateSglTab(targetTabId) {
+        sglTabBtns.forEach(btn => {
+            const isActive = btn.dataset.sglTab === targetTabId;
+            btn.classList.toggle('border-blue-600', isActive);
+            btn.classList.toggle('text-blue-600',    isActive);
+            btn.classList.toggle('active',           isActive);
+            btn.classList.toggle('border-transparent', !isActive);
+            btn.classList.toggle('text-gray-600',    !isActive);
+        });
+
+        sglTabContents.forEach(content => {
+            content.classList.toggle('hidden', content.id !== targetTabId);
+        });
+    }
+
     sglTabBtns.forEach(btn => {
         btn.addEventListener('click', () => {
-            sglTabBtns.forEach(b => {
-                b.classList.remove('border-blue-600', 'text-blue-600', 'active');
-                b.classList.add('border-transparent', 'text-gray-600');
-            });
-            sglTabContents.forEach(c => c.classList.add('hidden'));
-            btn.classList.add('border-blue-600', 'text-blue-600', 'active');
-            btn.classList.remove('border-transparent', 'text-gray-600');
-            const t = document.getElementById(btn.dataset.sglTab);
-            if (t) t.classList.remove('hidden');
+            activateSglTab(btn.dataset.sglTab);
         });
     });
-    if (sglTabBtns.length) sglTabBtns[0].dispatchEvent(new Event('click'));
 
+    // Activate first SGL tab by default
+    if (sglTabBtns.length > 0) {
+        activateSglTab(sglTabBtns[0].dataset.sglTab);
+    }
 
-    /* ================================================================
-       SEARCH
-    ================================================================ */
+    // ────────────────────────────────────────────────
+    // SEARCH EXISTING + MODAL LOGIC
+    // ────────────────────────────────────────────────
     const searchInput       = document.getElementById('searchInput');
     const searchBtn         = document.getElementById('searchBtn');
     const spinner           = document.getElementById('searchSpinner');
@@ -602,42 +597,61 @@
     const modalLoading      = document.getElementById('modalLoading');
     const modalBody         = document.getElementById('modalBody');
     const modalEditionsBody = document.getElementById('modalEditionsBody');
+
     let searchTimeout = null;
 
     function performSearch() {
         const q = searchInput.value.trim();
         if (q.length < 2) return;
-        showSpinner(true); hideAll();
+
+        showSpinner(true);
+        hideAll();
+
         fetch(`{{ route('search-print-resource.search') }}?q=${encodeURIComponent(q)}`, {
-            headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' }
+            headers: {
+                'Accept': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest'
+            }
         })
         .then(r => r.json())
         .then(data => {
             showSpinner(false);
-            if (!data.length) { emptyState.classList.remove('hidden'); return; }
+            if (!data.length) {
+                emptyState.classList.remove('hidden');
+                return;
+            }
             renderResults(data);
         })
-        .catch(() => { showSpinner(false); emptyState.classList.remove('hidden'); });
+        .catch(() => {
+            showSpinner(false);
+            emptyState.classList.remove('hidden');
+        });
     }
 
     searchBtn.addEventListener('click', performSearch);
-    searchInput.addEventListener('keydown', e => { if (e.key === 'Enter') performSearch(); });
+    searchInput.addEventListener('keydown', e => {
+        if (e.key === 'Enter') performSearch();
+    });
     searchInput.addEventListener('input', () => {
         clearTimeout(searchTimeout);
-        if (searchInput.value.trim().length >= 2) searchTimeout = setTimeout(performSearch, 450);
+        if (searchInput.value.trim().length >= 2) {
+            searchTimeout = setTimeout(performSearch, 450);
+        }
     });
 
     function renderResults(titles) {
         resultsList.innerHTML = '';
         resultCount.textContent = `${titles.length} title(s) found`;
         resultsArea.classList.remove('hidden');
+
         titles.forEach(title => {
             const editionBadges = title.editions.map(e => {
                 let label = esc(e.type);
-                if (e.edition && e.edition !== '-') label += ' - Ed. ' + esc(e.edition);
-                if (e.copyright && e.copyright !== '-') label += ' (' + esc(String(e.copyright)) + ')';
+                if (e.edition && e.edition !== '-') label += ` - Ed. ${esc(e.edition)}`;
+                if (e.copyright && e.copyright !== '-') label += ` (${esc(e.copyright)})`;
                 return `<span class="inline-flex items-center text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full">${label}</span>`;
-            }).join('');
+            }).join(' ');
+
             const card = document.createElement('div');
             card.className = 'border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow bg-white';
             card.innerHTML = `
@@ -646,14 +660,25 @@
                     <div class="flex-1 min-w-0 space-y-1.5">
                         <p class="font-semibold text-gray-900">${esc(title.title)}</p>
                         <p class="text-xs text-gray-500">${esc(title.authors)}</p>
-                        <p class="text-xs text-gray-600 leading-relaxed"><span class="font-medium">Subjects:</span> ${esc(title.subjects)}</p>
-                        <div class="flex flex-wrap gap-1.5 pt-0.5">${editionBadges || '<span class="text-xs text-gray-400">No editions</span>'}</div>
+                        <p class="text-xs text-gray-600 leading-relaxed">
+                            <span class="font-medium">Subjects:</span> ${esc(title.subjects)}
+                        </p>
+                        <div class="flex flex-wrap gap-1.5 pt-0.5">
+                            ${editionBadges || '<span class="text-xs text-gray-400">No editions</span>'}
+                        </div>
                     </div>
                     <div class="flex-shrink-0 self-center">
-                        <button data-title-id="${esc(title.id)}" class="view-btn text-xs px-4 py-2 bg-indigo-50 text-indigo-700 border border-indigo-200 rounded-lg hover:bg-indigo-100 transition-colors whitespace-nowrap font-medium">View Details</button>
+                        <button data-title-id="${esc(title.id)}"
+                                class="view-btn text-xs px-4 py-2 bg-indigo-50 text-indigo-700 border border-indigo-200 rounded-lg hover:bg-indigo-100 transition-colors whitespace-nowrap font-medium">
+                            View Details
+                        </button>
                     </div>
                 </div>`;
-            card.querySelector('.view-btn').addEventListener('click', function () { openModal(this.dataset.titleId); });
+
+            card.querySelector('.view-btn').addEventListener('click', function () {
+                openModal(this.dataset.titleId);
+            });
+
             resultsList.appendChild(card);
         });
     }
@@ -663,19 +688,23 @@
         document.body.style.overflow = 'hidden';
         modalBody.classList.add('hidden');
         modalLoading.classList.remove('hidden');
-        modalLoading.innerHTML = `<svg class="animate-spin h-8 w-8 text-blue-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"/></svg>`;
-        fetch(`{{ url('resources/search-print') }}/${titleId}/details`, {
-            headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' }
+
+        fetch(`{{ url('search-print') }}/${titleId}/details`, {
+            headers: {
+                'Accept': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest'
+            }
         })
         .then(r => r.json())
-        .then(data => { populateModal(data); modalLoading.classList.add('hidden'); modalBody.classList.remove('hidden'); })
-        .catch(() => { modalLoading.innerHTML = '<p class="text-red-500 text-sm px-8">Failed to load details. Please try again.</p>'; });
+        .then(data => {
+            populateModal(data);
+            modalLoading.classList.add('hidden');
+            modalBody.classList.remove('hidden');
+        })
+        .catch(() => {
+            modalLoading.innerHTML = '<p class="text-red-500 text-sm px-8">Failed to load details. Please try again.</p>';
+        });
     }
-
-    function closeModalFn() { detailModal.classList.add('hidden'); document.body.style.overflow = ''; }
-    closeModalBtn.addEventListener('click', closeModalFn);
-    modalBackdrop.addEventListener('click', closeModalFn);
-    document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModalFn(); });
 
     function populateModal(d) {
         document.getElementById('modalTitle').textContent     = 'Resource Details';
@@ -683,11 +712,13 @@
         document.getElementById('modalBookTitle').textContent = d.title;
         document.getElementById('modalAuthors').textContent   = d.authors;
         document.getElementById('modalSubjects').textContent  = d.subjects;
+
         modalEditionsBody.innerHTML = '';
         if (!d.editions || !d.editions.length) {
             modalEditionsBody.innerHTML = '<tr><td colspan="9" class="text-center text-gray-400 py-6 text-xs">No editions found</td></tr>';
             return;
         }
+
         d.editions.forEach(e => {
             const tr = document.createElement('tr');
             tr.className = 'hover:bg-gray-50 transition-colors';
@@ -701,8 +732,11 @@
                 <td class="px-3 py-2 text-gray-700">${esc(e.isbn)}</td>
                 <td class="px-3 py-2 text-gray-700">${esc(e.pages)}</td>
                 <td class="px-3 py-2 text-center">
-                    <a href="${esc(e.add_url)}" class="inline-flex items-center gap-1 text-xs px-3 py-1.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors whitespace-nowrap font-medium">
-                        <svg class="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+                    <a href="${esc(e.add_url)}"
+                       class="inline-flex items-center gap-1 text-xs px-3 py-1.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors whitespace-nowrap font-medium">
+                        <svg class="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                        </svg>
                         Add
                     </a>
                 </td>`;
@@ -710,9 +744,32 @@
         });
     }
 
-    function showSpinner(show) { spinner.classList.toggle('hidden', !show); }
-    function hideAll() { resultsArea.classList.add('hidden'); emptyState.classList.add('hidden'); initialHint.classList.add('hidden'); }
-    function esc(str) { const d = document.createElement('div'); d.appendChild(document.createTextNode(String(str ?? ''))); return d.innerHTML; }
+    function closeModalFn() {
+        detailModal.classList.add('hidden');
+        document.body.style.overflow = '';
+    }
+
+    closeModalBtn.addEventListener('click', closeModalFn);
+    modalBackdrop.addEventListener('click', closeModalFn);
+    document.addEventListener('keydown', e => {
+        if (e.key === 'Escape') closeModalFn();
+    });
+
+    function showSpinner(show) {
+        spinner.classList.toggle('hidden', !show);
+    }
+
+    function hideAll() {
+        resultsArea.classList.add('hidden');
+        emptyState.classList.add('hidden');
+        initialHint.classList.add('hidden');
+    }
+
+    function esc(str) {
+        const div = document.createElement('div');
+        div.appendChild(document.createTextNode(String(str ?? '')));
+        return div.innerHTML;
+    }
 
 })();
 </script>
