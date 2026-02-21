@@ -17,12 +17,18 @@ Route::get('/print-resources', [PrintResourceController::class, 'index'])->name(
 Route::get('/nonprint-resources', [NonPrintResourceController::class, 'index'])->name('nonprint-resources');
 
 // ============================================================
-// ADD PRINT RESOURCE (new dedicated page)
+// ADD PRINT RESOURCE — School request flow (3-tab page)
 // ============================================================
 Route::get('/add-print-resource', [AddPrintResourceController::class, 'index'])
     ->name('print-resource.create');
 Route::post('/add-print-resource', [AddPrintResourceController::class, 'store'])
     ->name('print-resource.store');
+Route::get('/add-print-resource/{id}/edit', [AddPrintResourceController::class, 'edit'])
+    ->name('print-resource.edit');
+Route::put('/add-print-resource/{id}', [AddPrintResourceController::class, 'update'])
+    ->name('print-resource.update');
+Route::delete('/add-print-resource/{id}', [AddPrintResourceController::class, 'destroy'])
+    ->name('print-resource.destroy');
 
 // ============================================================
 // ADD NON-PRINT RESOURCE (new dedicated page)

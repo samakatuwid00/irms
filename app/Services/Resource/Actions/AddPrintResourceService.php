@@ -3,28 +3,32 @@
 namespace App\Services\Resource\Actions;
 
 use App\Models\Author;
-use App\Models\DivisionLibrary;
-use App\Models\PrintAcquisition;
-use App\Models\PrintMasterlist;
 use App\Models\PrintResource;
 use App\Models\PrintTitle;
-use App\Models\RegionLibrary;
-use App\Models\SchoolLibrary;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
 class AddPrintResourceService
 {
+    // -----------------------------------------------------------------------
+    // PUBLIC API
+    // -----------------------------------------------------------------------
+
+    /**
+     * Create a new pending print-resource request from a school user.
+     * No acquisition data is attached at this stage.
+     *
+     * @param  array  $data  Validated form data (no 'acquisitions' key expected).
+     * @return string|null   The new PrintResource UUID, or null on failure.
+     */
     public function addPrintResource(array $data): ?string
     {
-        $printResourceId  = null;
-        $acquisitionIds   = [];
+        $printResourceId = null;
 
-        DB::transaction(function () use ($data, &$printResourceId, &$acquisitionIds) {
+        DB::transaction(function () use ($data, &$printResourceId) {
             // 1. Create or get title
             $title = $this->createOrGetTitle($data['title']);
 
@@ -34,33 +38,80 @@ class AddPrintResourceService
                 $title->authors()->syncWithoutDetaching($authorIds);
             }
 
-            // 3. Handle image upload
+            // 3. Handle optional image upload
             $coverPath = null;
             if (isset($data['image'])) {
                 $coverPath = $this->handleImageUpload($data['image'], $data['title']);
             }
 
-            // 4. Create or retrieve the print resource
-            $printResource   = $this->createPrintResource($data, $title->id, $authorIds, $coverPath);
-            $printResourceId = $printResource->id;
-
-            // 5. Handle acquisitions — collect IDs for post-commit vector rebuild
-            $acquisitionIds = $this->handleAcquisitions($data['acquisitions'], $printResource->id);
+            // 4. Create the resource (pending status, school station)
+            $resource        = $this->createPrintResource($data, $title->id, $authorIds, $coverPath);
+            $printResourceId = $resource->id;
         });
 
-        // ---------------------------------------------------------------
-        // Post-commit: rebuild search vectors AFTER the transaction so all
-        // rows are visible to the PG functions.
-        // ---------------------------------------------------------------
+        // Rebuild search vector outside the transaction so the row is visible
         if ($printResourceId) {
-            $this->updateSearchVectors($printResourceId, $acquisitionIds);
+            $this->updateSearchVector($printResourceId);
         }
 
         return $printResourceId;
     }
 
+    /**
+     * Update an existing pending print-resource request.
+     * Only the resource's own fields (title, authors, metadata, cover) change.
+     */
+    public function updatePrintResource(PrintResource $resource, array $data): void
+    {
+        DB::transaction(function () use ($resource, $data) {
+            // 1. Update or replace the title
+            $title = $this->createOrGetTitle($data['title']);
+
+            // 2. Sync authors on the (potentially new) title
+            $authorIds = $this->handleAuthors($data['authors'] ?? null);
+            $title->authors()->sync($authorIds);   // full sync for an edit
+
+            // 3. Handle optional new image
+            $coverPath = $resource->cover; // keep existing cover by default
+            if (isset($data['image'])) {
+                // Delete old file if it exists and differs
+                if ($resource->cover && Storage::disk('public')->exists($resource->cover)) {
+                    Storage::disk('public')->delete($resource->cover);
+                }
+                $coverPath = $this->handleImageUpload($data['image'], $data['title']);
+            }
+
+            // 4. Rebuild uniqueness hash with new values
+            $uniquenessHash = $this->buildUniquenessHash($title->id, $data['type'], $authorIds, $data);
+
+            $gradeLevelIds = !empty($data['subject_grade_levels'])
+                ? implode(',', array_unique($data['subject_grade_levels']))
+                : null;
+
+            $publisherName = !empty($data['publisher'])
+                ? ucwords(strtolower($data['publisher']))
+                : null;
+
+            $resource->update([
+                'print_title_id'          => $title->id,
+                'print_type_id'           => $data['type'],
+                'publisher'               => $publisherName,
+                'volume'                  => $data['volume']    ?? null,
+                'edition'                 => $data['edition']   ?? null,
+                'copyright'               => $data['copyright'] ?? null,
+                'pages'                   => $data['pages']     ?? null,
+                'isbn'                    => $data['isbn']      ?? null,
+                'subject_grade_level_ids' => $gradeLevelIds,
+                'cover'                   => $coverPath,
+                'uniqueness_hash'         => $uniquenessHash,
+            ]);
+        });
+
+        $this->updateSearchVector($resource->id);
+    }
+
     // -----------------------------------------------------------------------
-    // Private — core steps
+    // PRIVATE — core steps
     // -----------------------------------------------------------------------
 
     private function createOrGetTitle(string $titleName): PrintTitle
@@ -125,7 +176,6 @@ class AddPrintResourceService
 
     /**
      * Build a deterministic SHA-256 hash over all fields that define uniqueness.
-     * Sorted + normalised so order and casing never create phantom duplicates.
      */
     private function buildUniquenessHash(string $titleId, string $typeId, array $authorIds, array $data): string
     {
@@ -154,12 +204,13 @@ class AddPrintResourceService
     }
 
     /**
-     * Create a print resource, or return the existing one if the same metadata
-     * has already been recorded.
+     * Create (or retrieve an existing) print resource row.
      *
-     * FIX: do NOT include uniqueness_hash in the values array — Laravel merges
-     * the lookup key into the INSERT automatically, so passing it twice causes
-     * the values array to override the lookup and can silently skip the insert.
+     * For school users this is always a PENDING request:
+     *   status       = 0  (0 = pending, 1 = approved, 2 = rejected)
+     *   station_type = 'school'
+     *   station_id   = encoder's station_id
+     *   encoded_by   = Auth user id
      */
     private function createPrintResource(array $data, string $titleId, array $authorIds, ?string $coverPath): PrintResource
     {
@@ -173,143 +224,45 @@ class AddPrintResourceService
 
         $uniquenessHash = $this->buildUniquenessHash($titleId, $data['type'], $authorIds, $data);
 
+        $user = Auth::user();
+
         try {
             return PrintResource::firstOrCreate(
-                // Lookup key — hits the unique index directly
                 ['uniqueness_hash' => $uniquenessHash],
-                // Values used ONLY when creating a new row
-                // NOTE: do NOT repeat uniqueness_hash here — Laravel merges it in automatically
                 [
                     'id'                      => (string) Str::uuid(),
                     'print_title_id'          => $titleId,
                     'print_type_id'           => $data['type'],
                     'publisher'               => $publisherName,
-                    'volume'                  => $data['volume']    ?? 'volume',
-                    'edition'                 => $data['edition']   ?? 'edition',
-                    'copyright'               => $data['copyright'] ?? 'copyright',
+                    'volume'                  => $data['volume']    ?? null,
+                    'edition'                 => $data['edition']   ?? null,
+                    'copyright'               => $data['copyright'] ?? null,
                     'pages'                   => $data['pages']     ?? null,
-                    'isbn'                    => $data['isbn']      ?? 'isbn',
+                    'isbn'                    => $data['isbn']      ?? null,
                     'subject_grade_level_ids' => $gradeLevelIds,
                     'cover'                   => $coverPath,
+                    // ── Request / approval fields ──────────────────────────
+                    'status'                  => 0,           // 0 = pending
+                    'station_type'            => 'school',
+                    'station_id'              => $user->station_id,
+                    'encoded_by'              => $user->id,
                 ]
             );
         } catch (UniqueConstraintViolationException) {
-            // Concurrent request inserted the same hash between our SELECT and INSERT.
             return PrintResource::where('uniqueness_hash', $uniquenessHash)->firstOrFail();
         }
     }
 
-    /**
-     * Handle acquisitions — returns the list of new acquisition IDs so the
-     * caller can rebuild their search vectors after the transaction commits.
-     *
-     * @return string[]
-     */
-    private function handleAcquisitions(string $acquisitionsJson, string $printResourceId): array
-    {
-        $acquisitions = json_decode($acquisitionsJson, true);
-
-        $statusMap = [
-            'usable'            => 'USABLE',
-            'partially_damaged' => 'PARTIALLY DAMAGED',
-            'damaged'           => 'DAMAGED',
-            'lost'              => 'LOST',
-            'condemnable'       => 'CONDEMNABLE',
-        ];
-
-        $userId            = Auth::id();
-        $now               = now();
-        $masterlistInserts = [];
-        $acquisitionIds    = [];
-
-        foreach ($acquisitions as $acquisition) {
-            $acquisitionId = (string) Str::uuid();
-            $libraryId     = $acquisition['library_id'];
-
-            PrintAcquisition::create([
-                'id'                => $acquisitionId,
-                'print_id'          => $printResourceId,
-                'library_id'        => $libraryId,
-                'library_name'      => $this->resolveLibraryName($libraryId),
-                'source'            => $acquisition['source'],
-                'date_acquired'     => $acquisition['date_acquired'],
-                'cost'              => $acquisition['cost'] !== '' ? $acquisition['cost'] : 0,
-                'iar'               => $acquisition['iar'] !== '' ? $acquisition['iar'] : 'iar',
-                'usable'            => $acquisition['usable'] !== '' ? (int) $acquisition['usable'] : 0,
-                'partially_damaged' => $acquisition['partially_damaged'] !== '' ? (int) $acquisition['partially_damaged'] : 0,
-                'damaged'           => $acquisition['damaged'] !== '' ? (int) $acquisition['damaged'] : 0,
-                'lost'              => $acquisition['lost'] !== '' ? (int) $acquisition['lost'] : 0,
-                'condemnable'       => $acquisition['condemnable'] !== '' ? (int) $acquisition['condemnable'] : 0,
-                'total_qty'         => $acquisition['total_quantity'] !== '' ? (int) $acquisition['total_quantity'] : 0,
-                'remarks'           => $acquisition['remarks'],
-                'encoded_by'        => $userId,
-                'date_encoded'      => $now,
-            ]);
-
-            $acquisitionIds[] = $acquisitionId;
-
-            foreach ($statusMap as $field => $statusName) {
-                $qty = (int) ($acquisition[$field] ?? 0);
-                for ($i = 0; $i < $qty; $i++) {
-                    $masterlistInserts[] = [
-                        'id'                   => (string) Str::uuid(),
-                        'print_acquisition_id' => $acquisitionId,
-                        'status'               => $statusName,
-                    ];
-                }
-            }
-        }
-
-        if (!empty($masterlistInserts)) {
-            foreach (array_chunk($masterlistInserts, 500) as $chunk) {
-                PrintMasterlist::insert($chunk);
-            }
-        }
-
-        return $acquisitionIds;
-    }
-
     // -----------------------------------------------------------------------
-    // Private — helpers
+    // PRIVATE — helpers
     // -----------------------------------------------------------------------
 
-    private function resolveLibraryName(string $libraryId): string
+    private function updateSearchVector(string $printResourceId): void
     {
-        return SchoolLibrary::find($libraryId)?->library_name
-            ?? DivisionLibrary::find($libraryId)?->library_name
-            ?? RegionLibrary::find($libraryId)?->library_name
-            ?? 'Unknown Library';
-    }
-
-    /**
-     * Rebuild search vectors AFTER the transaction commits so all rows are
-     * visible to the PostgreSQL functions.
-     *
-     * - print_resources vector : title + authors + isbn + publisher (no library)
-     * - print_acquisitions vector : full metadata + library info per copy
-     *
-     * @param string   $printResourceId
-     * @param string[] $acquisitionIds
-     */
-    private function updateSearchVectors(string $printResourceId, array $acquisitionIds): void
-    {
-        // Rebuild the resource-level vector
         DB::statement('
             UPDATE print_resources
             SET search_vector = build_print_resource_search_vector(id)
             WHERE id = ?
         ', [$printResourceId]);
-
-        // Rebuild each acquisition vector — pass print_id + library_id directly
-        // to avoid the chicken-and-egg problem in the PG function
-        if (!empty($acquisitionIds)) {
-            $placeholders = implode(',', array_fill(0, count($acquisitionIds), '?'));
-
-            DB::statement("
-                UPDATE print_acquisitions
-                SET search_vector = build_print_acquisition_search_vector(print_id, library_id)
-                WHERE id IN ({$placeholders})
-            ", $acquisitionIds);
-        }
     }
 }

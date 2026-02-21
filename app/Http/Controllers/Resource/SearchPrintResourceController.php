@@ -60,6 +60,7 @@ class SearchPrintResourceController extends BaseController
         // Get PrintResources grouped by uniqueness_hash
         $resources = PrintResource::with(['printTitle.authors', 'type'])
             ->whereIn('print_title_id', $titleIds)
+            ->where('status', 1)
             ->get()
             ->groupBy('uniqueness_hash'); // one card per unique hash
 

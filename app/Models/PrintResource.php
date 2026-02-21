@@ -33,7 +33,9 @@ class PrintResource extends Model
         'cover',
         'uniqueness_hash',
         'status',
-        'station_type'
+        'station_type',
+        'station_id',
+        'encoded_by',
     ];
 
 

@@ -16,8 +16,7 @@
             <h2 class="text-xl font-semibold text-gray-800">Search Existing Print Resources</h2>
             <p class="text-sm text-gray-500 mt-1">
                 Search the masterlist by title or author. If a resource already exists, select it and add your acquisition records.
-                If no title is found, you can
-                <a href="{{ route('add-resources') }}" class="text-blue-600 underline hover:text-blue-800">add a new print resource here</a>.
+                If no title is found, you can manually add a new print resource to the masterlist via request.
             </p>
         </div>
 
@@ -72,8 +71,7 @@
                     d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/>
             </svg>
             <p class="font-medium">No titles found</p>
-            <p class="text-sm mt-1">Try a different keyword, or
-                <a href="{{ route('add-resources') }}" class="text-blue-600 underline">add a new print resource</a>.
+            <p class="text-sm mt-1">Try a different keyword.
             </p>
         </div>
 
