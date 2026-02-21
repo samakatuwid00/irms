@@ -887,4 +887,4 @@
 </script>
 
 @vite(['resources/js/add-print-resource.js'])
-@endsections
+@endsection

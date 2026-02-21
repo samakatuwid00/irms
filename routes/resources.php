@@ -13,7 +13,6 @@ use App\Http\Controllers\Resource\AddNonPrintResourceController;
 // ============================================================
 // RESOURCE NAVIGATION
 // ============================================================
-Route::get('/add-resources', [AddResourceController::class, 'index'])->name('add-resources');
 Route::get('/print-resources', [PrintResourceController::class, 'index'])->name('print-resources');
 Route::get('/nonprint-resources', [NonPrintResourceController::class, 'index'])->name('nonprint-resources');
 
@@ -64,8 +63,9 @@ Route::post('/resources/search-print/{id}/add-inline', [SearchPrintResourceContr
 // ============================================================
 // MANAGE RESOURCE
 // ============================================================
-Route::post('/add-print-resources', [AddResourceController::class, 'addPrintResource'])->name('add-print-resource');
-Route::post('/add-nonprint-resources', [AddResourceController::class, 'addNonPrintResource'])->name('add-nonprint-resource');
+Route::post('/add-print-resources', [AddPrintResourceController::class, 'addPrintResource'])->name('add-print-resource');
+Route::post('/add-nonprint-resources', [AddNonPrintResourceController::class, 'addNonPrintResource'])->name('add-nonprint-resource');
+
 Route::get('/edit-resource/{id}', [EditResourceController::class, 'index'])->name('edit-resource');
 Route::put('/update-print-resource/{id}', [EditResourceController::class, 'updatePrintResource'])->name('update-print-resource');
 Route::put('/update-nonprint-resource/{id}', [EditResourceController::class, 'updateNonPrintResource'])->name('update-nonprint-resource');
