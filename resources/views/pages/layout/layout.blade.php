@@ -196,6 +196,20 @@
                         </ul>
                     </li>
 
+                    <!-- Masterlist (Mobile) -->
+                    @if (Auth::check() && in_array(Auth::user()?->userType?->level, [3, 4]))
+                        <li>
+                            <a href="{{ route('masterlist.index') }}"
+                               class="flex items-center gap-3 px-3 py-2.5 text-sm rounded-lg transition-colors
+                                      {{ request()->routeIs('masterlist.*') ? 'bg-blue-100 text-blue-600' : 'text-gray-700 hover:bg-gray-100' }}">
+                                <svg class="w-5 h-5" xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                    <path d="M4 6h16M4 10h16M4 14h16M4 18h16"/>
+                                </svg>
+                                Masterlist
+                            </a>
+                        </li>
+                    @endif
+
                     <!-- Users -->
                     @if (Auth::check() && in_array(Auth::user()?->userType?->level, [1, 2, 3, 4]))
                         @php
@@ -461,6 +475,20 @@
                             </ul>
                         </div>
                     </li>
+
+                    <!-- Masterlist (Desktop) -->
+                    @if (Auth::check() && in_array(Auth::user()?->userType?->level, [3, 4]))
+                        <li class="rounded-lg transition-colors">
+                            <a href="{{ route('masterlist.index') }}"
+                               class="flex items-center gap-x-3.5 py-2 px-2.5 text-sm text-gray-800 rounded-lg
+                                      {{ request()->routeIs('masterlist.*') ? 'bg-blue-100 text-blue-600' : 'hover:bg-gray-100' }}">
+                                <svg class="size-4" xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                    <path d="M4 6h16M4 10h16M4 14h16M4 18h16"/>
+                                </svg>
+                                Masterlist
+                            </a>
+                        </li>
+                    @endif
 
                     <!-- Users -->
                     @if (Auth::check() && in_array(Auth::user()?->userType?->level, [1, 2, 3, 4]))

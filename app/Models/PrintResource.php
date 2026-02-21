@@ -36,6 +36,7 @@ class PrintResource extends Model
         'station_type',
         'station_id',
         'encoded_by',
+        'approver_station'
     ];
 
 

@@ -33,7 +33,8 @@
     @endif
 
     @php
-        $isEditing = isset($editResource);
+        $isEditing  = isset($editResource);
+        $isDivision = $isDivision ?? false;
     @endphp
 
     {{-- ===== PAGE-LEVEL TABS ===== --}}
@@ -47,6 +48,9 @@
                     class="page-tab-btn whitespace-nowrap pb-3 px-1 text-sm font-medium border-b-2 border-transparent text-gray-500 hover:text-gray-700">
                 {{ $isEditing ? 'Edit Request' : 'Manual Add' }}
             </button>
+
+            {{-- My Requests tab: only for school users (not division) --}}
+            @if(!$isDivision)
             <button type="button" data-page-tab="tab-requests"
                     class="page-tab-btn whitespace-nowrap pb-3 px-1 text-sm font-medium border-b-2 border-transparent text-gray-500 hover:text-gray-700">
                 My Requests
@@ -54,6 +58,7 @@
                     <span class="ml-1 inline-flex items-center justify-center px-1.5 py-0.5 text-xs font-bold leading-none text-white bg-blue-500 rounded-full">{{ $pendingCount }}</span>
                 @endif
             </button>
+            @endif
         </nav>
     </div>
 
@@ -122,6 +127,9 @@
                 @if($isEditing)
                     <h2 class="text-base font-semibold text-gray-800">Edit Resource Request</h2>
                     <p class="text-sm text-gray-500 mt-1">Update the details of your pending submission.</p>
+                @elseif($isDivision)
+                    <h2 class="text-base font-semibold text-gray-800">Add New Resource to Masterlist</h2>
+                    <p class="text-sm text-gray-500 mt-1">As a division account, resources you add are automatically approved and added to the masterlist.</p>
                 @else
                     <h2 class="text-base font-semibold text-gray-800">Submit a New Resource Request</h2>
                     <p class="text-sm text-gray-500 mt-1">Fill in the details below. Your submission will be reviewed before it appears in the masterlist.</p>
@@ -322,7 +330,15 @@
                 @endif
                 <button type="submit" id="savePrintBtn"
                         class="px-6 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed">
-                    <span id="savePrintText">{{ $isEditing ? 'Save Changes' : 'Submit Request' }}</span>
+                    <span id="savePrintText">
+                        @if($isEditing)
+                            Save Changes
+                        @elseif($isDivision)
+                            Add to Masterlist
+                        @else
+                            Submit Request
+                        @endif
+                    </span>
                     <span id="savePrintLoading" class="hidden"><i class="fas fa-spinner fa-spin mr-2"></i>Saving...</span>
                 </button>
             </div>
@@ -331,8 +347,9 @@
     </div>
 
     {{-- =================================================================
-        TAB 3 - MY REQUESTS
+        TAB 3 - MY REQUESTS  (school users only)
     ================================================================== --}}
+    @if(!$isDivision)
     <div id="tab-requests" class="page-tab-content hidden">
         <div class="space-y-4">
             <div class="flex items-center justify-between">
@@ -350,6 +367,7 @@
                             <th class="px-3 py-3 text-left">Publisher</th>
                             <th class="px-3 py-3 text-left">Edition</th>
                             <th class="px-3 py-3 text-left">Copyright</th>
+                            <th class="px-3 py-3 text-left">Subjects / Grades</th>
                             <th class="px-3 py-3 text-center">Status</th>
                             <th class="px-3 py-3 text-center">Date Submitted</th>
                             <th class="px-3 py-3 text-center">Actions</th>
@@ -362,16 +380,31 @@
                                     <img src="{{ $resource->cover ? asset('storage/' . $resource->cover) : asset('assets/images/def.jpg') }}"
                                         alt="cover" class="w-9 h-12 object-cover rounded border border-gray-200 shadow-sm">
                                 </td>
-                                <td class="px-3 py-2 font-medium text-gray-900 max-w-[180px]">
-                                    <span title="{{ $resource->printTitle->title ?? '' }}">{{ Str::limit($resource->printTitle->title ?? '-', 40) }}</span>
+                                <td class="px-3 py-2 font-medium text-gray-900 max-w-40">
+                                    <span title="{{ $resource->printTitle->title ?? '' }}">{{ Str::limit($resource->printTitle->title ?? '-', 38) }}</span>
                                 </td>
-                                <td class="px-3 py-2 text-gray-600 max-w-[140px]">
-                                    {{ Str::limit($resource->printTitle->authors->pluck('author_name')->join(', ') ?: '-', 35) }}
+                                <td class="px-3 py-2 text-gray-600 max-w-32.5">
+                                    {{ Str::limit($resource->printTitle->authors->pluck('author_name')->join(', ') ?: '-', 32) }}
                                 </td>
-                                <td class="px-3 py-2 text-gray-600">{{ $resource->type->type_name ?? '-' }}</td>
+                                <td class="px-3 py-2 text-gray-600 whitespace-nowrap">{{ $resource->type->type_name ?? '-' }}</td>
                                 <td class="px-3 py-2 text-gray-600">{{ $resource->publisher ?? '-' }}</td>
                                 <td class="px-3 py-2 text-gray-600">{{ $resource->edition ?? '-' }}</td>
                                 <td class="px-3 py-2 text-gray-600">{{ $resource->copyright ?? '-' }}</td>
+
+                                {{-- Subject / Grade Levels --}}
+                                <td class="px-3 py-2 text-gray-600 text-xs max-w-50">
+                                    @php
+                                        $sglIds = $resource->subject_grade_level_ids ? explode(',', $resource->subject_grade_level_ids) : [];
+                                        if (!empty($sglIds)) {
+                                            $sgls    = \App\Models\SubjectGradeLevel::with(['subject', 'gradeLevel'])->whereIn('id', $sglIds)->get();
+                                            $sglText = $sgls->map(fn($s) => ($s->subject->subject_name ?? '') . '-' . ($s->gradeLevel->grade ?? ''))->join(', ');
+                                        } else {
+                                            $sglText = '-';
+                                        }
+                                    @endphp
+                                    <span title="{{ $sglText }}">{{ Str::limit($sglText, 55) }}</span>
+                                </td>
+
                                 <td class="px-3 py-2 text-center">
                                     @if($resource->status == 0)
                                         <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">Pending</span>
@@ -383,32 +416,35 @@
                                 </td>
                                 <td class="px-3 py-2 text-center text-gray-500 text-xs whitespace-nowrap">{{ $resource->created_at?->format('M d, Y') ?? '-' }}</td>
                                 <td class="px-3 py-2 text-center">
-                                    <div class="flex justify-center gap-2">
-                                        @if($resource->status == 0)
-                                            <a href="{{ route('print-resource.edit', $resource->id) }}"
-                                            class="p-1.5 rounded hover:bg-blue-100 text-blue-600 transition-colors {{ $isEditing && $editResource->id === $resource->id ? 'bg-blue-100' : '' }}"
-                                            title="Edit">
-                                                <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                                                    <path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.687a1.875 1.875 0 112.652 2.652L7.5 19.153 3 21l1.847-4.5L16.862 4.487z"/>
-                                                </svg>
-                                            </a>
-                                        @endif
-                                        <form action="{{ route('print-resource.destroy', $resource->id) }}" method="POST"
-                                            onsubmit="return confirm('Are you sure you want to delete this request? This will also remove the title and authors if no other resources reference them.')">
-                                            @csrf
-                                            @method('DELETE')
-                                            <button type="submit" class="p-1.5 rounded hover:bg-red-100 text-red-600 transition-colors" title="Delete">
-                                                <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                                                    <path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6M9 7h6m2 0H7m3-3h4a1 1 0 011 1v1H9V5a1 1 0 011-1z"/>
-                                                </svg>
-                                            </button>
-                                        </form>
-                                    </div>
+                                    <button type="button"
+                                            class="req-view-btn inline-flex items-center gap-1 text-xs px-3 py-1.5 bg-indigo-50 text-indigo-600 border border-indigo-200 rounded-lg hover:bg-indigo-100 transition-colors whitespace-nowrap font-medium"
+                                            data-id="{{ $resource->id }}"
+                                            data-status="{{ $resource->status }}"
+                                            data-cover="{{ $resource->cover ? asset('storage/' . $resource->cover) : asset('assets/images/def.jpg') }}"
+                                            data-title="{{ $resource->printTitle->title ?? '-' }}"
+                                            data-authors="{{ $resource->printTitle->authors->pluck('author_name')->join(', ') ?: '-' }}"
+                                            data-type="{{ $resource->type->type_name ?? '-' }}"
+                                            data-publisher="{{ $resource->publisher ?? '-' }}"
+                                            data-volume="{{ $resource->volume ?? '-' }}"
+                                            data-edition="{{ $resource->edition ?? '-' }}"
+                                            data-copyright="{{ $resource->copyright ?? '-' }}"
+                                            data-isbn="{{ $resource->isbn ?? '-' }}"
+                                            data-pages="{{ $resource->pages ?? '-' }}"
+                                            data-subjects="{{ $sglText }}"
+                                            data-submitted="{{ $resource->created_at?->format('M d, Y') ?? '-' }}"
+                                            data-edit-url="{{ route('print-resource.edit', $resource->id) }}"
+                                            data-delete-url="{{ route('print-resource.destroy', $resource->id) }}">
+                                        <svg class="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+                                        </svg>
+                                        View
+                                    </button>
                                 </td>
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="10" class="text-center text-gray-400 py-10">
+                                <td colspan="11" class="text-center text-gray-400 py-10">
                                     <svg class="mx-auto mb-3 h-10 w-10 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
                                     </svg>
@@ -420,9 +456,121 @@
                     </tbody>
                 </table>
             </div>
-            @if($myRequests->hasPages())
+            @if(method_exists($myRequests, 'hasPages') && $myRequests->hasPages())
                 <div class="mt-4">{{ $myRequests->appends(['active_tab' => 'tab-requests'])->links() }}</div>
             @endif
+        </div>
+    </div>
+    @endif
+
+    {{-- ===== MY REQUESTS VIEW MODAL ===== --}}
+    <div id="reqViewModal" class="fixed inset-0 z-50 hidden overflow-y-auto" role="dialog" aria-modal="true">
+        <div id="reqModalBackdrop" class="fixed inset-0 bg-black/50 transition-opacity"></div>
+        <div class="relative min-h-screen flex items-start justify-center p-4 pt-10">
+            <div class="relative bg-white rounded-xl shadow-2xl w-full max-w-2xl z-10 mb-10">
+
+                {{-- Header --}}
+                <div class="flex items-center justify-between px-6 py-4 border-b border-gray-200">
+                    <h3 class="text-base font-semibold text-gray-800">Request Details</h3>
+                    <button id="closeReqModal" class="text-gray-400 hover:text-gray-600 transition-colors rounded-full p-1 hover:bg-gray-100">
+                        <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                        </svg>
+                    </button>
+                </div>
+
+                {{-- Body --}}
+                <div class="p-6">
+                    <div class="flex gap-5">
+                        {{-- Cover --}}
+                        <div class="shrink-0">
+                            <img id="rvm-cover" src="" alt="Cover"
+                                 class="w-28 h-40 object-cover rounded-lg border border-gray-200 shadow-sm bg-gray-100">
+                        </div>
+
+                        {{-- Info --}}
+                        <div class="flex-1 min-w-0 space-y-2.5">
+                            <div>
+                                <h4 id="rvm-title" class="text-lg font-bold text-gray-900 leading-snug"></h4>
+                                <p id="rvm-authors" class="text-sm text-gray-500 mt-0.5 italic"></p>
+                            </div>
+
+                            <div class="flex flex-wrap gap-2 pt-0.5">
+                                <span id="rvm-type-badge" class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800"></span>
+                                <span id="rvm-status-badge" class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium"></span>
+                            </div>
+
+                            <dl class="grid grid-cols-2 gap-x-6 gap-y-3 text-sm pt-1">
+                                <div>
+                                    <dt class="text-xs font-semibold text-gray-400 uppercase tracking-wide">Publisher</dt>
+                                    <dd id="rvm-publisher" class="text-gray-700 mt-0.5"></dd>
+                                </div>
+                                <div>
+                                    <dt class="text-xs font-semibold text-gray-400 uppercase tracking-wide">Copyright</dt>
+                                    <dd id="rvm-copyright" class="text-gray-700 mt-0.5"></dd>
+                                </div>
+                                <div>
+                                    <dt class="text-xs font-semibold text-gray-400 uppercase tracking-wide">Edition</dt>
+                                    <dd id="rvm-edition" class="text-gray-700 mt-0.5"></dd>
+                                </div>
+                                <div>
+                                    <dt class="text-xs font-semibold text-gray-400 uppercase tracking-wide">Volume</dt>
+                                    <dd id="rvm-volume" class="text-gray-700 mt-0.5"></dd>
+                                </div>
+                                <div>
+                                    <dt class="text-xs font-semibold text-gray-400 uppercase tracking-wide">ISBN</dt>
+                                    <dd id="rvm-isbn" class="text-gray-700 mt-0.5 font-mono text-xs tracking-wider"></dd>
+                                </div>
+                                <div>
+                                    <dt class="text-xs font-semibold text-gray-400 uppercase tracking-wide">Pages</dt>
+                                    <dd id="rvm-pages" class="text-gray-700 mt-0.5"></dd>
+                                </div>
+                                <div class="col-span-2">
+                                    <dt class="text-xs font-semibold text-gray-400 uppercase tracking-wide">Date Submitted</dt>
+                                    <dd id="rvm-submitted" class="text-gray-700 mt-0.5"></dd>
+                                </div>
+                            </dl>
+                        </div>
+                    </div>
+
+                    {{-- Subjects --}}
+                    <div class="mt-5 pt-4 border-t border-gray-100">
+                        <p class="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">Subjects / Grade Levels</p>
+                        <p id="rvm-subjects" class="text-sm text-gray-700 leading-relaxed"></p>
+                    </div>
+                </div>
+
+                {{-- Footer — edit & delete only shown for pending --}}
+                <div class="flex justify-end gap-3 px-6 py-4 border-t border-gray-100 bg-gray-50 rounded-b-xl">
+                    <button id="closeReqModalFooter"
+                            class="px-4 py-2 text-sm border border-gray-300 text-gray-600 rounded-lg hover:bg-gray-100 transition-colors">
+                        Close
+                    </button>
+
+                    {{-- Delete (pending only) --}}
+                    <form id="rvm-delete-form" method="POST" style="display:none"
+                          onsubmit="return confirm('Delete this request? The title and authors will not be removed if other resources still reference them.')">
+                        @csrf
+                        @method('DELETE')
+                        <button type="submit"
+                                class="inline-flex items-center gap-1.5 px-4 py-2 text-sm bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-medium">
+                            <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6M9 7h6m2 0H7m3-3h4a1 1 0 011 1v1H9V5a1 1 0 011-1z"/>
+                            </svg>
+                            Delete
+                        </button>
+                    </form>
+
+                    {{-- Edit (pending only) --}}
+                    <a id="rvm-edit-link" href="#" style="display:none"
+                       class="items-center gap-1.5 px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium">
+                        <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16.862 4.487l1.687-1.687a1.875 1.875 0 112.652 2.652L7.5 19.153 3 21l1.847-4.5L16.862 4.487z"/>
+                        </svg>
+                        Edit Request
+                    </a>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -488,10 +636,12 @@
         </div>
     </div>
 
-    {{-- ===== Seed edit-mode authors for JS ===== --}}
-    @if($isEditing)
-    <script>window.__editAuthors = @json($editingAuthors ?? []);</script>
-    @endif
+</div>
+
+{{-- ===== Seed edit-mode authors for JS ===== --}}
+@if($isEditing)
+<script>window.__editAuthors = @json($editingAuthors ?? []);</script>
+@endif
 
 <script>
 (function () {
@@ -499,7 +649,8 @@
     // PAGE-LEVEL TAB MANAGEMENT
     // ────────────────────────────────────────────────
     const STORAGE_KEY     = 'addPrintResource_activeTab';
-    const VALID_TABS      = ['tab-search', 'tab-add', 'tab-requests'];
+    const isDivision      = {{ $isDivision ? 'true' : 'false' }};
+    const VALID_TABS      = isDivision ? ['tab-search', 'tab-add'] : ['tab-search', 'tab-add', 'tab-requests'];
     const pageTabBtns     = document.querySelectorAll('.page-tab-btn');
     const pageTabContents = document.querySelectorAll('.page-tab-content');
 
@@ -520,31 +671,25 @@
             content.classList.toggle('hidden', content.id !== targetId);
         });
 
-        // Only save to storage on user interaction, not on forced redirect
         if (shouldSaveToStorage) {
             sessionStorage.setItem(STORAGE_KEY, targetId);
         }
     }
 
-    // Determine which tab to show on load
     let initialTab = '{{ session('active_tab') }}' ||
                      sessionStorage.getItem(STORAGE_KEY) ||
                      'tab-search';
 
-    // Force search tab after adding acquisition (via flash data)
     if ('{{ session('just_added_acquisition') }}' === '1') {
         initialTab = 'tab-search';
-        // Optional: clear the flag so refresh doesn't force it again
-        // (but usually not needed since it's a one-time flash)
     }
 
-    activatePageTab(initialTab, false);   // don't save yet — this is initial load
+    activatePageTab(initialTab, false);
 
-    // Handle manual tab clicks → update storage
     pageTabBtns.forEach(btn => {
         btn.addEventListener('click', () => {
             const tabId = btn.dataset.pageTab;
-            activatePageTab(tabId, true);   // save this choice
+            activatePageTab(tabId, true);
         });
     });
 
@@ -575,7 +720,6 @@
         });
     });
 
-    // Activate first SGL tab by default
     if (sglTabBtns.length > 0) {
         activateSglTab(sglTabBtns[0].dataset.sglTab);
     }
@@ -770,6 +914,75 @@
         div.appendChild(document.createTextNode(String(str ?? '')));
         return div.innerHTML;
     }
+
+    // ── MY REQUESTS VIEW MODAL ───────────────────────────────────────────
+    const reqViewModal      = document.getElementById('reqViewModal');
+    const reqModalBackdrop  = document.getElementById('reqModalBackdrop');
+    const closeReqBtn       = document.getElementById('closeReqModal');
+    const closeReqFooter    = document.getElementById('closeReqModalFooter');
+    const rvmDeleteForm     = document.getElementById('rvm-delete-form');
+    const rvmEditLink       = document.getElementById('rvm-edit-link');
+
+    function openReqModal(btn) {
+        const status = parseInt(btn.dataset.status);
+
+        document.getElementById('rvm-cover').src            = btn.dataset.cover;
+        document.getElementById('rvm-title').textContent    = btn.dataset.title;
+        document.getElementById('rvm-authors').textContent  = btn.dataset.authors !== '-' ? btn.dataset.authors : '';
+        document.getElementById('rvm-type-badge').textContent = btn.dataset.type;
+        document.getElementById('rvm-publisher').textContent  = btn.dataset.publisher;
+        document.getElementById('rvm-copyright').textContent  = btn.dataset.copyright;
+        document.getElementById('rvm-edition').textContent    = btn.dataset.edition;
+        document.getElementById('rvm-volume').textContent     = btn.dataset.volume;
+        document.getElementById('rvm-isbn').textContent       = btn.dataset.isbn;
+        document.getElementById('rvm-pages').textContent      = btn.dataset.pages;
+        document.getElementById('rvm-subjects').textContent   = btn.dataset.subjects;
+        document.getElementById('rvm-submitted').textContent  = btn.dataset.submitted;
+
+        // Status badge
+        const statusBadge = document.getElementById('rvm-status-badge');
+        if (status === 0) {
+            statusBadge.textContent = 'Pending';
+            statusBadge.className = 'inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800';
+        } else if (status === 1) {
+            statusBadge.textContent = '✓ Approved';
+            statusBadge.className = 'inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800';
+        } else {
+            statusBadge.textContent = 'Rejected';
+            statusBadge.className = 'inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800';
+        }
+
+        // Edit & Delete only for pending
+        if (status === 0) {
+            rvmEditLink.href = btn.dataset.editUrl;
+            rvmEditLink.style.display = 'inline-flex';
+            rvmDeleteForm.action = btn.dataset.deleteUrl;
+            rvmDeleteForm.style.display = 'block';
+        } else {
+            rvmEditLink.style.display = 'none';
+            rvmDeleteForm.style.display = 'none';
+        }
+
+        reqViewModal.classList.remove('hidden');
+        document.body.style.overflow = 'hidden';
+    }
+
+    function closeReqModal() {
+        reqViewModal.classList.add('hidden');
+        document.body.style.overflow = '';
+    }
+
+    document.querySelectorAll('.req-view-btn').forEach(btn => {
+        btn.addEventListener('click', () => openReqModal(btn));
+    });
+
+    closeReqBtn    && closeReqBtn.addEventListener('click', closeReqModal);
+    closeReqFooter && closeReqFooter.addEventListener('click', closeReqModal);
+    reqModalBackdrop && reqModalBackdrop.addEventListener('click', closeReqModal);
+
+    document.addEventListener('keydown', e => {
+        if (e.key === 'Escape' && !reqViewModal.classList.contains('hidden')) closeReqModal();
+    });
 
 })();
 </script>

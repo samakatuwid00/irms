@@ -30,6 +30,7 @@ class AddPrintResourceController extends BaseController
 
     // -----------------------------------------------------------------------
     // index — show the page (Search Existing / Manual Add / My Requests tabs)
+    //         Division users (level 3) do not see the My Requests tab.
     // -----------------------------------------------------------------------
 
     public function index()
@@ -38,7 +39,7 @@ class AddPrintResourceController extends BaseController
     }
 
     // -----------------------------------------------------------------------
-    // store — save a new pending print-resource request
+    // store — save a new print-resource request or direct entry
     // -----------------------------------------------------------------------
 
     public function store(Request $request)
@@ -47,6 +48,18 @@ class AddPrintResourceController extends BaseController
 
         $this->printResourceService->addPrintResource($validated);
 
+        $user  = Auth::user();
+        $level = $user->userType?->level ?? 0;
+
+        if ($level === 3) {
+            // Division: redirect to masterlist since it's auto-approved
+            return redirect()
+                ->route('masterlist.index')
+                ->with('success', 'Resource has been added to the masterlist.')
+                ->with('active_tab', 'tab-masterlist');
+        }
+
+        // School: redirect back to add page, show My Requests tab
         return redirect()
             ->route('print-resource.create')
             ->with('success', 'Your resource request has been submitted and is pending approval.')
@@ -55,25 +68,36 @@ class AddPrintResourceController extends BaseController
 
     // -----------------------------------------------------------------------
     // edit — reuse the same page/form, just pass the resource to pre-fill
+    //        Only level 1 (school) users may edit their own pending requests.
     // -----------------------------------------------------------------------
 
     public function edit(string $id)
     {
-        $user     = Auth::user();
-        $resource = PrintResource::with(['printTitle.authors', 'type'])
-            ->where('id',           $id)
-            ->where('station_type', 'school')
-            ->where('station_id',   $user->station_id)
-            ->where('encoded_by',   $user->id)
-            ->where('status',       0)   // only pending requests can be edited
-            ->firstOrFail();
+        $user  = Auth::user();
+        $level = $user->userType?->level ?? 0;
+
+        if ($level == 1) {
+
+            $resource = PrintResource::with(['printTitle.authors', 'type'])
+                ->where('id', $id)
+                ->where('station_type', 'school')
+                ->where('station_id', $user->station_id)
+                ->where('encoded_by', $user->id)
+                ->where('status', 0)
+                ->firstOrFail();
+
+        } else {
+            abort(403, 'Unauthorized access.');
+        }
 
         $data = $this->buildViewData();
 
-        // Extra variables the blade uses to pre-fill the form
-        $data['editResource']  = $resource;
-        $data['editingAuthors'] = $resource->printTitle->authors->pluck('author_name')->toArray();
-        $data['editingSglIds']  = $resource->subject_grade_level_ids
+        $data['editResource']   = $resource;
+        $data['editingAuthors'] = $resource->printTitle->authors
+            ->pluck('author_name')
+            ->toArray();
+
+        $data['editingSglIds'] = $resource->subject_grade_level_ids
             ? explode(',', $resource->subject_grade_level_ids)
             : [];
 
@@ -81,7 +105,7 @@ class AddPrintResourceController extends BaseController
     }
 
     // -----------------------------------------------------------------------
-    // update — save edits to a pending resource request
+    // update — save edits to a pending resource request (school only)
     // -----------------------------------------------------------------------
 
     public function update(Request $request, string $id)
@@ -105,7 +129,9 @@ class AddPrintResourceController extends BaseController
     }
 
     // -----------------------------------------------------------------------
-    // destroy — delete a pending request and clean up orphaned title/authors
+    // destroy — delete a pending request (school only).
+    //           Title and authors are cleaned up only if nothing else
+    //           references them.
     // -----------------------------------------------------------------------
 
     public function destroy(string $id)
@@ -116,6 +142,7 @@ class AddPrintResourceController extends BaseController
             ->where('station_type', 'school')
             ->where('station_id',   $user->station_id)
             ->where('encoded_by',   $user->id)
+            ->where('status',       0)
             ->firstOrFail();
 
         DB::transaction(function () use ($resource) {
@@ -158,11 +185,12 @@ class AddPrintResourceController extends BaseController
 
     /**
      * Shared data needed by both index() and edit().
-     * Returns the array passed to the view.
+     * For division users (level 3), myRequests and pendingCount are omitted.
      */
     private function buildViewData(): array
     {
         $user      = Auth::user();
+        $level     = $user->userType?->level ?? 0;
         $stationId = $user->station_id;
 
         $subjectGradeLevels = SubjectGradeLevel::query()
@@ -182,16 +210,32 @@ class AddPrintResourceController extends BaseController
 
         $printTypes = PrintType::all();
 
-        $myRequests = PrintResource::with(['printTitle.authors', 'type'])
-            ->where('station_type', 'school')
-            ->where('station_id',   $stationId)
-            ->where('encoded_by',   $user->id)
-            ->latest()
-            ->paginate(15);
+        // Division users (level 3) don't have a "My Requests" tab on this page
+        if ($level === 3) {
+            $myRequests   = collect(); // empty
+            $pendingCount = 0;
+            $isDivision   = true;
+        } else {
+            $myRequests = PrintResource::with(['printTitle.authors', 'type'])
+                ->where('station_type', 'school')
+                ->where('station_id',   $stationId)
+                ->where('encoded_by',   $user->id)
+                ->latest()
+                ->paginate(15);
 
-        $pendingCount = $myRequests->where('status', 0)->count();
+            $pendingCount = $myRequests->where('status', 0)->count();
+            $isDivision   = false;
+        }
 
-        return compact('user', 'subjectGradeLevels', 'printTypes', 'myRequests', 'pendingCount');
+        return compact(
+            'user',
+            'subjectGradeLevels',
+            'printTypes',
+            'myRequests',
+            'pendingCount',
+            'isDivision',
+            'level'
+        );
     }
 
     /**

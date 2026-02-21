@@ -49,7 +49,7 @@
         </div>
     @endif
 
-<form id="nonprintForm" action="{{ route('add-nonprint-resource') }}" class="resource-form space-y-8" method="POST" enctype="multipart/form-data">
+<form id="nonprintForm" action="{{ route('nonprint-resource.create') }}" class="resource-form space-y-8" method="POST" enctype="multipart/form-data">
     @csrf
 
     {{-- =========================

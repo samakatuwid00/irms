@@ -3,8 +3,10 @@
 namespace App\Services\Resource\Actions;
 
 use App\Models\Author;
+use App\Models\District;
 use App\Models\PrintResource;
 use App\Models\PrintTitle;
+use App\Models\School;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -18,10 +20,11 @@ class AddPrintResourceService
     // -----------------------------------------------------------------------
 
     /**
-     * Create a new pending print-resource request from a school user.
-     * No acquisition data is attached at this stage.
+     * Create a new print-resource.
+     * - Level 1 (school): status = 0 (pending), approver_station = division UUID
+     * - Level 3 (division): status = 1 (approved), no approver_station needed
      *
-     * @param  array  $data  Validated form data (no 'acquisitions' key expected).
+     * @param  array  $data  Validated form data.
      * @return string|null   The new PrintResource UUID, or null on failure.
      */
     public function addPrintResource(array $data): ?string
@@ -44,7 +47,7 @@ class AddPrintResourceService
                 $coverPath = $this->handleImageUpload($data['image'], $data['title']);
             }
 
-            // 4. Create the resource (pending status, school station)
+            // 4. Create the resource
             $resource        = $this->createPrintResource($data, $title->id, $authorIds, $coverPath);
             $printResourceId = $resource->id;
         });
@@ -58,7 +61,7 @@ class AddPrintResourceService
     }
 
     /**
-     * Update an existing pending print-resource request.
+     * Update an existing print-resource.
      * Only the resource's own fields (title, authors, metadata, cover) change.
      */
     public function updatePrintResource(PrintResource $resource, array $data): void
@@ -204,13 +207,33 @@ class AddPrintResourceService
     }
 
     /**
+     * Resolve the division UUID for a school user.
+     * School → District → Division.
+     */
+    private function resolveDivisionId(string $stationId): ?string
+    {
+        // station_id is the school's UUID; look up district then division
+        $school = School::with('district.division')->find($stationId);
+
+        return $school?->district?->division?->id ?? null;
+    }
+
+    /**
      * Create (or retrieve an existing) print resource row.
      *
-     * For school users this is always a PENDING request:
-     *   status       = 0  (0 = pending, 1 = approved, 2 = rejected)
-     *   station_type = 'school'
-     *   station_id   = encoder's station_id
-     *   encoded_by   = Auth user id
+     * Level 1 (school):
+     *   status          = 0  (pending)
+     *   station_type    = 'school'
+     *   station_id      = school's station_id
+     *   encoded_by      = Auth user id
+     *   approver_station = division UUID (resolved via school → district → division)
+     *
+     * Level 3 (division):
+     *   status          = 1  (approved — auto-approved)
+     *   station_type    = 'division'
+     *   station_id      = division's station_id
+     *   encoded_by      = Auth user id
+     *   approver_station = null (not needed)
      */
     private function createPrintResource(array $data, string $titleId, array $authorIds, ?string $coverPath): PrintResource
     {
@@ -224,7 +247,21 @@ class AddPrintResourceService
 
         $uniquenessHash = $this->buildUniquenessHash($titleId, $data['type'], $authorIds, $data);
 
-        $user = Auth::user();
+        $user  = Auth::user();
+        $level = $user->userType?->level ?? 0;
+
+        // Determine status and approver_station based on user level
+        if ($level === 3) {
+            // Division: auto-approve
+            $status          = 1;
+            $stationType     = 'division';
+            $approverStation = null;
+        } else {
+            // School (level 1) or any other: pending, needs division approval
+            $status          = 0;
+            $stationType     = 'school';
+            $approverStation = $this->resolveDivisionId($user->station_id);
+        }
 
         try {
             return PrintResource::firstOrCreate(
@@ -241,11 +278,11 @@ class AddPrintResourceService
                     'isbn'                    => $data['isbn']      ?? null,
                     'subject_grade_level_ids' => $gradeLevelIds,
                     'cover'                   => $coverPath,
-                    // ── Request / approval fields ──────────────────────────
-                    'status'                  => 0,           // 0 = pending
-                    'station_type'            => 'school',
+                    'status'                  => $status,
+                    'station_type'            => $stationType,
                     'station_id'              => $user->station_id,
                     'encoded_by'              => $user->id,
+                    'approver_station'        => $approverStation,
                 ]
             );
         } catch (UniqueConstraintViolationException) {
