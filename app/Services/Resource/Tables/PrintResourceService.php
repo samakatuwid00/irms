@@ -72,10 +72,7 @@ class PrintResourceService
             return $this->emptyPaginator($request);
         }
 
-        $query = PrintResource::with(['printTitle.authors', 'type', 'printAcquisitions'])
-            ->whereHas('printAcquisitions', function ($q) use ($divisionLibraryIds) {
-                $q->whereIn('library_id', $divisionLibraryIds->toArray());
-            });
+        $query = $this->buildLibraryQuery($divisionLibraryIds);
 
         $this->applySearch($query, (string) $request->input('division_search', ''));
 
@@ -408,19 +405,18 @@ class PrintResourceService
     /**
      * Build a base PrintResource query scoped to the given library IDs.
      *
-     * Because library_id now lives on print_acquisitions, we use
-     * whereHas() so that a resource is included only when it has at least
-     * one acquisition belonging to one of the supplied library IDs.
-     * The eager-loaded `printAcquisitions` relation is intentionally NOT
-     * filtered here so that all acquisitions for the resource are available
-     * to the model accessors (quantities, library_name, showDetails, etc.).
+     * Only resources that have at least one acquisition belonging to one of
+     * the supplied library IDs AND have at least one acquisition overall
+     * (total_qty > 0) are included. This ensures resources with zero
+     * acquisitions across all levels are never displayed.
      */
     private function buildLibraryQuery(Collection $libraryIds)
     {
         return PrintResource::with(['printTitle.authors', 'type', 'printAcquisitions'])
             ->whereHas('printAcquisitions', function ($q) use ($libraryIds) {
                 $q->whereIn('library_id', $libraryIds->toArray());
-            });
+            })
+            ->whereHas('printAcquisitions');  // guarantees at least one acquisition exists globally
     }
 
     private function getResources(Request $request, int $level, Collection $libraryIds)

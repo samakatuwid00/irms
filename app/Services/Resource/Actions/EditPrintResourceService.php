@@ -26,37 +26,25 @@ class EditPrintResourceService
      * intentionally NOT touched here — only PrintAcquisition and
      * PrintMasterlist rows are written.
      *
-     * Returns ['deleted' => bool, 'resource' => PrintResource|null].
-     * 'deleted' is true when every acquisition was removed / zeroed out,
-     * causing the parent resource to be deleted as well.
+     * Returns ['resource' => PrintResource].
      */
     public function updatePrintResource(string $id, array $data): array
     {
-        $shouldDeleteResource = false;
-        $printResource        = null;
+        $printResource = null;
 
-        DB::transaction(function () use ($id, $data, &$shouldDeleteResource, &$printResource) {
+        DB::transaction(function () use ($id, $data, &$printResource) {
             $printResource = PrintResource::with('printAcquisitions')->findOrFail($id);
 
             // Update acquisition rows only
             $this->updateAcquisitions($printResource, $data['acquisitions']);
 
-            // If no acquisitions remain with qty > 0, delete the resource
             $printResource->refresh();
-            if ($printResource->printAcquisitions()->count() === 0) {
-                $printResource->delete();
-                $shouldDeleteResource = true;
-                $printResource        = null;
-            }
         });
 
         // Rebuild full-text search vector after the transaction commits
-        if (! $shouldDeleteResource) {
-            $this->updateSearchVector($id);
-        }
+        $this->updateSearchVector($id);
 
         return [
-            'deleted'  => $shouldDeleteResource,
             'resource' => $printResource,
         ];
     }
