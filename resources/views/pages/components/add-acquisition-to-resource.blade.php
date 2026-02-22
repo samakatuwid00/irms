@@ -125,12 +125,12 @@
 
                 {{-- Library selector (now part of each acquisition) --}}
                 <div>
-                    <label class="block text-sm font-medium mb-1">
-                        Library <span class="text-red-500">*</span>
-                        <span class="text-xs font-normal text-gray-400">(saved with each acquisition)</span>
-                    </label>
 
                     @if (Auth::user()->userType?->level === 3)
+                        <label class="block text-sm font-medium mb-1">
+                            Library <span class="text-red-500">*</span>
+                            <span class="text-xs font-normal text-gray-400">(saved with each acquisition)</span>
+                        </label>
                         {{-- Division user: dropdown of their division's libraries --}}
                         <select id="acqLibraryId" class="w-full border border-gray-300 rounded px-3 py-2 text-sm" required>
                             <option value="" disabled selected>Select library</option>
@@ -145,17 +145,11 @@
                         <input id="acqLibraryId" type="hidden"
                             value="{{ $regionLibrary->id ?? '' }}"
                             data-name="{{ $regionLibrary->library_name ?? '' }}">
-                        <p class="text-sm text-gray-700 border border-gray-200 bg-white rounded px-3 py-2">
-                            {{ $regionLibrary->library_name ?? 'Region Library' }}
-                        </p>
                     @elseif (Auth::user()->userType?->level === 1)
                         {{-- School user: single fixed library --}}
                         <input id="acqLibraryId" type="hidden"
                             value="{{ $schoolLibrary->id ?? '' }}"
                             data-name="{{ $schoolLibrary->library_name ?? '' }}">
-                        <p class="text-sm text-gray-700 border border-gray-200 bg-white rounded px-3 py-2">
-                            {{ $schoolLibrary->library_name ?? 'School Library' }}
-                        </p>
                     @else
                         <input id="acqLibraryId" type="hidden" value="" data-name="">
                         <p class="text-sm text-yellow-600">No library assigned to your account.</p>

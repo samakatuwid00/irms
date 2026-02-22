@@ -35,19 +35,19 @@ class EditPrintResourceService
         DB::transaction(function () use ($id, $data, &$printResource) {
             $printResource = PrintResource::with('printAcquisitions')->findOrFail($id);
 
-            // Update acquisition rows only
             $this->updateAcquisitions($printResource, $data['acquisitions']);
 
             $printResource->refresh();
         });
 
-        // Rebuild full-text search vector after the transaction commits
         $this->updateSearchVector($id);
 
         return [
             'resource' => $printResource,
         ];
     }
+
+
 
     // -------------------------------------------------------------------------
     // ACQUISITIONS

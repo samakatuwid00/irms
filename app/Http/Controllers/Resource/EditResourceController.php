@@ -124,19 +124,17 @@ class EditResourceController extends BaseController
     public function updatePrintResource(Request $request, $id)
     {
         $validated = $request->validate([
-            'acquisitions' => 'required|string',
+            'library_id'   => 'required|string|max:36',
+            'acquisitions' => 'nullable|string',
         ]);
 
-        $result = $this->printResourceService->updatePrintResource($id, $validated);
+        // Default to an empty JSON array if nothing was submitted
+        $validated['acquisitions'] = $validated['acquisitions'] ?? '[]';
 
-        if ($result['deleted']) {
-            return redirect()
-                ->route('print-resources')
-                ->with('success', 'All acquisitions were removed so the print resource has been deleted.');
-        }
+        $this->printResourceService->updatePrintResource($id, $validated);
 
         return redirect()
-            ->route('edit-resource', ['id' => $id])
+            ->route('print-resources')
             ->with('success', 'Acquisitions updated successfully.');
     }
 
