@@ -136,8 +136,9 @@
                 @endif
             </div>
             @if($isEditing)
-                <button type="button" data-page-tab="tab-requests"
-                        class="page-tab-btn text-sm text-blue-600 hover:underline flex items-center gap-1 mt-1">
+                {{-- Back button: resets form and goes back to My Requests tab --}}
+                <button type="button" id="backToRequestsBtn"
+                        class="text-sm text-blue-600 hover:underline flex items-center gap-1 mt-1">
                     &larr; Back to My Requests
                 </button>
             @endif
@@ -323,8 +324,9 @@
             {{-- SUBMIT / CANCEL --}}
             <div class="flex justify-end gap-3">
                 @if($isEditing)
-                    <button type="button" data-page-tab="tab-requests"
-                            class="page-tab-btn px-5 py-2 border border-gray-300 text-gray-700 rounded hover:bg-gray-50 text-sm">
+                    {{-- Cancel: resets form, goes back to My Requests --}}
+                    <button type="button" id="cancelEditBtn"
+                            class="px-5 py-2 border border-gray-300 text-gray-700 rounded hover:bg-gray-50 text-sm">
                         Cancel
                     </button>
                 @endif
@@ -415,31 +417,75 @@
                                     @endif
                                 </td>
                                 <td class="px-3 py-2 text-center text-gray-500 text-xs whitespace-nowrap">{{ $resource->created_at?->format('M d, Y') ?? '-' }}</td>
+
+                                {{-- ── ACTIONS COLUMN ── --}}
                                 <td class="px-3 py-2 text-center">
-                                    <button type="button"
-                                            class="req-view-btn inline-flex items-center gap-1 text-xs px-3 py-1.5 bg-indigo-50 text-indigo-600 border border-indigo-200 rounded-lg hover:bg-indigo-100 transition-colors whitespace-nowrap font-medium"
-                                            data-id="{{ $resource->id }}"
-                                            data-status="{{ $resource->status }}"
-                                            data-cover="{{ $resource->cover ? asset('storage/' . $resource->cover) : asset('assets/images/def.jpg') }}"
-                                            data-title="{{ $resource->printTitle->title ?? '-' }}"
-                                            data-authors="{{ $resource->printTitle->authors->pluck('author_name')->join(', ') ?: '-' }}"
-                                            data-type="{{ $resource->type->type_name ?? '-' }}"
-                                            data-publisher="{{ $resource->publisher ?? '-' }}"
-                                            data-volume="{{ $resource->volume ?? '-' }}"
-                                            data-edition="{{ $resource->edition ?? '-' }}"
-                                            data-copyright="{{ $resource->copyright ?? '-' }}"
-                                            data-isbn="{{ $resource->isbn ?? '-' }}"
-                                            data-pages="{{ $resource->pages ?? '-' }}"
-                                            data-subjects="{{ $sglText }}"
-                                            data-submitted="{{ $resource->created_at?->format('M d, Y') ?? '-' }}"
-                                            data-edit-url="{{ route('print-resource.edit', $resource->id) }}"
-                                            data-delete-url="{{ route('print-resource.destroy', $resource->id) }}">
-                                        <svg class="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
-                                        </svg>
-                                        View
-                                    </button>
+                                    <div class="flex items-center justify-center gap-1.5">
+
+                                        {{-- View Details (always visible) --}}
+                                        <div class="relative group">
+                                            <button type="button"
+                                                    class="req-view-btn inline-flex items-center justify-center w-8 h-8 rounded-lg bg-indigo-50 text-indigo-600 border border-indigo-200 hover:bg-indigo-100 transition-colors"
+                                                    data-id="{{ $resource->id }}"
+                                                    data-status="{{ $resource->status }}"
+                                                    data-cover="{{ $resource->cover ? asset('storage/' . $resource->cover) : asset('assets/images/def.jpg') }}"
+                                                    data-title="{{ $resource->printTitle->title ?? '-' }}"
+                                                    data-authors="{{ $resource->printTitle->authors->pluck('author_name')->join(', ') ?: '-' }}"
+                                                    data-type="{{ $resource->type->type_name ?? '-' }}"
+                                                    data-publisher="{{ $resource->publisher ?? '-' }}"
+                                                    data-volume="{{ $resource->volume ?? '-' }}"
+                                                    data-edition="{{ $resource->edition ?? '-' }}"
+                                                    data-copyright="{{ $resource->copyright ?? '-' }}"
+                                                    data-isbn="{{ $resource->isbn ?? '-' }}"
+                                                    data-pages="{{ $resource->pages ?? '-' }}"
+                                                    data-subjects="{{ $sglText }}"
+                                                    data-submitted="{{ $resource->created_at?->format('M d, Y') ?? '-' }}"
+                                                    data-edit-url="{{ route('print-resource.edit', $resource->id) }}"
+                                                    data-delete-url="{{ route('print-resource.destroy', $resource->id) }}">
+                                                <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+                                                </svg>
+                                            </button>
+                                            <span class="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 whitespace-nowrap rounded bg-gray-800 px-2 py-1 text-xs text-white opacity-0 group-hover:opacity-100 transition-opacity z-10">
+                                                View Details
+                                            </span>
+                                        </div>
+
+                                        @if($resource->status == 0)
+                                            {{-- Edit — full page nav to edit route; JS will open tab-add on load --}}
+                                            <div class="relative group">
+                                                <a href="{{ route('print-resource.edit', $resource->id) }}"
+                                                   class="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-blue-50 text-blue-600 border border-blue-200 hover:bg-blue-100 transition-colors">
+                                                    <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16.862 4.487l1.687-1.687a1.875 1.875 0 112.652 2.652L7.5 19.153 3 21l1.847-4.5L16.862 4.487z"/>
+                                                    </svg>
+                                                </a>
+                                                <span class="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 whitespace-nowrap rounded bg-gray-800 px-2 py-1 text-xs text-white opacity-0 group-hover:opacity-100 transition-opacity z-10">
+                                                    Edit Request
+                                                </span>
+                                            </div>
+
+                                            {{-- Delete (pending only) --}}
+                                            <div class="relative group">
+                                                <form method="POST" action="{{ route('print-resource.destroy', $resource->id) }}"
+                                                      onsubmit="return confirm('Delete this request? The title and authors will not be removed if other resources still reference them.')">
+                                                    @csrf
+                                                    @method('DELETE')
+                                                    <button type="submit"
+                                                            class="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-red-50 text-red-600 border border-red-200 hover:bg-red-100 transition-colors">
+                                                        <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6M9 7h6m2 0H7m3-3h4a1 1 0 011 1v1H9V5a1 1 0 011-1z"/>
+                                                        </svg>
+                                                    </button>
+                                                </form>
+                                                <span class="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 whitespace-nowrap rounded bg-gray-800 px-2 py-1 text-xs text-white opacity-0 group-hover:opacity-100 transition-opacity z-10">
+                                                    Delete
+                                                </span>
+                                            </div>
+                                        @endif
+
+                                    </div>
                                 </td>
                             </tr>
                         @empty
@@ -482,24 +528,19 @@
                 {{-- Body --}}
                 <div class="p-6">
                     <div class="flex gap-5">
-                        {{-- Cover --}}
                         <div class="shrink-0">
                             <img id="rvm-cover" src="" alt="Cover"
                                  class="w-28 h-40 object-cover rounded-lg border border-gray-200 shadow-sm bg-gray-100">
                         </div>
-
-                        {{-- Info --}}
                         <div class="flex-1 min-w-0 space-y-2.5">
                             <div>
                                 <h4 id="rvm-title" class="text-lg font-bold text-gray-900 leading-snug"></h4>
                                 <p id="rvm-authors" class="text-sm text-gray-500 mt-0.5 italic"></p>
                             </div>
-
                             <div class="flex flex-wrap gap-2 pt-0.5">
                                 <span id="rvm-type-badge" class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800"></span>
                                 <span id="rvm-status-badge" class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium"></span>
                             </div>
-
                             <dl class="grid grid-cols-2 gap-x-6 gap-y-3 text-sm pt-1">
                                 <div>
                                     <dt class="text-xs font-semibold text-gray-400 uppercase tracking-wide">Publisher</dt>
@@ -532,43 +573,17 @@
                             </dl>
                         </div>
                     </div>
-
-                    {{-- Subjects --}}
                     <div class="mt-5 pt-4 border-t border-gray-100">
                         <p class="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">Subjects / Grade Levels</p>
                         <p id="rvm-subjects" class="text-sm text-gray-700 leading-relaxed"></p>
                     </div>
                 </div>
-
-                {{-- Footer — edit & delete only shown for pending --}}
+                {{-- Footer --}}
                 <div class="flex justify-end gap-3 px-6 py-4 border-t border-gray-100 bg-gray-50 rounded-b-xl">
                     <button id="closeReqModalFooter"
                             class="px-4 py-2 text-sm border border-gray-300 text-gray-600 rounded-lg hover:bg-gray-100 transition-colors">
                         Close
                     </button>
-
-                    {{-- Delete (pending only) --}}
-                    <form id="rvm-delete-form" method="POST" style="display:none"
-                          onsubmit="return confirm('Delete this request? The title and authors will not be removed if other resources still reference them.')">
-                        @csrf
-                        @method('DELETE')
-                        <button type="submit"
-                                class="inline-flex items-center gap-1.5 px-4 py-2 text-sm bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-medium">
-                            <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6M9 7h6m2 0H7m3-3h4a1 1 0 011 1v1H9V5a1 1 0 011-1z"/>
-                            </svg>
-                            Delete
-                        </button>
-                    </form>
-
-                    {{-- Edit (pending only) --}}
-                    <a id="rvm-edit-link" href="#" style="display:none"
-                       class="items-center gap-1.5 px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium">
-                        <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16.862 4.487l1.687-1.687a1.875 1.875 0 112.652 2.652L7.5 19.153 3 21l1.847-4.5L16.862 4.487z"/>
-                        </svg>
-                        Edit Request
-                    </a>
                 </div>
             </div>
         </div>
@@ -645,88 +660,92 @@
 
 <script>
 (function () {
-    // ────────────────────────────────────────────────
-    // PAGE-LEVEL TAB MANAGEMENT
-    // ────────────────────────────────────────────────
     const STORAGE_KEY     = 'addPrintResource_activeTab';
     const isDivision      = {{ $isDivision ? 'true' : 'false' }};
+    const isEditing       = {{ $isEditing  ? 'true' : 'false' }};
     const VALID_TABS      = isDivision ? ['tab-search', 'tab-add'] : ['tab-search', 'tab-add', 'tab-requests'];
     const pageTabBtns     = document.querySelectorAll('.page-tab-btn');
     const pageTabContents = document.querySelectorAll('.page-tab-content');
 
-    function activatePageTab(targetId, shouldSaveToStorage = true) {
-        if (!VALID_TABS.includes(targetId)) {
-            targetId = 'tab-search';
-        }
+    // ────────────────────────────────────────────────────────────────────────
+    // PAGE-LEVEL TAB MANAGEMENT
+    // ────────────────────────────────────────────────────────────────────────
+    function activatePageTab(targetId, saveToStorage = true) {
+        if (!VALID_TABS.includes(targetId)) targetId = 'tab-search';
 
         pageTabBtns.forEach(btn => {
-            const isActive = btn.dataset.pageTab === targetId;
-            btn.classList.toggle('border-blue-600', isActive);
-            btn.classList.toggle('text-blue-600',    isActive);
-            btn.classList.toggle('border-transparent', !isActive);
-            btn.classList.toggle('text-gray-500',    !isActive);
+            const active = btn.dataset.pageTab === targetId;
+            btn.classList.toggle('border-blue-600',   active);
+            btn.classList.toggle('text-blue-600',      active);
+            btn.classList.toggle('border-transparent', !active);
+            btn.classList.toggle('text-gray-500',      !active);
         });
 
-        pageTabContents.forEach(content => {
-            content.classList.toggle('hidden', content.id !== targetId);
-        });
+        pageTabContents.forEach(c => c.classList.toggle('hidden', c.id !== targetId));
 
-        if (shouldSaveToStorage) {
-            sessionStorage.setItem(STORAGE_KEY, targetId);
-        }
+        if (saveToStorage) sessionStorage.setItem(STORAGE_KEY, targetId);
     }
 
-    let initialTab = '{{ session('active_tab') }}' ||
-                     sessionStorage.getItem(STORAGE_KEY) ||
-                     'tab-search';
-
-    if ('{{ session('just_added_acquisition') }}' === '1') {
-        initialTab = 'tab-search';
+    // ── INITIAL TAB ──────────────────────────────────────────────────────────
+    // When the controller renders the edit form ($isEditing === true), always
+    // open tab-add so the user lands directly on the filled-in form.
+    let initialTab;
+    if (isEditing) {
+        initialTab = 'tab-add';
+    } else {
+        initialTab = '{{ session('active_tab') }}'
+            || sessionStorage.getItem(STORAGE_KEY)
+            || 'tab-search';
     }
+    if ('{{ session('just_added_acquisition') }}' === '1') initialTab = 'tab-search';
 
     activatePageTab(initialTab, false);
 
+    // Normal tab-button clicks
     pageTabBtns.forEach(btn => {
-        btn.addEventListener('click', () => {
-            const tabId = btn.dataset.pageTab;
-            activatePageTab(tabId, true);
-        });
+        btn.addEventListener('click', () => activatePageTab(btn.dataset.pageTab, true));
     });
 
-    // ────────────────────────────────────────────────
-    // SGL TABS (Subject / Grade Level inside form)
-    // ────────────────────────────────────────────────
+    // ────────────────────────────────────────────────────────────────────────
+    // CANCEL / BACK TO REQUESTS
+    // Redirects the browser to the create route with ?tab=tab-requests so the
+    // page reloads cleanly (no stale edit state) and lands on My Requests.
+    // ────────────────────────────────────────────────────────────────────────
+    function goBackToRequests() {
+        // Store the desired landing tab so index() picks it up on reload
+        sessionStorage.setItem(STORAGE_KEY, 'tab-requests');
+        window.location.href = '{{ route('print-resource.create') }}';
+    }
+
+    const backBtn   = document.getElementById('backToRequestsBtn');
+    const cancelBtn = document.getElementById('cancelEditBtn');
+    if (backBtn)   backBtn.addEventListener('click',   goBackToRequests);
+    if (cancelBtn) cancelBtn.addEventListener('click', goBackToRequests);
+
+    // ────────────────────────────────────────────────────────────────────────
+    // SGL (Subject / Grade Level) INNER TABS
+    // ────────────────────────────────────────────────────────────────────────
     const sglTabBtns     = document.querySelectorAll('.sgl-tab-btn');
     const sglTabContents = document.querySelectorAll('.sgl-tab-content');
 
-    function activateSglTab(targetTabId) {
+    function activateSglTab(targetId) {
         sglTabBtns.forEach(btn => {
-            const isActive = btn.dataset.sglTab === targetTabId;
-            btn.classList.toggle('border-blue-600', isActive);
-            btn.classList.toggle('text-blue-600',    isActive);
-            btn.classList.toggle('active',           isActive);
-            btn.classList.toggle('border-transparent', !isActive);
-            btn.classList.toggle('text-gray-600',    !isActive);
+            const active = btn.dataset.sglTab === targetId;
+            btn.classList.toggle('border-blue-600',   active);
+            btn.classList.toggle('text-blue-600',      active);
+            btn.classList.toggle('active',             active);
+            btn.classList.toggle('border-transparent', !active);
+            btn.classList.toggle('text-gray-600',      !active);
         });
-
-        sglTabContents.forEach(content => {
-            content.classList.toggle('hidden', content.id !== targetTabId);
-        });
+        sglTabContents.forEach(c => c.classList.toggle('hidden', c.id !== targetId));
     }
 
-    sglTabBtns.forEach(btn => {
-        btn.addEventListener('click', () => {
-            activateSglTab(btn.dataset.sglTab);
-        });
-    });
+    sglTabBtns.forEach(btn => btn.addEventListener('click', () => activateSglTab(btn.dataset.sglTab)));
+    if (sglTabBtns.length) activateSglTab(sglTabBtns[0].dataset.sglTab);
 
-    if (sglTabBtns.length > 0) {
-        activateSglTab(sglTabBtns[0].dataset.sglTab);
-    }
-
-    // ────────────────────────────────────────────────
-    // SEARCH EXISTING + MODAL LOGIC
-    // ────────────────────────────────────────────────
+    // ────────────────────────────────────────────────────────────────────────
+    // SEARCH EXISTING
+    // ────────────────────────────────────────────────────────────────────────
     const searchInput       = document.getElementById('searchInput');
     const searchBtn         = document.getElementById('searchBtn');
     const spinner           = document.getElementById('searchSpinner');
@@ -747,40 +766,26 @@
     function performSearch() {
         const q = searchInput.value.trim();
         if (q.length < 2) return;
-
         showSpinner(true);
         hideAll();
 
         fetch(`{{ route('search-print-resource.search') }}?q=${encodeURIComponent(q)}`, {
-            headers: {
-                'Accept': 'application/json',
-                'X-Requested-With': 'XMLHttpRequest'
-            }
+            headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' }
         })
         .then(r => r.json())
         .then(data => {
             showSpinner(false);
-            if (!data.length) {
-                emptyState.classList.remove('hidden');
-                return;
-            }
+            if (!data.length) { emptyState.classList.remove('hidden'); return; }
             renderResults(data);
         })
-        .catch(() => {
-            showSpinner(false);
-            emptyState.classList.remove('hidden');
-        });
+        .catch(() => { showSpinner(false); emptyState.classList.remove('hidden'); });
     }
 
     searchBtn.addEventListener('click', performSearch);
-    searchInput.addEventListener('keydown', e => {
-        if (e.key === 'Enter') performSearch();
-    });
+    searchInput.addEventListener('keydown', e => { if (e.key === 'Enter') performSearch(); });
     searchInput.addEventListener('input', () => {
         clearTimeout(searchTimeout);
-        if (searchInput.value.trim().length >= 2) {
-            searchTimeout = setTimeout(performSearch, 450);
-        }
+        if (searchInput.value.trim().length >= 2) searchTimeout = setTimeout(performSearch, 450);
     });
 
     function renderResults(titles) {
@@ -791,7 +796,7 @@
         titles.forEach(title => {
             const editionBadges = title.editions.map(e => {
                 let label = esc(e.type);
-                if (e.edition && e.edition !== '-') label += ` - Ed. ${esc(e.edition)}`;
+                if (e.edition   && e.edition   !== '-') label += ` - Ed. ${esc(e.edition)}`;
                 if (e.copyright && e.copyright !== '-') label += ` (${esc(e.copyright)})`;
                 return `<span class="inline-flex items-center text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full">${label}</span>`;
             }).join(' ');
@@ -822,7 +827,6 @@
             card.querySelector('.view-btn').addEventListener('click', function () {
                 openModal(this.dataset.titleId);
             });
-
             resultsList.appendChild(card);
         });
     }
@@ -834,10 +838,7 @@
         modalLoading.classList.remove('hidden');
 
         fetch(`{{ url('search-print') }}/${titleId}/details`, {
-            headers: {
-                'Accept': 'application/json',
-                'X-Requested-With': 'XMLHttpRequest'
-            }
+            headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' }
         })
         .then(r => r.json())
         .then(data => {
@@ -862,7 +863,6 @@
             modalEditionsBody.innerHTML = '<tr><td colspan="9" class="text-center text-gray-400 py-6 text-xs">No editions found</td></tr>';
             return;
         }
-
         d.editions.forEach(e => {
             const tr = document.createElement('tr');
             tr.className = 'hover:bg-gray-50 transition-colors';
@@ -888,47 +888,37 @@
         });
     }
 
-    function closeModalFn() {
-        detailModal.classList.add('hidden');
-        document.body.style.overflow = '';
-    }
-
+    function closeModalFn() { detailModal.classList.add('hidden'); document.body.style.overflow = ''; }
     closeModalBtn.addEventListener('click', closeModalFn);
     modalBackdrop.addEventListener('click', closeModalFn);
-    document.addEventListener('keydown', e => {
-        if (e.key === 'Escape') closeModalFn();
-    });
+    document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModalFn(); });
 
-    function showSpinner(show) {
-        spinner.classList.toggle('hidden', !show);
-    }
-
+    function showSpinner(show) { spinner.classList.toggle('hidden', !show); }
     function hideAll() {
         resultsArea.classList.add('hidden');
         emptyState.classList.add('hidden');
         initialHint.classList.add('hidden');
     }
-
     function esc(str) {
-        const div = document.createElement('div');
-        div.appendChild(document.createTextNode(String(str ?? '')));
-        return div.innerHTML;
+        const d = document.createElement('div');
+        d.appendChild(document.createTextNode(String(str ?? '')));
+        return d.innerHTML;
     }
 
-    // ── MY REQUESTS VIEW MODAL ───────────────────────────────────────────
-    const reqViewModal      = document.getElementById('reqViewModal');
-    const reqModalBackdrop  = document.getElementById('reqModalBackdrop');
-    const closeReqBtn       = document.getElementById('closeReqModal');
-    const closeReqFooter    = document.getElementById('closeReqModalFooter');
-    const rvmDeleteForm     = document.getElementById('rvm-delete-form');
-    const rvmEditLink       = document.getElementById('rvm-edit-link');
+    // ────────────────────────────────────────────────────────────────────────
+    // MY REQUESTS VIEW MODAL
+    // ────────────────────────────────────────────────────────────────────────
+    const reqViewModal     = document.getElementById('reqViewModal');
+    const reqModalBackdrop = document.getElementById('reqModalBackdrop');
+    const closeReqBtn      = document.getElementById('closeReqModal');
+    const closeReqFooter   = document.getElementById('closeReqModalFooter');
 
     function openReqModal(btn) {
         const status = parseInt(btn.dataset.status);
 
-        document.getElementById('rvm-cover').src            = btn.dataset.cover;
-        document.getElementById('rvm-title').textContent    = btn.dataset.title;
-        document.getElementById('rvm-authors').textContent  = btn.dataset.authors !== '-' ? btn.dataset.authors : '';
+        document.getElementById('rvm-cover').src              = btn.dataset.cover;
+        document.getElementById('rvm-title').textContent      = btn.dataset.title;
+        document.getElementById('rvm-authors').textContent    = btn.dataset.authors !== '-' ? btn.dataset.authors : '';
         document.getElementById('rvm-type-badge').textContent = btn.dataset.type;
         document.getElementById('rvm-publisher').textContent  = btn.dataset.publisher;
         document.getElementById('rvm-copyright').textContent  = btn.dataset.copyright;
@@ -939,47 +929,28 @@
         document.getElementById('rvm-subjects').textContent   = btn.dataset.subjects;
         document.getElementById('rvm-submitted').textContent  = btn.dataset.submitted;
 
-        // Status badge
         const statusBadge = document.getElementById('rvm-status-badge');
         if (status === 0) {
             statusBadge.textContent = 'Pending';
-            statusBadge.className = 'inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800';
+            statusBadge.className   = 'inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800';
         } else if (status === 1) {
             statusBadge.textContent = '✓ Approved';
-            statusBadge.className = 'inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800';
+            statusBadge.className   = 'inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800';
         } else {
             statusBadge.textContent = 'Rejected';
-            statusBadge.className = 'inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800';
-        }
-
-        // Edit & Delete only for pending
-        if (status === 0) {
-            rvmEditLink.href = btn.dataset.editUrl;
-            rvmEditLink.style.display = 'inline-flex';
-            rvmDeleteForm.action = btn.dataset.deleteUrl;
-            rvmDeleteForm.style.display = 'block';
-        } else {
-            rvmEditLink.style.display = 'none';
-            rvmDeleteForm.style.display = 'none';
+            statusBadge.className   = 'inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800';
         }
 
         reqViewModal.classList.remove('hidden');
         document.body.style.overflow = 'hidden';
     }
 
-    function closeReqModal() {
-        reqViewModal.classList.add('hidden');
-        document.body.style.overflow = '';
-    }
+    function closeReqModal() { reqViewModal.classList.add('hidden'); document.body.style.overflow = ''; }
 
-    document.querySelectorAll('.req-view-btn').forEach(btn => {
-        btn.addEventListener('click', () => openReqModal(btn));
-    });
-
-    closeReqBtn    && closeReqBtn.addEventListener('click', closeReqModal);
-    closeReqFooter && closeReqFooter.addEventListener('click', closeReqModal);
+    document.querySelectorAll('.req-view-btn').forEach(btn => btn.addEventListener('click', () => openReqModal(btn)));
+    closeReqBtn      && closeReqBtn.addEventListener('click',      closeReqModal);
+    closeReqFooter   && closeReqFooter.addEventListener('click',   closeReqModal);
     reqModalBackdrop && reqModalBackdrop.addEventListener('click', closeReqModal);
-
     document.addEventListener('keydown', e => {
         if (e.key === 'Escape' && !reqViewModal.classList.contains('hidden')) closeReqModal();
     });
