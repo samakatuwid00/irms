@@ -36,27 +36,27 @@ Route::delete('/add-print-resource/{id}', [AddPrintResourceController::class, 'd
 // ============================================================
 // PRINT RESOURCE MASTERLIST (division level 3, region level 4)
 // ============================================================
-Route::get('/masterlist', [MasterlistController::class, 'index'])
+Route::get('/print-masterlist', [MasterlistController::class, 'index'])
     ->name('masterlist.index');
 
 // Edit an approved resource (division + region)
-Route::get('/masterlist/{id}/edit', [MasterlistController::class, 'editForm'])
+Route::get('/print-masterlist/{id}/edit', [MasterlistController::class, 'editForm'])
     ->name('masterlist.edit');
-Route::put('/masterlist/{id}', [MasterlistController::class, 'update'])
+Route::put('/print-masterlist/{id}', [MasterlistController::class, 'update'])
     ->name('masterlist.update');
 
 // Approve a school request (division only)
-Route::patch('/masterlist/{id}/approve', [MasterlistController::class, 'approve'])
+Route::patch('/print-masterlist/{id}/approve', [MasterlistController::class, 'approve'])
     ->name('masterlist.approve');
 
 // Reject a school request (division only) — deletes the resource only
-Route::delete('/masterlist/{id}/reject', [MasterlistController::class, 'reject'])
+Route::delete('/print-masterlist/{id}/reject', [MasterlistController::class, 'reject'])
     ->name('masterlist.reject');
 
 // AJAX search endpoints (optional — for future async use)
-Route::get('/masterlist/search', [MasterlistController::class, 'search'])
+Route::get('/print-masterlist/search', [MasterlistController::class, 'search'])
     ->name('masterlist.search');
-Route::get('/masterlist/requests/search', [MasterlistController::class, 'requestSearch'])
+Route::get('/print-masterlist/requests/search', [MasterlistController::class, 'requestSearch'])
     ->name('masterlist.requests.search');
 
 // ============================================================
