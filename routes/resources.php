@@ -9,7 +9,9 @@ use App\Http\Controllers\Resource\ManageEstimatedResourceCountController;
 use App\Http\Controllers\Resource\SearchPrintResourceController;
 use App\Http\Controllers\Resource\AddPrintResourceController;
 use App\Http\Controllers\Resource\AddNonPrintResourceController;
+use App\Http\Controllers\Resource\SearchNonPrintResourceController;
 use App\Http\Controllers\Resource\MasterlistController;
+use App\Http\Controllers\Resource\NonPrintMasterlistController;
 
 // ============================================================
 // RESOURCE TABLE
@@ -78,11 +80,57 @@ Route::post('/search-print/{id}/add', [SearchPrintResourceController::class, 'st
 // ============================================================
 // ADD NON-PRINT RESOURCE
 // ============================================================
+
 Route::get('/add-nonprint-resource', [AddNonPrintResourceController::class, 'index'])
     ->name('nonprint-resource.create');
 Route::post('/add-nonprint-resource', [AddNonPrintResourceController::class, 'store'])
     ->name('nonprint-resource.store');
+Route::get('/add-nonprint-resource/{id}/edit', [AddNonPrintResourceController::class, 'edit'])
+    ->name('nonprint-resource.edit');
+Route::put('/add-nonprint-resource/{id}', [AddNonPrintResourceController::class, 'update'])
+    ->name('nonprint-resource.update');
+Route::delete('/add-nonprint-resource/{id}', [AddNonPrintResourceController::class, 'destroy'])
+    ->name('nonprint-resource.destroy');
 
+// ── SEARCH NON-PRINT RESOURCE (AJAX keyword search + detail modal) ─
+Route::get('/search-nonprint/query', [SearchNonPrintResourceController::class, 'search'])
+    ->name('search-nonprint-resource.search');
+
+Route::get('/search-nonprint/{id}/details', [SearchNonPrintResourceController::class, 'show'])
+    ->name('search-nonprint-resource.show');
+
+// ── ADD ACQUISITION to an existing approved non-print resource ──
+Route::get('/search-nonprint/{id}/add', [SearchNonPrintResourceController::class, 'addForm'])
+    ->name('search-nonprint-resource.add-form');
+
+Route::post('/search-nonprint/{id}/add', [SearchNonPrintResourceController::class, 'store'])
+    ->name('search-nonprint-resource.store');
+
+// ============================================================
+// NON-PRINT RESOURCE MASTERLIST (division level 3, region level 4)
+// ============================================================
+Route::get('/nonprint-masterlist', [NonPrintMasterlistController::class, 'index'])
+    ->name('nonprint-masterlist.index');
+
+// Edit an approved resource (division + region)
+Route::get('/nonprint-masterlist/{id}/edit', [NonPrintMasterlistController::class, 'editForm'])
+    ->name('nonprint-masterlist.edit');
+Route::put('/nonprint-masterlist/{id}', [NonPrintMasterlistController::class, 'update'])
+    ->name('nonprint-masterlist.update');
+
+// Approve a school request (division only)
+Route::patch('/nonprint-masterlist/{id}/approve', [NonPrintMasterlistController::class, 'approve'])
+    ->name('nonprint-masterlist.approve');
+
+// Reject a school request (division only) — deletes the resource only
+Route::delete('/nonprint-masterlist/{id}/reject', [NonPrintMasterlistController::class, 'reject'])
+    ->name('nonprint-masterlist.reject');
+
+// AJAX search endpoints
+Route::get('/nonprint-masterlist/search', [NonPrintMasterlistController::class, 'search'])
+    ->name('nonprint-masterlist.search');
+Route::get('/nonprint-masterlist/requests/search', [NonPrintMasterlistController::class, 'requestSearch'])
+    ->name('nonprint-masterlist.requests.search');
 
 // ============================================================
 // EDIT RESOURCE

@@ -75,6 +75,23 @@ function initMobileAddResourceSubmenu() {
 }
 
 /**
+ * Initialize mobile masterlist submenu toggle
+ */
+function initMobileMasterlistSubmenu() {
+    const toggle = document.getElementById('mobile-masterlist-toggle');
+    const submenu = document.getElementById('mobile-masterlist-submenu');
+    const chevron = document.getElementById('mobile-masterlist-chevron');
+
+    if (!toggle || !submenu) return;
+
+    toggle.addEventListener('click', (e) => {
+        e.preventDefault();
+        submenu.classList.toggle('hidden');
+        chevron.classList.toggle('rotate-180');
+    });
+}
+
+/**
  * Initialize desktop FAB (Floating Action Button) menu
  */
 function initFabMenu() {
@@ -215,17 +232,35 @@ function initAddResourceAccordion() {
 }
 
 /**
+ * Keep masterlist accordion open on relevant pages
+ */
+function initMasterlistAccordion() {
+    const el = document.getElementById('masterlist-accordion-collapse');
+    if (!el) return;
+
+    const isMasterlistPage =
+        window.location.pathname.includes('masterlist') ||
+        window.location.pathname.includes('nonprint-masterlist');
+
+    if (isMasterlistPage) {
+        el.classList.remove('hidden');
+    }
+}
+
+/**
  * Initialize all layout components
  */
 export function initLayout() {
     initMobileMenu();
     initMobileResourcesSubmenu();
     initMobileAddResourceSubmenu();
+    initMobileMasterlistSubmenu();
     initFabMenu();
     initAccountDropdown();
     initPreline();
     initResourcesAccordion();
     initAddResourceAccordion();
+    initMasterlistAccordion();
 }
 
 // Auto-initialize when DOM is ready

@@ -1,13 +1,12 @@
 /**
  * Non-Print Resource Form Handler
+ * Handles image preview and form submit loading state only.
+ * Acquisitions are added separately via the Search > Add Acquisition flow.
  */
 import {
     setupImagePreview,
-    setupTabs,
-    setupQuantityCalculation,
     setupFormSubmit
 } from './add-resource-modules/form-utils.js';
-import { AcquisitionManager } from './add-resource-modules/acquisition-manager-nonprint.js';
 
 export function initNonPrintResourceForm() {
     const form = document.getElementById('nonprintForm');
@@ -15,41 +14,6 @@ export function initNonPrintResourceForm() {
 
     // Setup image preview
     setupImagePreview('nonprintImageUpload', 'nonprintImagePreview');
-
-    // Setup tabs
-    setupTabs(form);
-
-    // Setup quantity calculation
-    const calculateTotal = setupQuantityCalculation(form, 'nonprintTotalQuantity');
-
-    // Setup acquisition manager
-    const acquisitionConfig = {
-        tableBodySelector: '#nonprintAcquisitionTableBody',
-        hiddenInputSelector: '#nonprintAcquisitionsInput',
-        addButtonSelector: '#addNonPrintAcquisitionBtn',
-        fields: {
-            source: '[name="source"]',
-            date_acquired: '[name="date_acquired"]',
-            cost: '[name="cost"]',
-            iar: '[name="iar"]',
-            remarks: '[name="remarks"]',
-            usable: '[name="usable"]',
-            partially_damaged: '[name="partially_damaged"]',
-            damaged: '[name="damaged"]',
-            lost: '[name="lost"]',
-            condemnable: '[name="condemnable"]',
-            total_quantity: '#nonprintTotalQuantity'
-        },
-        onFieldsReset: calculateTotal,
-        onFieldsSet: calculateTotal
-    };
-
-    const acquisitionManager = new AcquisitionManager(form, acquisitionConfig);
-    acquisitionManager.setupEventDelegation();
-
-    // Expose edit and delete functions to global scope for backwards compatibility
-    window.editNonPrintAcquisition = (index) => acquisitionManager.edit(index);
-    window.deleteNonPrintAcquisition = (index) => acquisitionManager.delete(index);
 
     // Setup form submit with loading state
     setupFormSubmit(form, 'saveNonPrintBtn', 'saveNonPrintText', 'saveNonPrintLoading');
