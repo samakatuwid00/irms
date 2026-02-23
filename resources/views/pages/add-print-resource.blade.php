@@ -42,12 +42,19 @@
         <nav class="-mb-px flex gap-6" id="pageTabs">
             <button type="button" data-page-tab="tab-search"
                     class="page-tab-btn whitespace-nowrap pb-3 px-1 text-sm font-medium border-b-2 border-transparent text-gray-500 hover:text-gray-700">
-                Search Existing
+                Search Masterlist
             </button>
+            @if ($isDivision)
+                <button type="button" data-page-tab="tab-add"
+                    class="page-tab-btn whitespace-nowrap pb-3 px-1 text-sm font-medium border-b-2 border-transparent text-gray-500 hover:text-gray-700">
+                    {{ $isEditing ? 'Edit Request' : 'Add to Masterlist' }}
+                </button>
+            @else
             <button type="button" data-page-tab="tab-add"
                     class="page-tab-btn whitespace-nowrap pb-3 px-1 text-sm font-medium border-b-2 border-transparent text-gray-500 hover:text-gray-700">
-                {{ $isEditing ? 'Edit Request' : 'Manual Add' }}
+                {{ $isEditing ? 'Edit Request' : 'Request Add to Masterlist' }}
             </button>
+            @endif
 
             {{-- My Requests tab: only for school users (not division) --}}
             @if(!$isDivision)
