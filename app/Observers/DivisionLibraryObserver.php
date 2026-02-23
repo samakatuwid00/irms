@@ -9,8 +9,11 @@ use Illuminate\Support\Facades\DB;
  * DivisionLibraryObserver
  *
  * When a library's name changes, rebuild search vectors for:
- *   - print_acquisitions   (library_name is part of their search vector)
- *   - nonprint_resources   (still holds library_id / library_name directly)
+ *   - print_acquisitions      (library_name is part of their search vector)
+ *   - nonprint_acquisitions   (library_name is part of their search vector)
+ *
+ * Note: nonprint_resources no longer holds library info; that moved to
+ * nonprint_acquisitions, so we don't update nonprint_resources here anymore.
  *
  * Register in AppServiceProvider:
  *   DivisionLibrary::observe(DivisionLibraryObserver::class);
@@ -23,10 +26,10 @@ class DivisionLibraryObserver
             return;
         }
 
-        $this->rebuildVectors($library->id, $library->library_name);
+        $this->rebuildVectors($library->id);
     }
 
-    private function rebuildVectors(string $libraryId, string $libraryName): void
+    private function rebuildVectors(string $libraryId): void
     {
         // --- Print acquisitions -------------------------------------------
         // Pass print_id and library_id directly to match the two-argument
@@ -37,18 +40,12 @@ class DivisionLibraryObserver
             WHERE library_id = ?
         ', [$libraryId]);
 
-        // --- Non-print resources ------------------------------------------
-        // library_name is still denormalised on nonprint_resources, so sync it
-        // first, then rebuild the search vector.
+        // --- Non-print acquisitions ---------------------------------------
+        // Pass nonprint_id and library_id directly to match the two-argument
+        // function signature — avoids querying the row being written.
         DB::statement('
-            UPDATE nonprint_resources
-            SET library_name = ?
-            WHERE library_id = ?
-        ', [$libraryName, $libraryId]);
-
-        DB::statement('
-            UPDATE nonprint_resources
-            SET search_vector = build_nonprint_resource_search_vector(id)
+            UPDATE nonprint_acquisitions
+            SET search_vector = build_nonprint_acquisition_search_vector(nonprint_id, library_id)
             WHERE library_id = ?
         ', [$libraryId]);
     }
