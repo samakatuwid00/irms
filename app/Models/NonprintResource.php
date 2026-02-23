@@ -14,7 +14,6 @@ class NonprintResource extends Model
         'id',
         'nonprint_title_id',
         'nonprint_type_id',
-        'library_id',
         'brand',
         'code',
         'version',
@@ -26,7 +25,12 @@ class NonprintResource extends Model
         'created_at',
         'updated_at',
         'cover',
-        'library_name',
+        'uniqueness_hash',
+        'status',
+        'station_type',
+        'station_id',
+        'encoded_by',
+        'approver_station'
     ];
     protected $table = 'nonprint_resources';
 

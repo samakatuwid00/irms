@@ -12,7 +12,7 @@ return new class extends Migration
             $table->uuid('id')->primary();
             $table->uuid('nonprint_title_id');
             $table->uuid('nonprint_type_id');
-            $table->string('brand');
+            $table->string('brand')->nullable();
             $table->string('code');
             $table->string('version');
             $table->string('url');
@@ -20,11 +20,16 @@ return new class extends Migration
             $table->string('model');
             $table->string('subject_grade_level_ids');
             $table->timestamps();
-            $table->uuid('library_id');
-            $table->string('library_name');
+            $table->integer('status');
+            $table->string('station_type');
+            $table->uuid('station_id');
+            $table->uuid('encoded_by');
+            $table->uuid('approver_station');
 
             $table->foreign('nonprint_title_id')->references('id')->on('nonprint_titles');
             $table->foreign('nonprint_type_id')->references('id')->on('nonprint_types');
+
+            $table->string('uniqueness_hash', 64)->nullable()->unique();
         });
     }
 

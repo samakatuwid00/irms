@@ -21,7 +21,7 @@ return new class extends Migration
             $table->integer('damaged');
             $table->integer('lost');
             $table->integer('condemnable');
-            $table->text('remarks');
+            $table->text('remarks')->nullable();
             $table->date('date_encoded');
             $table->uuid('encoded_by');
             $table->uuid('curriculum_id');

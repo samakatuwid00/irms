@@ -12,16 +12,19 @@ return new class extends Migration
             $table->uuid('id')->primary();
             $table->uuid('print_title_id');
             $table->uuid('print_type_id');
-            $table->string('publisher');
-            $table->string('volume');
-            $table->string('edition');
-            $table->string('copyright');
-            $table->integer('pages');
-            $table->string('isbn');
+            $table->string('publisher')->nullable();
+            $table->string('volume')->nullable();;
+            $table->string('edition')->nullable();;
+            $table->string('copyright')->nullable();;
+            $table->integer('pages')->nullable();;
+            $table->string('isbn')->nullable();;
             $table->string('subject_grade_level_ids');
             $table->timestamps();
             $table->integer('status');
             $table->string('station_type');
+            $table->uuid('station_id');
+            $table->uuid('encoded_by');
+            $table->uuid('approver_station');
 
             $table->foreign('print_title_id')->references('id')->on('print_titles');
             $table->foreign('print_type_id')->references('id')->on('print_types');
