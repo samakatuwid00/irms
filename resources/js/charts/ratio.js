@@ -44,14 +44,6 @@ async function initRatioChart() {
                     });
 
                     const pop = population[params[0].name] || 0;
-                    if (totalLR > 0 && pop > 0) {
-                        const peoplePerLR = pop / totalLR;
-                        if (peoplePerLR >= 1) {
-                            txt += `<b>1 LR serves ≈ ${Math.round(peoplePerLR).toLocaleString()} people</b>`;
-                        } else {
-                            const lrPerPerson = Math.round(totalLR / pop);
-                        }
-                    }
 
                     return txt;
                 }
@@ -127,11 +119,12 @@ async function initRatioChart() {
                     name: 'Population',
                     type: 'bar',
                     stack: 'total',
+                    barMinWidth: 10,   // 👈 ensures small values are visible
                     label: {
                         show: true,
                         position: 'inside',
                         formatter: function (params) {
-                            return (params.value || 0).toLocaleString(); // comma separator
+                            return (params.value || 0).toLocaleString();
                         },
                         color: '#fff'
                     },
@@ -154,7 +147,7 @@ async function initRatioChart() {
                             const pop = population[category] || 0;
 
                             if (lrCount <= 0) return 'N/A';
-                            if (pop <= 0) return 'No pop';
+                            if (pop <= 0) return 'N/A';
 
                             const peoplePerLR = pop / lrCount;
                             if (peoplePerLR >= 1) {

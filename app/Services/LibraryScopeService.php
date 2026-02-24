@@ -37,11 +37,19 @@ class LibraryScopeService
         return Cache::remember($cacheKey, $ttl, function () use ($userLevel, $stationId) {
             return match ($userLevel) {
                 1 => $this->getSchoolLibraries($stationId),
+                2 => $this->getDistrictLibraries($stationId),  // ← NEW: Add this line
                 3 => $this->getDivisionLibraries($stationId),
                 4 => $this->getRegionLibraries($stationId),
                 default => collect(),
             };
         });
+    }
+
+    // ← NEW: Add this method
+    private function getDistrictLibraries(string $districtId): Collection
+    {
+        $schoolIds = School::where('district_id', $districtId)->pluck('id');
+        return SchoolLibrary::whereIn('school_id', $schoolIds)->pluck('id');
     }
 
     private function getSchoolLibraries(string $schoolId): Collection

@@ -6,7 +6,7 @@ use App\Http\Controllers\DashboardController;
 // Protected routes [NAVIGATIONS]
 Route::middleware('auth')->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
-    
+
     // Existing LR Availability chart endpoint
     Route::get('/chart/lr-availability', [DashboardController::class, 'getLrAvailabilityData'])
         ->name('chart.lr-availability');
@@ -17,13 +17,16 @@ Route::middleware('auth')->group(function () {
 
     // New Exdef chart
     Route::get('/chart/exdef', [DashboardController::class, 'getLrSufficiencyData'])
-         ->name('chart.exdef');
+        ->name('chart.exdef');
 
     // New Heatmap chart
     Route::get('/chart/heatmap', [DashboardController::class, 'getLrHeatmapData'])
-         ->name('chart.heatmap');
+        ->name('chart.heatmap');
 
     // New Heatmap chart
     Route::get('/chart/heatmap', [DashboardController::class, 'getLrHeatmapData'])
-         ->name('chart.heatmap');
+        ->name('chart.heatmap');
+
+    Route::get('/dashboard/bosy-status', [DashboardController::class, 'getBosyStatusData'])
+        ->name('dashboard.bosy-status');
 });

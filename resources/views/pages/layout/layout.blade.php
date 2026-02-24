@@ -14,6 +14,8 @@
     @vite(['resources/js/charts/exdef.js'])
     @vite(['resources/js/charts/heatmap.js'])
     @vite(['resources/js/charts/visualization.js'])
+    @vite(['resources/js/charts/bosy.js'])
+    @vite(['resources/css/bosy/bosy.css'])
 
     <!-- CSRF Token for forms -->
     <meta name="csrf-token" content="{{ csrf_token() }}">

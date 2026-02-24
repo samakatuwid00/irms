@@ -1,0 +1,255 @@
+    /* ── Outer wrapper: horizontal scroll on narrow viewports ── */
+    .bosy-x-scroll-wrapper {
+        overflow-x: auto;
+        overflow-y: hidden;
+        scroll-behavior: smooth;
+        /* nudge so the x-bar sits flush at the bottom of the card */
+        padding-bottom: 4px;
+        margin-bottom: -4px;
+    }
+
+    /* X-axis scrollbar */
+    .bosy-x-scroll-wrapper::-webkit-scrollbar {
+        height: 5px;
+    }
+
+    .bosy-x-scroll-wrapper::-webkit-scrollbar-track {
+        background: #f1f5f9;
+        border-radius: 99px;
+    }
+
+    .bosy-x-scroll-wrapper::-webkit-scrollbar-thumb {
+        background: #cbd5e1;
+        border-radius: 99px;
+    }
+
+    .bosy-x-scroll-wrapper::-webkit-scrollbar-thumb:hover {
+        background: #94a3b8;
+    }
+
+    /* ── Inner container: vertical scroll after ~5 items ── */
+    .bosy-scroll-container {
+        max-height: calc(5 * 72px);
+        /* ~5 items at ~72px each */
+        overflow-y: auto;
+        overflow-x: visible;
+        /* let x-scroll be handled by wrapper */
+        scroll-behavior: smooth;
+        padding-right: 4px;
+    }
+
+    /* Y-axis scrollbar */
+    .bosy-scroll-container::-webkit-scrollbar {
+        width: 5px;
+    }
+
+    .bosy-scroll-container::-webkit-scrollbar-track {
+        background: #f1f5f9;
+        border-radius: 99px;
+    }
+
+    .bosy-scroll-container::-webkit-scrollbar-thumb {
+        background: #cbd5e1;
+        border-radius: 99px;
+    }
+
+    .bosy-scroll-container::-webkit-scrollbar-thumb:hover {
+        background: #94a3b8;
+    }
+
+    /* ── Item animation ── */
+    .bosy-division-item {
+        opacity: 0;
+        transform: translateY(12px);
+        animation: fadeInUp 0.4s forwards;
+        border-radius: 0.5rem;
+        padding: 0.5rem 0.25rem;
+        transition: background-color 0.15s ease;
+    }
+
+    .bosy-division-item:hover {
+        background-color: #f8fafc;
+    }
+
+    @keyframes fadeInUp {
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    .bosy-division-item:nth-child(1) {
+        animation-delay: 0.05s;
+    }
+
+    .bosy-division-item:nth-child(2) {
+        animation-delay: 0.10s;
+    }
+
+    .bosy-division-item:nth-child(3) {
+        animation-delay: 0.15s;
+    }
+
+    .bosy-division-item:nth-child(4) {
+        animation-delay: 0.20s;
+    }
+
+    .bosy-division-item:nth-child(5) {
+        animation-delay: 0.25s;
+    }
+
+    .bosy-division-item:nth-child(6) {
+        animation-delay: 0.30s;
+    }
+
+    .bosy-division-item:nth-child(n+7) {
+        animation-delay: 0.35s;
+    }
+
+    /* ── Status badge – full label on md+, dot-only on small ── */
+    .status-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.35rem;
+        padding: 0.35rem 0.85rem;
+        font-size: 0.8125rem;
+        font-weight: 600;
+        border-radius: 0.375rem;
+        white-space: nowrap;
+    }
+
+    /* The colored dot inside the badge */
+    .status-badge::before {
+        content: '';
+        display: inline-block;
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        flex-shrink: 0;
+    }
+
+    .status-complete {
+        background-color: #dcfce7;
+        color: #166534;
+        border: 1px solid #86efac;
+    }
+
+    .status-complete::before {
+        background-color: #16a34a;
+    }
+
+    .status-review {
+        background-color: #f3f4f6;
+        color: #374151;
+        border: 1px solid #d1d5db;
+    }
+
+    .status-review::before {
+        background-color: #9ca3af;
+    }
+
+    .status-review {
+        background-color: #f3f4f6;
+        color: #374151;
+        border: 1px solid #d1d5db;
+    }
+
+    .status-review::before {
+        background-color: #9ca3af;
+    }
+
+    .status-advanced {
+        background-color: #f3f4f6;
+        color: #374151;
+        border: 1px solid #d1d5db;
+    }
+
+    .status-advanced::before {
+        background-color: #9ca3af;
+    }
+
+    .status-progress {
+        background-color: #f3f4f6;
+        color: #374151;
+        border: 1px solid #d1d5db;
+    }
+
+    .status-progress::before {
+        background-color: #9ca3af;
+    }
+
+    .status-partial {
+        background-color: #f3f4f6;
+        color: #374151;
+        border: 1px solid #d1d5db;
+    }
+
+    .status-partial::before {
+        background-color: #9ca3af;
+    }
+
+    .status-ongoing {
+        background-color: #dbeafe;
+        color: #1e40af;
+        border: 1px solid #93c5fd;
+    }
+
+    .status-ongoing::before {
+        background-color: #3b82f6;
+    }
+
+    .status-pending {
+        background-color: #fef3c7;
+        color: #92400e;
+        border: 1px solid #fcd34d;
+    }
+
+    .status-pending::before {
+        background-color: #f59e0b;
+    }
+
+    /* ── Row grid layout ── */
+        .bosy-row-grid {
+            display: grid;
+            grid-template-columns: minmax(110px, 2.8fr) 3fr minmax(48px, 1fr) minmax(16px, auto);
+            align-items: center;
+            gap: 0.75rem;          /* 12px – was gap-2 / gap-3 */
+        }
+
+        @media (min-width: 400px) {
+            .bosy-row-grid {
+                grid-template-columns: minmax(120px, 3fr) 3.5fr minmax(52px, 1fr) minmax(20px, auto);
+                gap: 1rem;
+            }
+        }
+
+        @media (min-width: 640px) {
+            .bosy-row-grid {
+                grid-template-columns: minmax(140px, 3.5fr) 7fr minmax(60px, 1fr) 100px;
+                gap: 1.25rem;
+            }
+        }
+
+
+    /* ── On small screens: hide badge text, show dot only ── */
+    @media (max-width: 639px) {
+        .status-badge {
+            padding: 0;
+            background: transparent !important;
+            border: none !important;
+            color: transparent;
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            overflow: hidden;
+        }
+
+        /* Make the dot fill the whole badge */
+        .status-badge::before {
+            width: 14px;
+            height: 14px;
+            margin: 0;
+        }
+
+        /* Show a tooltip via title on hover (handled in JS) */
+    }
