@@ -18,7 +18,6 @@ use Illuminate\Support\Facades\Cache;
 class NonPrintResourceService
 {
     private const PER_PAGE = 5;
-
     private const CACHE_TTL = 3600;
     private const CACHE_TTL_LIBRARIES = 1800;
     private const CACHE_TTL_HIERARCHY = 7200;
@@ -30,17 +29,12 @@ class NonPrintResourceService
 
     public function getResourcesData(Request $request, int $level, string $stationId): array
     {
-        // Get dropdown options for filters (schools, districts, divisions)
         $dropdownData = $this->getDropdownData($level, $stationId);
-
-        // Determine which library IDs to query based on level and filters
         $libraryIds = $this->getLibraryIds($request, $level, $stationId, $dropdownData);
 
-        // Get main resources and filtered resources
         $resources = $this->getResources($request, $level, $libraryIds['main']);
         $filteredResources = $this->getFilteredResources($request, $level, $libraryIds['filtered']);
 
-        // For school level, get division resources
         $divisionResources = null;
         if ($level === self::LEVEL_SCHOOL) {
             $divisionResources = $this->getDivisionResourcesForSchool($request, $stationId);
@@ -56,7 +50,6 @@ class NonPrintResourceService
 
     private function getDivisionResourcesForSchool(Request $request, string $schoolId)
     {
-        // Cache the division library IDs lookup for this school
         $divisionLibraryIds = Cache::remember(
             "school_division_libraries_{$schoolId}",
             self::CACHE_TTL_HIERARCHY,
@@ -79,8 +72,7 @@ class NonPrintResourceService
             return $this->emptyPaginator($request);
         }
 
-        $query = NonprintResource::with(['nonprintTitle', 'type', 'nonprintAcquisitions'])
-            ->whereIn('library_id', $divisionLibraryIds->toArray());
+        $query = $this->buildLibraryQuery($divisionLibraryIds);
 
         $this->applySearch($query, (string) $request->input('division_search', ''));
 
@@ -88,13 +80,11 @@ class NonPrintResourceService
     }
 
     /**
-     * OPTIMIZED: library_name is now a stored column on nonprint_resources.
-     * No more cross-table UNION ALL lookups or cache round-trips per page —
-     * the value is already on every hydrated model.
-     *
-     * The only thing we still handle here is the fallback for rows whose
-     * library_name column was not yet populated (e.g. legacy rows or a null
-     * library_id), keeping the exact same display behaviour as before.
+     * OPTIMIZED: library_name is now resolved from nonprint_acquisitions.
+     * Each resource may have multiple acquisitions across different libraries;
+     * the first non-null library_name is used as the display label (consistent
+     * with the previous single-library behaviour). Rows with no acquisitions
+     * fall back gracefully.
      */
     private function attachLibraryNames(LengthAwarePaginator $resources): void
     {
@@ -103,15 +93,17 @@ class NonPrintResourceService
         }
 
         foreach ($resources as $resource) {
-            // Column already populated by DB / observer — use it directly.
-            if (!empty($resource->library_name)) {
-                continue;
-            }
+            // Derive library_name from the loaded acquisitions relation.
+            if (empty($resource->library_name)) {
+                $firstName = $resource->nonprintAcquisitions
+                    ->whereNotNull('library_name')
+                    ->value('library_name');
 
-            // Fallback for rows that pre-date the column or have no library.
-            $resource->library_name = $resource->library_id
-                ? 'Unknown Library'
-                : 'No Library Assigned';
+                $resource->library_name = $firstName
+                    ?? ($resource->nonprintAcquisitions->isNotEmpty()
+                        ? 'Unknown Library'
+                        : 'No Library Assigned');
+            }
         }
     }
 
@@ -127,7 +119,6 @@ class NonPrintResourceService
 
         switch ($level) {
             case self::LEVEL_DISTRICT:
-                // District level: show schools within this district
                 $data['schools'] = Cache::remember(
                     "schools_district_{$stationId}",
                     self::CACHE_TTL,
@@ -138,7 +129,6 @@ class NonPrintResourceService
                 break;
 
             case self::LEVEL_DIVISION:
-                // Division level: show districts and their schools
                 $data['districts'] = Cache::remember(
                     "districts_division_{$stationId}",
                     self::CACHE_TTL,
@@ -157,7 +147,6 @@ class NonPrintResourceService
                 break;
 
             case self::LEVEL_REGION:
-                // Region level: show all divisions, districts, and schools
                 $data['divisions'] = Cache::remember(
                     "divisions_region_{$stationId}",
                     self::CACHE_TTL,
@@ -377,9 +366,27 @@ class NonPrintResourceService
         return ['main' => collect(), 'filtered' => $libraries];
     }
 
+    // ─── Query Builders ───────────────────────────────────────────────────────
+
+    /**
+     * Build a base NonprintResource query scoped to the given library IDs.
+     *
+     * Only resources that have at least one acquisition belonging to one of
+     * the supplied library IDs AND have at least one acquisition overall
+     * (total_qty > 0) are included. This ensures resources with zero
+     * acquisitions across all levels are never displayed.
+     */
+    private function buildLibraryQuery(Collection $libraryIds)
+    {
+        return NonprintResource::with(['nonprintTitle', 'type', 'nonprintAcquisitions'])
+            ->whereHas('nonprintAcquisitions', function ($q) use ($libraryIds) {
+                $q->whereIn('library_id', $libraryIds->toArray());
+            })
+            ->whereHas('nonprintAcquisitions');  // guarantees at least one acquisition exists globally
+    }
+
     private function getResources(Request $request, int $level, Collection $libraryIds)
     {
-        // Division level uses different search parameter
         if ($level === self::LEVEL_DIVISION) {
             return $this->getDivisionResources($request, $libraryIds);
         }
@@ -388,9 +395,7 @@ class NonPrintResourceService
             return $this->emptyPaginator($request);
         }
 
-        $query = NonprintResource::with(['nonprintTitle', 'type', 'nonprintAcquisitions'])
-            ->whereIn('library_id', $libraryIds->toArray());
-
+        $query = $this->buildLibraryQuery($libraryIds);
         $this->applySearch($query, (string) $request->input('search', ''));
 
         return $query->paginate(self::PER_PAGE)->withQueryString();
@@ -402,9 +407,7 @@ class NonPrintResourceService
             return $this->emptyPaginator($request);
         }
 
-        $query = NonprintResource::with(['nonprintTitle', 'type', 'nonprintAcquisitions'])
-            ->whereIn('library_id', $libraryIds->toArray());
-
+        $query = $this->buildLibraryQuery($libraryIds);
         $this->applySearch($query, (string) $request->input('division_search', ''));
 
         return $query->paginate(self::PER_PAGE)->withQueryString();
@@ -418,10 +421,8 @@ class NonPrintResourceService
             return $this->emptyPaginator($request);
         }
 
-        $query = NonprintResource::with(['nonprintTitle', 'type', 'nonprintAcquisitions'])
-            ->whereIn('library_id', $libraryIds->toArray());
+        $query = $this->buildLibraryQuery($libraryIds);
 
-        // Division level uses 'school_search', others use 'search'
         $searchParam = $level === self::LEVEL_DIVISION ? 'school_search' : 'search';
         $this->applySearch($query, (string) $request->input($searchParam, ''));
 
@@ -438,8 +439,19 @@ class NonPrintResourceService
         };
     }
 
+    // ─── Search ───────────────────────────────────────────────────────────────
+
     /**
-     * Apply full-text search using PostgreSQL's tsvector.
+     * Apply full-text search using the search_vector column on nonprint_acquisitions.
+     *
+     * We use a WHERE EXISTS subquery against nonprint_acquisitions so the filter
+     * operates at the NonprintResource level (one resource row per result) while
+     * the ts_rank is derived from the acquisition rows. Using EXISTS keeps the
+     * result set deduplicated — a resource with multiple acquisitions that all
+     * match still appears once.
+     *
+     * Ranking uses the MAX rank across all matching acquisitions so that the
+     * resource with the best-matching acquisition floats to the top.
      */
     private function applySearch($query, string $search)
     {
@@ -449,18 +461,31 @@ class NonPrintResourceService
             return $query;
         }
 
-        return $query->whereRaw(
-            "search_vector @@ plainto_tsquery('english', ?)",
-            [$search]
-        )->orderByRaw(
-            "ts_rank(search_vector, plainto_tsquery('english', ?)) DESC",
+        // Filter: resource must have at least one acquisition matching the FTS query.
+        $query->whereExists(function ($sub) use ($search) {
+            $sub->select(DB::raw(1))
+                ->from('nonprint_acquisitions')
+                ->whereColumn('nonprint_acquisitions.nonprint_id', 'nonprint_resources.id')
+                ->whereRaw(
+                    "nonprint_acquisitions.search_vector @@ plainto_tsquery('english', ?)",
+                    [$search]
+                );
+        });
+
+        // Order: highest-ranking acquisition determines row order.
+        $query->orderByRaw(
+            "(SELECT MAX(ts_rank(na.search_vector, plainto_tsquery('english', ?)))
+              FROM nonprint_acquisitions na
+              WHERE na.nonprint_id = nonprint_resources.id) DESC",
             [$search]
         );
+
+        return $query;
     }
 
     /**
-     * Fallback search method using LIKE queries.
-     * Use this if full-text search is not available or for debugging.
+     * ILIKE fallback search (used when the FTS vector is unavailable / empty).
+     * Mirrors the old behaviour but targets nonprint_acquisitions for library_name.
      */
     private function applySearchFallback($query, string $search)
     {
@@ -473,33 +498,35 @@ class NonPrintResourceService
         $searchLower = '%' . strtolower($search) . '%';
 
         return $query->where(function ($q) use ($searchLower) {
-            $q->whereRaw('LOWER(brand) LIKE ?', [$searchLower])
-            ->orWhereRaw('LOWER(code) LIKE ?', [$searchLower])
-            ->orWhereRaw('LOWER(version) LIKE ?', [$searchLower])
-            ->orWhereRaw('LOWER(url) LIKE ?', [$searchLower])
-            ->orWhereRaw('LOWER(size) LIKE ?', [$searchLower])
-            ->orWhereRaw('LOWER(model) LIKE ?', [$searchLower])
+            $q->whereHas('nonprintAcquisitions', function ($aq) use ($searchLower) {
+                    $aq->where('brand', 'ILIKE', $searchLower)
+                       ->orWhere('code', 'ILIKE', $searchLower)
+                       ->orWhere('version', 'ILIKE', $searchLower)
+                       ->orWhere('url', 'ILIKE', $searchLower)
+                       ->orWhere('size', 'ILIKE', $searchLower)
+                       ->orWhere('model', 'ILIKE', $searchLower)
+                       ->orWhere('library_name', 'ILIKE', $searchLower);
+                })
 
-            ->orWhereHas('nonprintTitle', fn($qt) =>
-                $qt->whereRaw('LOWER(title) LIKE ?', [$searchLower])
-            )
+                ->orWhereHas('nonprintTitle', fn($qt) =>
+                    $qt->where('title', 'ILIKE', $searchLower)
+                )
 
-            ->orWhereExists(function ($exists) use ($searchLower) {
-                $exists->select(DB::raw(1))
+                ->orWhereExists(function ($exists) use ($searchLower) {
+                    $exists->select(DB::raw(1))
                         ->from('subject_grade_levels as sgl')
                         ->join('subjects as subj', 'sgl.subject_id', '=', 'subj.id')
                         ->join('grade_levels as gl', 'sgl.grade_level_id', '=', 'gl.id')
                         ->whereRaw("sgl.id::text = ANY(string_to_array(nonprint_resources.subject_grade_level_ids, ','))")
                         ->where(function ($match) use ($searchLower) {
-                            $match->whereRaw('LOWER(subj.subject_name) LIKE ?', [$searchLower])
-                                ->orWhereRaw('LOWER(gl.grade) LIKE ?', [$searchLower]);
+                            $match->where('subj.subject_name', 'ILIKE', $searchLower)
+                                  ->orWhere('gl.grade', 'ILIKE', $searchLower);
                         });
-            })
-
-            // library_name is now a stored column — search it directly
-            ->orWhereRaw('LOWER(library_name) LIKE ?', [$searchLower]);
+                });
         });
     }
+
+    // ─── Helpers ──────────────────────────────────────────────────────────────
 
     private function emptyPaginator(Request $request)
     {
@@ -517,23 +544,23 @@ class NonPrintResourceService
         $patterns = match($level) {
             self::LEVEL_SCHOOL => [
                 "school_libraries_{$stationId}",
-                "school_division_libraries_{$stationId}"
+                "school_division_libraries_{$stationId}",
             ],
             self::LEVEL_DISTRICT => [
                 "schools_district_{$stationId}",
-                "district_school_libraries_{$stationId}"
+                "district_school_libraries_{$stationId}",
             ],
             self::LEVEL_DIVISION => [
                 "districts_division_{$stationId}",
                 "schools_division_{$stationId}",
                 "division_libraries_{$stationId}",
-                "division_all_libraries_{$stationId}"
+                "division_all_libraries_{$stationId}",
             ],
             self::LEVEL_REGION => [
                 "divisions_region_{$stationId}",
                 "region_all_libraries_{$stationId}",
                 "all_districts",
-                "all_schools"
+                "all_schools",
             ],
             default => []
         };
@@ -544,7 +571,7 @@ class NonPrintResourceService
     }
 
     /**
-     * Clear library name caches.
+     * Clear all library name caches.
      */
     public function clearLibraryCache(): void
     {
