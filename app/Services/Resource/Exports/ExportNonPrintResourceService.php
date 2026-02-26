@@ -27,7 +27,11 @@ class ExportNonPrintResourceService
     public const LEVEL_REGION = 4;
 
     /**
-     * Get all filtered resources for export (no pagination)
+     * Get all filtered resources for export (no pagination).
+     *
+     * library_id now lives on nonprint_acquisitions, so we scope the query
+     * via whereHas and let the eager-loaded relation carry all acquisition
+     * rows to the model accessors (quantities, library_name, showDetails…).
      */
     public function getExportData(Request $request, int $level, string $stationId): Collection
     {
@@ -38,18 +42,15 @@ class ExportNonPrintResourceService
         }
 
         $query = NonprintResource::with(['nonprintTitle', 'type', 'nonprintAcquisitions'])
-            ->whereIn('library_id', $libraryIds->toArray());
+            ->whereHas('nonprintAcquisitions', function ($q) use ($libraryIds) {
+                $q->whereIn('library_id', $libraryIds->toArray());
+            });
 
         // Apply search based on level
         $searchParam = $this->getSearchParam($request, $level);
         $this->applySearch($query, $searchParam);
 
-        $resources = $query->get();
-
-        // Attach library names using optimized caching
-        $this->attachLibraryNames($resources);
-
-        return $resources;
+        return $query->get();
     }
 
     /**
@@ -252,66 +253,12 @@ class ExportNonPrintResourceService
     }
 
     /**
-     * Attach library names to resources collection using optimized caching
-     */
-    private function attachLibraryNames(Collection $resources): void
-    {
-        if ($resources->isEmpty()) {
-            return;
-        }
-
-        $libraryIds = $resources->pluck('library_id')->unique()->filter();
-
-        if ($libraryIds->isEmpty()) {
-            foreach ($resources as $resource) {
-                $resource->library_name = 'No Library Assigned';
-            }
-            return;
-        }
-
-        // Cache library lookups - critical for performance at scale
-        $libraryIdsKey = $libraryIds->sort()->values()->implode('_');
-        $cacheKey = 'library_names_' . md5($libraryIdsKey);
-
-        $allLibraries = Cache::remember(
-            $cacheKey,
-            self::CACHE_TTL_LIBRARIES,
-            function () use ($libraryIds) {
-                // OPTIMIZATION: Use UNION ALL instead of 3 separate queries
-                $results = DB::select("
-                    SELECT id, library_name, 'school' as type FROM school_libraries WHERE id = ANY(?)
-                    UNION ALL
-                    SELECT id, library_name, 'division' as type FROM division_libraries WHERE id = ANY(?)
-                    UNION ALL
-                    SELECT id, library_name, 'region' as type FROM region_libraries WHERE id = ANY(?)
-                ", [
-                    '{' . $libraryIds->implode(',') . '}',
-                    '{' . $libraryIds->implode(',') . '}',
-                    '{' . $libraryIds->implode(',') . '}'
-                ]);
-
-                return collect($results)->keyBy('id');
-            }
-        );
-
-        foreach ($resources as $resource) {
-            if (!$resource->library_id) {
-                $resource->library_name = 'No Library Assigned';
-                continue;
-            }
-
-            $library = $allLibraries->get($resource->library_id);
-
-            if ($library) {
-                $resource->library_name = $library->library_name;
-            } else {
-                $resource->library_name = 'Unknown Library';
-            }
-        }
-    }
-
-    /**
-     * Apply full-text search using PostgreSQL's tsvector
+     * Apply full-text search via nonprint_acquisitions.search_vector.
+     *
+     * Uses WHERE EXISTS so each nonprint_resources row appears at most once
+     * even when multiple acquisitions match. Ranking picks the best-matching
+     * acquisition to determine sort order — identical behaviour to
+     * NonPrintResourceService::applySearch().
      */
     private function applySearch($query, string $search)
     {
@@ -321,19 +268,30 @@ class ExportNonPrintResourceService
             return $query;
         }
 
-        // Use PostgreSQL full-text search with ranking (same as main service)
-        return $query->whereRaw(
-            "search_vector @@ plainto_tsquery('english', ?)",
-            [$search]
-        )->orderByRaw(
-            "ts_rank(search_vector, plainto_tsquery('english', ?)) DESC",
+        $query->whereExists(function ($sub) use ($search) {
+            $sub->select(DB::raw(1))
+                ->from('nonprint_acquisitions')
+                ->whereColumn('nonprint_acquisitions.nonprint_id', 'nonprint_resources.id')
+                ->whereRaw(
+                    "nonprint_acquisitions.search_vector @@ plainto_tsquery('english', ?)",
+                    [$search]
+                );
+        });
+
+        $query->orderByRaw(
+            "(SELECT MAX(ts_rank(na.search_vector, plainto_tsquery('english', ?)))
+              FROM nonprint_acquisitions na
+              WHERE na.nonprint_id = nonprint_resources.id) DESC",
             [$search]
         );
+
+        return $query;
     }
 
     /**
-     * Fallback search method using LIKE queries
-     * This is kept for backward compatibility but should not be needed
+     * ILIKE fallback — used when the FTS vector is unavailable.
+     * library_name and other acquisition fields are now looked up via
+     * the nonprintAcquisitions relation.
      */
     private function applySearchFallback($query, string $search)
     {
@@ -346,45 +304,34 @@ class ExportNonPrintResourceService
         $searchLower = '%' . strtolower($search) . '%';
 
         return $query->where(function ($q) use ($searchLower) {
-            // Search in direct resource fields
-            $q->whereRaw('LOWER(brand) LIKE ?', [$searchLower])
-            ->orWhereRaw('LOWER(code) LIKE ?', [$searchLower])
-            ->orWhereRaw('LOWER(version) LIKE ?', [$searchLower])
-            ->orWhereRaw('LOWER(url) LIKE ?', [$searchLower])
-            ->orWhereRaw('LOWER(size) LIKE ?', [$searchLower])
-            ->orWhereRaw('LOWER(model) LIKE ?', [$searchLower])
+            // Fields that moved to nonprint_acquisitions
+            $q->whereHas('nonprintAcquisitions', function ($aq) use ($searchLower) {
+                    $aq->where('brand',        'ILIKE', $searchLower)
+                       ->orWhere('code',        'ILIKE', $searchLower)
+                       ->orWhere('version',     'ILIKE', $searchLower)
+                       ->orWhere('url',         'ILIKE', $searchLower)
+                       ->orWhere('size',        'ILIKE', $searchLower)
+                       ->orWhere('model',       'ILIKE', $searchLower)
+                       ->orWhere('library_name','ILIKE', $searchLower);
+                })
 
-            // Search in title
-            ->orWhereHas('nonprintTitle', fn($qt) =>
-                $qt->whereRaw('LOWER(title) LIKE ?', [$searchLower])
-            )
+                // Title
+                ->orWhereHas('nonprintTitle', fn($qt) =>
+                    $qt->where('title', 'ILIKE', $searchLower)
+                )
 
-            // Search in subjects and grade levels
-            ->orWhereExists(function ($exists) use ($searchLower) {
-                $exists->select(DB::raw(1))
+                // Subject / Grade
+                ->orWhereExists(function ($exists) use ($searchLower) {
+                    $exists->select(DB::raw(1))
                         ->from('subject_grade_levels as sgl')
                         ->join('subjects as subj', 'sgl.subject_id', '=', 'subj.id')
-                        ->join('grade_levels as gl', 'sgl.grade_level_id', '=', 'gl.id')
+                        ->join('grade_levels as gl',   'sgl.grade_level_id', '=', 'gl.id')
                         ->whereRaw("sgl.id::text = ANY(string_to_array(nonprint_resources.subject_grade_level_ids, ','))")
                         ->where(function ($match) use ($searchLower) {
-                            $match->whereRaw('LOWER(subj.subject_name) LIKE ?', [$searchLower])
-                                ->orWhereRaw('LOWER(gl.grade) LIKE ?', [$searchLower]);
+                            $match->where('subj.subject_name', 'ILIKE', $searchLower)
+                                  ->orWhere('gl.grade',        'ILIKE', $searchLower);
                         });
-            })
-
-            // Combined library search (optimized with UNION ALL)
-            ->orWhereExists(function ($exists) use ($searchLower) {
-                $exists->selectRaw('1')
-                    ->fromRaw('(
-                        SELECT id, library_name FROM school_libraries
-                        UNION ALL
-                        SELECT id, library_name FROM division_libraries
-                        UNION ALL
-                        SELECT id, library_name FROM region_libraries
-                    ) as all_libraries')
-                    ->whereColumn('nonprint_resources.library_id', 'all_libraries.id')
-                    ->whereRaw('LOWER(all_libraries.library_name) LIKE ?', [$searchLower]);
-            });
+                });
         });
     }
 

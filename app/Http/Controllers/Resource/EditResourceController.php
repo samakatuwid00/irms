@@ -145,39 +145,14 @@ class EditResourceController extends BaseController
     public function updateNonPrintResource(Request $request, $id)
     {
         $validated = $request->validate([
-            'nonprintTitle'        => 'required|string|max:255',
-            'typeNP'               => 'required|exists:nonprint_types,id',
-            'brand'                => 'nullable|string|max:255',
-            'code'                 => 'nullable|string|max:255',
-            'version'              => 'nullable|string|max:255',
-            'model'                => 'nullable|string|max:255',
-            'url'                  => 'nullable|string|max:255',
-            'size'                 => 'nullable|string|max:255',
-            'library_idNP'         => 'required|string|max:36',
-            'subject_grade_levels' => 'nullable|array',
-            'acquisitions'         => 'required|string',
-            'imageNP'              => 'nullable|image|mimes:jpeg,png,jpg|max:5120',
+            'library_id'   => 'nullable|string|max:36',
+            'acquisitions' => 'nullable|string',
         ]);
 
-        $serviceData = [
-            'title'                => $validated['nonprintTitle'],
-            'type'                 => $validated['typeNP'],
-            'brand'                => $validated['brand']    ?? 'Brand not specified.',
-            'code'                 => $validated['code']     ?? 'Code not specified.',
-            'version'              => $validated['version']  ?? 'Version not specified.',
-            'model'                => $validated['model']    ?? 'Model not specified.',
-            'url'                  => $validated['url']      ?? 'URL not specified.',
-            'size'                 => $validated['size']     ?? '',
-            'library_id'           => $validated['library_idNP'],
-            'subject_grade_levels' => $validated['subject_grade_levels'] ?? null,
-            'acquisitions'         => $validated['acquisitions'],
-        ];
+        // Default to an empty JSON array if nothing was submitted
+        $validated['acquisitions'] = $validated['acquisitions'] ?? '[]';
 
-        if ($request->hasFile('imageNP')) {
-            $serviceData['image'] = $request->file('imageNP');
-        }
-
-        $result = $this->nonPrintResourceService->updateNonPrintResource($id, $serviceData);
+        $result = $this->nonPrintResourceService->updateNonPrintResource($id, $validated);
 
         if ($result['deleted']) {
             return redirect()
@@ -187,6 +162,6 @@ class EditResourceController extends BaseController
 
         return redirect()
             ->route('edit-resource', ['id' => $id, 'tab' => 'nonprint'])
-            ->with('success', 'Non-print resource successfully updated.');
+            ->with('success', 'Acquisitions updated successfully.');
     }
 }

@@ -210,7 +210,8 @@
               action="{{ route('nonprint-masterlist.update', $resource->id) }}"
               class="space-y-8"
               method="POST"
-              enctype="multipart/form-data">
+              enctype="multipart/form-data"
+              autocomplete="off">
             @csrf
             @method('PUT')
 
@@ -221,6 +222,7 @@
                     <div class="h-full flex flex-col items-center justify-between border-2 border-dashed border-blue-500 rounded-lg p-4 text-center">
                         <img id="npImagePreview"
                              src="{{ $resource->cover ? asset('storage/' . $resource->cover) : asset('assets/images/def.jpg') }}"
+                             data-default-src="{{ $resource->cover ? asset('storage/' . $resource->cover) : asset('assets/images/def.jpg') }}"
                              alt="Image preview"
                              class="w-full flex-1 object-cover rounded mb-4">
                         <input type="file" name="image" id="npImageUpload" class="hidden" accept="image/*">
@@ -235,8 +237,15 @@
                 <div class="md:col-span-2 space-y-4">
                     <div>
                         <label class="block text-sm font-medium mb-1">Title <span class="text-red-500">*</span></label>
-                        <input type="text" name="title" required
-                               value="{{ old('title', $resource->nonprintTitle->title ?? '') }}"
+                        {{--
+                            FIX: Never use old() for title. Always render the server value directly.
+                            The data-server-value attribute is used by the pageshow JS handler
+                            to re-stamp the correct value if the browser restores this page from bfcache.
+                        --}}
+                        <input type="text" name="title" id="np-edit-title-input" required
+                               value="{{ $resource->nonprintTitle->title ?? '' }}"
+                               data-server-value="{{ $resource->nonprintTitle->title ?? '' }}"
+                               autocomplete="off"
                                class="w-full border border-gray-300 rounded px-3 py-2">
                     </div>
 
@@ -247,7 +256,7 @@
                                 <option disabled>Select type</option>
                                 @foreach ($nonprintTypes as $type)
                                     <option value="{{ $type->id }}"
-                                        {{ old('type', $resource->nonprint_type_id) == $type->id ? 'selected' : '' }}>
+                                        {{ $resource->nonprint_type_id == $type->id ? 'selected' : '' }}>
                                         {{ $type->type_name }}
                                     </option>
                                 @endforeach
@@ -256,37 +265,43 @@
                         <div>
                             <label class="block text-sm font-medium mb-1">Brand</label>
                             <input type="text" name="brand"
-                                   value="{{ old('brand', $resource->brand ?? '') }}"
+                                   value="{{ $resource->brand ?? '' }}"
+                                   autocomplete="off"
                                    class="w-full border border-gray-300 rounded px-3 py-2">
                         </div>
                         <div>
                             <label class="block text-sm font-medium mb-1">Code</label>
                             <input type="text" name="code"
-                                   value="{{ old('code', $resource->code ?? '') }}"
+                                   value="{{ $resource->code ?? '' }}"
+                                   autocomplete="off"
                                    class="w-full border border-gray-300 rounded px-3 py-2">
                         </div>
                         <div>
                             <label class="block text-sm font-medium mb-1">Version</label>
                             <input type="text" name="version"
-                                   value="{{ old('version', $resource->version ?? '') }}"
+                                   value="{{ $resource->version ?? '' }}"
+                                   autocomplete="off"
                                    class="w-full border border-gray-300 rounded px-3 py-2">
                         </div>
                         <div>
                             <label class="block text-sm font-medium mb-1">Model</label>
                             <input type="text" name="model"
-                                   value="{{ old('model', $resource->model ?? '') }}"
+                                   value="{{ $resource->model ?? '' }}"
+                                   autocomplete="off"
                                    class="w-full border border-gray-300 rounded px-3 py-2">
                         </div>
                         <div>
                             <label class="block text-sm font-medium mb-1">Size</label>
                             <input type="text" name="size"
-                                   value="{{ old('size', $resource->size ?? '') }}"
+                                   value="{{ $resource->size ?? '' }}"
+                                   autocomplete="off"
                                    class="w-full border border-gray-300 rounded px-3 py-2">
                         </div>
                         <div class="md:col-span-2">
                             <label class="block text-sm font-medium mb-1">URL / Link</label>
                             <input type="text" name="url"
-                                   value="{{ old('url', $resource->url ?? '') }}"
+                                   value="{{ $resource->url ?? '' }}"
+                                   autocomplete="off"
                                    class="w-full border border-gray-300 rounded px-3 py-2">
                         </div>
                     </div>
@@ -302,7 +317,8 @@
                     'SHS' => ['tab' => 'np-shs',    'label' => 'Senior High',  'grades' => [11=>'11',12=>'12']],
                 ];
                 $grouped    = $subjectGradeLevels->groupBy(['key_stage', 'subject_name']);
-                $checkedIds = old('subject_grade_levels', $editingSglIds ?? []);
+                // FIX: Never use old() for checkboxes — always use server-rendered $editingSglIds
+                $checkedIds = $editingSglIds ?? [];
             @endphp
 
             <div class="space-y-4">
@@ -651,6 +667,14 @@
         btn.addEventListener('click', () => activatePageTab(btn.dataset.pageTab, true));
     });
 
+    // ── bfcache: re-stamp title input with server value on back/forward nav ──
+    window.addEventListener('pageshow', function (e) {
+        const titleInput = document.getElementById('np-edit-title-input');
+        if (titleInput) {
+            titleInput.value = titleInput.getAttribute('data-server-value') ?? '';
+        }
+    });
+
     // ── SGL TABS (inside edit form) ─────────────────────────────────────
     const sglTabBtns     = document.querySelectorAll('.np-sgl-tab-btn');
     const sglTabContents = document.querySelectorAll('.np-sgl-tab-content');
@@ -687,31 +711,31 @@
     const closeViewBtn    = document.getElementById('closeNpViewModal');
     const closeViewFooter = document.getElementById('closeNpViewModalFooter');
 
-    const vmCover      = document.getElementById('vm-cover');
-    const vmTitle      = document.getElementById('vm-title');
-    const vmTypeBadge  = document.getElementById('vm-type-badge');
-    const vmStatusBadge= document.getElementById('vm-status-badge');
-    const vmBrand      = document.getElementById('vm-brand');
-    const vmCode       = document.getElementById('vm-code');
-    const vmVersion    = document.getElementById('vm-version');
-    const vmModel      = document.getElementById('vm-model');
-    const vmSize       = document.getElementById('vm-size');
-    const vmUrl        = document.getElementById('vm-url');
-    const vmSubjects   = document.getElementById('vm-subjects');
-    const vmEditLink   = document.getElementById('vm-edit-link');
+    const vmCover       = document.getElementById('vm-cover');
+    const vmTitle       = document.getElementById('vm-title');
+    const vmTypeBadge   = document.getElementById('vm-type-badge');
+    const vmStatusBadge = document.getElementById('vm-status-badge');
+    const vmBrand       = document.getElementById('vm-brand');
+    const vmCode        = document.getElementById('vm-code');
+    const vmVersion     = document.getElementById('vm-version');
+    const vmModel       = document.getElementById('vm-model');
+    const vmSize        = document.getElementById('vm-size');
+    const vmUrl         = document.getElementById('vm-url');
+    const vmSubjects    = document.getElementById('vm-subjects');
+    const vmEditLink    = document.getElementById('vm-edit-link');
 
     function openViewModal(btn) {
         const isRequest = btn.dataset.isRequest === 'true';
 
-        vmCover.src           = btn.dataset.cover;
-        vmTitle.textContent   = btn.dataset.title;
+        vmCover.src            = btn.dataset.cover;
+        vmTitle.textContent    = btn.dataset.title;
         vmTypeBadge.textContent = btn.dataset.type;
-        vmBrand.textContent   = btn.dataset.brand;
-        vmCode.textContent    = btn.dataset.code;
-        vmVersion.textContent = btn.dataset.version;
-        vmModel.textContent   = btn.dataset.model;
-        vmSize.textContent    = btn.dataset.size;
-        vmUrl.textContent     = btn.dataset.url !== '-' ? btn.dataset.url : '-';
+        vmBrand.textContent    = btn.dataset.brand;
+        vmCode.textContent     = btn.dataset.code;
+        vmVersion.textContent  = btn.dataset.version;
+        vmModel.textContent    = btn.dataset.model;
+        vmSize.textContent     = btn.dataset.size;
+        vmUrl.textContent      = btn.dataset.url !== '-' ? btn.dataset.url : '-';
         vmSubjects.textContent = btn.dataset.subjects;
 
         // Status badge: pending requests show yellow, approved show green

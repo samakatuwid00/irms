@@ -132,6 +132,9 @@ class NonPrintResourceExportController extends BaseController
         // Populate data
         $row = 2;
         foreach ($resources as $resource) {
+            // Get the first acquisition (for fields like brand, code, etc.)
+            $acquisition = $resource->nonprintAcquisitions->first();
+
             // Get subjects and grades
             $subjects = [];
             if ($resource->subjects()->count()) {
@@ -141,6 +144,12 @@ class NonPrintResourceExportController extends BaseController
             }
             $subjectsText = $subjects ? implode(', ', $subjects) : 'No assignment';
 
+            // Resolve library_name from acquisitions
+            $libraryName = $resource->nonprintAcquisitions
+                ->whereNotNull('library_name')
+                ->value('library_name')
+                ?? ($resource->nonprintAcquisitions->isNotEmpty() ? 'Unknown Library' : 'No Library Assigned');
+
             // Get quantities
             $qty = $resource->quantities;
             $total = array_sum($qty);
@@ -148,13 +157,13 @@ class NonPrintResourceExportController extends BaseController
             // Set cell values
             $sheet->setCellValue('A' . $row, $resource->nonprintTitle->title);
             $sheet->setCellValue('B' . $row, $resource->type->type_name);
-            $sheet->setCellValue('C' . $row, $resource->brand ?? 'N/A');
-            $sheet->setCellValue('D' . $row, $resource->code ?? 'N/A');
-            $sheet->setCellValue('E' . $row, $resource->version ?? 'N/A');
-            $sheet->setCellValue('F' . $row, $resource->url ?? 'N/A');
-            $sheet->setCellValue('G' . $row, $resource->size ?? 'N/A');
-            $sheet->setCellValue('H' . $row, $resource->model ?? 'N/A');
-            $sheet->setCellValue('I' . $row, $resource->library_name ?? 'N/A');
+            $sheet->setCellValue('C' . $row, $acquisition?->brand ?? 'N/A');
+            $sheet->setCellValue('D' . $row, $acquisition?->code ?? 'N/A');
+            $sheet->setCellValue('E' . $row, $acquisition?->version ?? 'N/A');
+            $sheet->setCellValue('F' . $row, $acquisition?->url ?? 'N/A');
+            $sheet->setCellValue('G' . $row, $acquisition?->size ?? 'N/A');
+            $sheet->setCellValue('H' . $row, $acquisition?->model ?? 'N/A');
+            $sheet->setCellValue('I' . $row, $libraryName);
             $sheet->setCellValue('J' . $row, $subjectsText);
             $sheet->setCellValue('K' . $row, $qty['usable']);
             $sheet->setCellValue('L' . $row, $qty['partially_damaged']);
