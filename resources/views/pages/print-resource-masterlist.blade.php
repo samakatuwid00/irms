@@ -245,11 +245,6 @@
                     <div class="space-y-4">
                         <div>
                             <label class="block text-sm font-medium mb-1">Title <span class="text-red-500">*</span></label>
-                            {{--
-                                FIX: Never use old() for title. Always render the server value directly.
-                                The data-server-value attribute is used by the pageshow JS handler
-                                to re-stamp the correct value if the browser restores this page from bfcache.
-                            --}}
                             <input type="text" name="title" id="edit-title-input" required
                                    value="{{ $resource->printTitle->title ?? '' }}"
                                    data-server-value="{{ $resource->printTitle->title ?? '' }}"
@@ -334,7 +329,6 @@
                     'SHS' => ['tab' => 'shs',    'label' => 'Senior High',  'grades' => [11=>'11',12=>'12']],
                 ];
                 $grouped    = $subjectGradeLevels->groupBy(['key_stage', 'subject_name']);
-                // FIX: Never use old() for checkboxes — always use server-rendered $editingSglIds
                 $checkedIds = $editingSglIds ?? [];
             @endphp
 
@@ -663,10 +657,6 @@
         btn.addEventListener('click', () => activatePageTab(btn.dataset.pageTab));
     });
 
-    // ── BFCACHE FIX: Re-stamp server-rendered values after browser restores page ──
-    // pageshow fires on both normal loads AND bfcache restores (persisted === true).
-    // DOMContentLoaded does NOT fire on bfcache restores, which is why the title
-    // was bleeding through when navigating between edit pages.
     window.addEventListener('pageshow', function (e) {
         const titleInput = document.getElementById('edit-title-input');
         if (titleInput) {
