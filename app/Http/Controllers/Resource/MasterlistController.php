@@ -65,30 +65,35 @@ class MasterlistController extends BaseController
         $resource = PrintResource::with(['printTitle.authors', 'type'])
             ->where('id', $id)
             ->where('status', 1)
-            ->firstOrFail();
+            ->firstOrFail()
+            ->fresh(['printTitle.authors', 'type']);
 
         $subjectGradeLevels = $this->getSubjectGradeLevels();
         $printTypes         = PrintType::all();
 
         $editingAuthors = $resource->printTitle->authors->pluck('author_name')->toArray();
         $editingSglIds  = $resource->subject_grade_level_ids
-            ? explode(',', $resource->subject_grade_level_ids)
+            ? array_map('trim', explode(',', $resource->subject_grade_level_ids))
             : [];
 
-        // Build tab data so the blade has $masterlist and $requests
         [$masterlist, $requests] = $this->buildTabData($request, $user, $level);
 
-        return view('pages.print-resource-masterlist', compact(
-            'resource',
-            'subjectGradeLevels',
-            'printTypes',
-            'editingAuthors',
-            'editingSglIds',
-            'masterlist',
-            'requests',
-            'level',
-            'user'
-        ));
+        // FIX: no-store headers prevent bfcache so navigating between edit pages
+        // always fetches fresh HTML — eliminating stale title bleed-through.
+        return response()
+            ->view('pages.print-resource-masterlist', compact(
+                'resource',
+                'subjectGradeLevels',
+                'printTypes',
+                'editingAuthors',
+                'editingSglIds',
+                'masterlist',
+                'requests',
+                'level',
+                'user'
+            ))
+            ->header('Cache-Control', 'no-store, no-cache, must-revalidate')
+            ->header('Pragma', 'no-cache');
     }
 
     // -----------------------------------------------------------------------
@@ -102,18 +107,22 @@ class MasterlistController extends BaseController
 
         abort_unless(in_array($level, [3, 4]), 403, 'Unauthorized access.');
 
-        $resource = PrintResource::where('id', $id)
+        $resource = PrintResource::with(['printTitle.authors'])
+            ->where('id', $id)
             ->where('status', 1)
             ->firstOrFail();
 
         $validated = $this->validateResourceRequest($request);
 
+        if ($resource->printTitle) {
+            $resource->printTitle->update(['title' => $validated['title']]);
+        }
+
         $this->printResourceService->updatePrintResource($resource, $validated);
 
         return redirect()
             ->route('masterlist.index')
-            ->with('success', 'Resource updated successfully.')
-            ->with('active_tab', 'tab-masterlist');
+            ->with('success', 'Resource updated successfully.');
     }
 
     // -----------------------------------------------------------------------
@@ -127,7 +136,6 @@ class MasterlistController extends BaseController
 
         abort_unless($level === 3, 403, 'Only division accounts can approve requests.');
 
-        // Only approve requests directed to this division
         $resource = PrintResource::where('id', $id)
             ->where('status', 0)
             ->where('approver_station', $user->station_id)
@@ -135,7 +143,6 @@ class MasterlistController extends BaseController
 
         $resource->update(['status' => 1]);
 
-        // Rebuild search vector after approval
         DB::statement('
             UPDATE print_resources
             SET search_vector = build_print_resource_search_vector(id)
@@ -150,8 +157,6 @@ class MasterlistController extends BaseController
 
     // -----------------------------------------------------------------------
     // reject — reject (and delete) a school request (division only, level 3)
-    //          NOTE: title and authors are intentionally NOT deleted here,
-    //          as they may be referenced by other resources.
     // -----------------------------------------------------------------------
 
     public function reject(string $id)
@@ -166,12 +171,10 @@ class MasterlistController extends BaseController
             ->where('approver_station', $user->station_id)
             ->firstOrFail();
 
-        // Delete cover image if it exists
         if ($resource->cover && \Illuminate\Support\Facades\Storage::disk('public')->exists($resource->cover)) {
             \Illuminate\Support\Facades\Storage::disk('public')->delete($resource->cover);
         }
 
-        // Delete the resource only — do NOT touch title/authors
         $resource->delete();
 
         return redirect()
@@ -203,7 +206,13 @@ class MasterlistController extends BaseController
             );
         }
 
-        $results = $query->orderByDesc('created_at')->paginate(15);
+        $results = $query
+            ->orderBy(
+                PrintTitle::select('title')
+                    ->whereColumn('print_titles.id', 'print_resources.print_title_id')
+                    ->limit(1)
+            )
+            ->paginate(15);
 
         return response()->json([
             'data' => $results->map(fn($r) => $this->formatResource($r)),
@@ -239,7 +248,13 @@ class MasterlistController extends BaseController
             );
         }
 
-        $results = $query->orderByDesc('created_at')->paginate(15);
+        $results = $query
+            ->orderBy(
+                PrintTitle::select('title')
+                    ->whereColumn('print_titles.id', 'print_resources.print_title_id')
+                    ->limit(1)
+            )
+            ->paginate(15);
 
         return response()->json([
             'data' => $results->map(fn($r) => $this->formatResource($r)),
@@ -257,8 +272,7 @@ class MasterlistController extends BaseController
 
     private function buildTabData(Request $request, $user, int $level): array
     {
-        // Masterlist: all approved resources
-        $mlSearch = trim($request->input('ml_search', ''));
+        $mlSearch        = trim($request->input('ml_search', ''));
         $masterlistQuery = PrintResource::with(['printTitle.authors', 'type'])
             ->where('status', 1);
 
@@ -269,12 +283,17 @@ class MasterlistController extends BaseController
             );
         }
 
-        $masterlist = $masterlistQuery->orderByDesc('created_at')->paginate(15, ['*'], 'ml_page');
+        $masterlist = $masterlistQuery
+            ->orderBy(
+                PrintTitle::select('title')
+                    ->whereColumn('print_titles.id', 'print_resources.print_title_id')
+                    ->limit(1)
+            )
+            ->paginate(15, ['*'], 'ml_page');
 
-        // Requests: only for division (level 3)
         $requests = null;
         if ($level === 3) {
-            $rqSearch = trim($request->input('rq_search', ''));
+            $rqSearch      = trim($request->input('rq_search', ''));
             $requestsQuery = PrintResource::with(['printTitle.authors', 'type'])
                 ->where('status', 0)
                 ->where('approver_station', $user->station_id);
@@ -286,7 +305,13 @@ class MasterlistController extends BaseController
                 );
             }
 
-            $requests = $requestsQuery->orderByDesc('created_at')->paginate(15, ['*'], 'rq_page');
+            $requests = $requestsQuery
+                ->orderBy(
+                    PrintTitle::select('title')
+                        ->whereColumn('print_titles.id', 'print_resources.print_title_id')
+                        ->limit(1)
+                )
+                ->paginate(15, ['*'], 'rq_page');
         }
 
         return [$masterlist, $requests];

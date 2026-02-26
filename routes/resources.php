@@ -53,7 +53,7 @@ Route::patch('/print-masterlist/{id}/approve', [MasterlistController::class, 'ap
 Route::delete('/print-masterlist/{id}/reject', [MasterlistController::class, 'reject'])
     ->name('masterlist.reject');
 
-// AJAX search endpoints (optional — for future async use)
+// AJAX search endpoints
 Route::get('/print-masterlist/search', [MasterlistController::class, 'search'])
     ->name('masterlist.search');
 Route::get('/print-masterlist/requests/search', [MasterlistController::class, 'requestSearch'])

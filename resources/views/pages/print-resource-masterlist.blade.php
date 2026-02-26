@@ -47,7 +47,8 @@
 
             @if($isEditing)
             <button type="button" data-page-tab="tab-edit"
-                    class="page-tab-btn whitespace-nowrap pb-3 px-1 text-sm font-medium border-b-2 border-transparent text-gray-500 hover:text-gray-700">
+                    class="page-tab-btn whitespace-nowrap pb-3 px-1 text-sm font-medium border-b-2 border-transparent text-gray-500 hover:text-gray-700"
+                    id="editTabBtn">
                 Edit Resource
             </button>
             @endif
@@ -111,30 +112,30 @@
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-gray-100">
-                        @forelse($masterlist as $resource)
+                        @forelse($masterlist as $row)
                             <tr class="hover:bg-gray-50 transition-colors">
                                 <td class="px-3 py-2">
-                                    <img src="{{ $resource->cover ? asset('storage/' . $resource->cover) : asset('assets/images/def.jpg') }}"
+                                    <img src="{{ $row->cover ? asset('storage/' . $row->cover) : asset('assets/images/def.jpg') }}"
                                          alt="cover" class="w-9 h-12 object-cover rounded border border-gray-200 shadow-sm">
                                 </td>
                                 <td class="px-3 py-2 font-medium text-gray-900 max-w-[180px]">
-                                    <span title="{{ $resource->printTitle->title ?? '' }}">{{ Str::limit($resource->printTitle->title ?? '-', 40) }}</span>
+                                    <span title="{{ $row->printTitle->title ?? '' }}">{{ Str::limit($row->printTitle->title ?? '-', 40) }}</span>
                                 </td>
                                 <td class="px-3 py-2 text-gray-600 max-w-[140px]">
-                                    {{ Str::limit($resource->printTitle->authors->pluck('author_name')->join(', ') ?: '-', 35) }}
+                                    {{ Str::limit($row->printTitle->authors->pluck('author_name')->join(', ') ?: '-', 35) }}
                                 </td>
-                                <td class="px-3 py-2 text-gray-600 whitespace-nowrap">{{ $resource->type->type_name ?? '-' }}</td>
-                                <td class="px-3 py-2 text-gray-600">{{ $resource->publisher ?? '-' }}</td>
-                                <td class="px-3 py-2 text-gray-600">{{ $resource->edition ?? '-' }}</td>
-                                <td class="px-3 py-2 text-gray-600">{{ $resource->copyright ?? '-' }}</td>
-                                <td class="px-3 py-2 text-gray-600">{{ $resource->isbn ?? '-' }}</td>
+                                <td class="px-3 py-2 text-gray-600 whitespace-nowrap">{{ $row->type->shortname ?? '-' }}</td>
+                                <td class="px-3 py-2 text-gray-600">{{ $row->publisher ?? '-' }}</td>
+                                <td class="px-3 py-2 text-gray-600">{{ $row->edition ?? '-' }}</td>
+                                <td class="px-3 py-2 text-gray-600">{{ $row->copyright ?? '-' }}</td>
+                                <td class="px-3 py-2 text-gray-600">{{ $row->isbn ?? '-' }}</td>
                                 <td class="px-3 py-2 text-gray-600 max-w-[220px] text-xs">
                                     @php
-                                        $sglIds = $resource->subject_grade_level_ids ? explode(',', $resource->subject_grade_level_ids) : [];
+                                        $sglIds = $row->subject_grade_level_ids ? explode(',', $row->subject_grade_level_ids) : [];
                                         if (!empty($sglIds)) {
                                             $sgls = \App\Models\SubjectGradeLevel::with(['subject', 'gradeLevel'])
                                                 ->whereIn('id', $sglIds)->get();
-                                            $sglText = $sgls->map(fn($s) => ($s->subject->subject_name ?? '') . ' - Gr.' . ($s->gradeLevel->grade ?? ''))->join('; ');
+                                            $sglText = $sgls->map(fn($s) => ($s->subject->subject_name ?? '') . ' - ' . ($s->gradeLevel->grade ?? ''))->join('; ');
                                         } else {
                                             $sglText = '-';
                                         }
@@ -144,17 +145,17 @@
                                 <td class="px-3 py-2 text-center">
                                     <div class="flex justify-center gap-2">
                                         <button type="button"
-                                                data-view-id="{{ $resource->id }}"
-                                                data-cover="{{ $resource->cover ? asset('storage/' . $resource->cover) : asset('assets/images/def.jpg') }}"
-                                                data-title="{{ $resource->printTitle->title ?? '-' }}"
-                                                data-authors="{{ $resource->printTitle->authors->pluck('author_name')->join(', ') ?: '-' }}"
-                                                data-type="{{ $resource->type->type_name ?? '-' }}"
-                                                data-publisher="{{ $resource->publisher ?? '-' }}"
-                                                data-volume="{{ $resource->volume ?? '-' }}"
-                                                data-edition="{{ $resource->edition ?? '-' }}"
-                                                data-copyright="{{ $resource->copyright ?? '-' }}"
-                                                data-isbn="{{ $resource->isbn ?? '-' }}"
-                                                data-pages="{{ $resource->pages ?? '-' }}"
+                                                data-view-id="{{ $row->id }}"
+                                                data-cover="{{ $row->cover ? asset('storage/' . $row->cover) : asset('assets/images/def.jpg') }}"
+                                                data-title="{{ $row->printTitle->title ?? '-' }}"
+                                                data-authors="{{ $row->printTitle->authors->pluck('author_name')->join(', ') ?: '-' }}"
+                                                data-type="{{ $row->type->shortname ?? '-' }}"
+                                                data-publisher="{{ $row->publisher ?? '-' }}"
+                                                data-volume="{{ $row->volume ?? '-' }}"
+                                                data-edition="{{ $row->edition ?? '-' }}"
+                                                data-copyright="{{ $row->copyright ?? '-' }}"
+                                                data-isbn="{{ $row->isbn ?? '-' }}"
+                                                data-pages="{{ $row->pages ?? '-' }}"
                                                 data-subjects="{{ $sglText ?? '-' }}"
                                                 class="view-resource-btn inline-flex items-center gap-1 text-xs px-3 py-1.5 bg-indigo-50 text-indigo-600 border border-indigo-200 rounded-lg hover:bg-indigo-100 transition-colors whitespace-nowrap font-medium">
                                             <svg class="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -163,7 +164,7 @@
                                             </svg>
                                             View
                                         </button>
-                                        <a href="{{ route('masterlist.edit', $resource->id) }}"
+                                        <a href="{{ route('masterlist.edit', $row->id) }}"
                                            class="inline-flex items-center gap-1 text-xs px-3 py-1.5 bg-blue-50 text-blue-600 border border-blue-200 rounded-lg hover:bg-blue-100 transition-colors whitespace-nowrap font-medium">
                                             <svg class="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16.862 4.487l1.687-1.687a1.875 1.875 0 112.652 2.652L7.5 19.153 3 21l1.847-4.5L16.862 4.487z"/>
@@ -208,17 +209,18 @@
                 <h2 class="text-base font-semibold text-gray-800">Edit Resource</h2>
                 <p class="text-sm text-gray-500 mt-1">Update the details of this approved resource.</p>
             </div>
-            <button type="button" data-page-tab="tab-masterlist"
-                    class="page-tab-btn text-sm text-blue-600 hover:underline flex items-center gap-1 mt-1">
+            <a href="{{ route('masterlist.index') }}"
+               class="text-sm text-blue-600 hover:underline flex items-center gap-1 mt-1">
                 &larr; Back to Masterlist
-            </button>
+            </a>
         </div>
 
         <form id="editForm"
               action="{{ route('masterlist.update', $resource->id) }}"
               class="resource-form space-y-8"
               method="POST"
-              enctype="multipart/form-data">
+              enctype="multipart/form-data"
+              autocomplete="off">
             @csrf
             @method('PUT')
 
@@ -243,8 +245,15 @@
                     <div class="space-y-4">
                         <div>
                             <label class="block text-sm font-medium mb-1">Title <span class="text-red-500">*</span></label>
-                            <input type="text" name="title" required
-                                   value="{{ old('title', $resource->printTitle->title ?? '') }}"
+                            {{--
+                                FIX: Never use old() for title. Always render the server value directly.
+                                The data-server-value attribute is used by the pageshow JS handler
+                                to re-stamp the correct value if the browser restores this page from bfcache.
+                            --}}
+                            <input type="text" name="title" id="edit-title-input" required
+                                   value="{{ $resource->printTitle->title ?? '' }}"
+                                   data-server-value="{{ $resource->printTitle->title ?? '' }}"
+                                   autocomplete="off"
                                    class="w-full border border-gray-300 rounded px-3 py-2">
                         </div>
                         <div>
@@ -257,7 +266,8 @@
                         <div>
                             <label class="block text-sm font-medium mb-1">Publisher</label>
                             <input type="text" name="publisher"
-                                   value="{{ old('publisher', $resource->publisher ?? '') }}"
+                                   value="{{ $resource->publisher ?? '' }}"
+                                   autocomplete="off"
                                    class="w-full border border-gray-300 rounded px-3 py-2">
                         </div>
                     </div>
@@ -270,7 +280,7 @@
                                     <option disabled>Select type</option>
                                     @foreach ($printTypes as $type)
                                         <option value="{{ $type->id }}"
-                                            {{ old('type', $resource->print_type_id) == $type->id ? 'selected' : '' }}>
+                                            {{ $resource->print_type_id == $type->id ? 'selected' : '' }}>
                                             {{ $type->type_name }}
                                         </option>
                                     @endforeach
@@ -278,12 +288,14 @@
                             </div>
                             <div>
                                 <label class="block text-sm mb-1">Volume</label>
-                                <input name="volume" value="{{ old('volume', $resource->volume ?? '') }}"
+                                <input name="volume" value="{{ $resource->volume ?? '' }}"
+                                       autocomplete="off"
                                        class="w-full border border-gray-300 rounded px-3 py-2">
                             </div>
                             <div>
                                 <label class="block text-sm mb-1">Edition</label>
-                                <input name="edition" value="{{ old('edition', $resource->edition ?? '') }}"
+                                <input name="edition" value="{{ $resource->edition ?? '' }}"
+                                       autocomplete="off"
                                        class="w-full border border-gray-300 rounded px-3 py-2">
                             </div>
                         </div>
@@ -291,18 +303,21 @@
                             <div>
                                 <label class="block text-sm mb-1">Copyright</label>
                                 <input name="copyright" type="number"
-                                       value="{{ old('copyright', $resource->copyright ?? '') }}"
+                                       value="{{ $resource->copyright ?? '' }}"
+                                       autocomplete="off"
                                        class="w-full border border-gray-300 rounded px-3 py-2">
                             </div>
                             <div>
                                 <label class="block text-sm mb-1">ISBN</label>
-                                <input name="isbn" value="{{ old('isbn', $resource->isbn ?? '') }}"
+                                <input name="isbn" value="{{ $resource->isbn ?? '' }}"
+                                       autocomplete="off"
                                        class="w-full border border-gray-300 rounded px-3 py-2">
                             </div>
                             <div>
                                 <label class="block text-sm mb-1">Pages</label>
                                 <input name="pages" type="number"
-                                       value="{{ old('pages', $resource->pages ?? '') }}"
+                                       value="{{ $resource->pages ?? '' }}"
+                                       autocomplete="off"
                                        class="w-full border border-gray-300 rounded px-3 py-2">
                             </div>
                         </div>
@@ -319,7 +334,8 @@
                     'SHS' => ['tab' => 'shs',    'label' => 'Senior High',  'grades' => [11=>'11',12=>'12']],
                 ];
                 $grouped    = $subjectGradeLevels->groupBy(['key_stage', 'subject_name']);
-                $checkedIds = old('subject_grade_levels', $editingSglIds ?? []);
+                // FIX: Never use old() for checkboxes — always use server-rendered $editingSglIds
+                $checkedIds = $editingSglIds ?? [];
             @endphp
 
             <div class="space-y-4">
@@ -368,10 +384,10 @@
             </div>
 
             <div class="flex justify-end gap-3">
-                <button type="button" data-page-tab="tab-masterlist"
-                        class="page-tab-btn px-5 py-2 border border-gray-300 text-gray-700 rounded hover:bg-gray-50 text-sm">
+                <a href="{{ route('masterlist.index') }}"
+                   class="px-5 py-2 border border-gray-300 text-gray-700 rounded hover:bg-gray-50 text-sm">
                     Cancel
-                </button>
+                </a>
                 <button type="submit" id="savePrintBtn"
                         class="px-6 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed">
                     <span id="savePrintText">Save Changes</span>
@@ -442,7 +458,7 @@
                                 <td class="px-3 py-2 text-gray-600 max-w-32.5">
                                     {{ Str::limit($req->printTitle->authors->pluck('author_name')->join(', ') ?: '-', 32) }}
                                 </td>
-                                <td class="px-3 py-2 text-gray-600 whitespace-nowrap">{{ $req->type->type_name ?? '-' }}</td>
+                                <td class="px-3 py-2 text-gray-600 whitespace-nowrap">{{ $req->type->shortname ?? '-' }}</td>
                                 <td class="px-3 py-2 text-gray-600">{{ $req->publisher ?? '-' }}</td>
                                 <td class="px-3 py-2 text-gray-600">{{ $req->edition ?? '-' }}</td>
                                 <td class="px-3 py-2 text-gray-600">{{ $req->copyright ?? '-' }}</td>
@@ -452,7 +468,7 @@
                                         if (!empty($sglIds)) {
                                             $reqSgls = \App\Models\SubjectGradeLevel::with(['subject', 'gradeLevel'])
                                                 ->whereIn('id', $sglIds)->get();
-                                            $reqSglText = $reqSgls->map(fn($s) => ($s->subject->subject_name ?? '') . ' - Gr.' . ($s->gradeLevel->grade ?? ''))->join('; ');
+                                            $reqSglText = $reqSgls->map(fn($s) => ($s->subject->subject_name ?? '') . ' - ' . ($s->gradeLevel->grade ?? ''))->join('; ');
                                         } else {
                                             $reqSglText = '-';
                                         }
@@ -602,13 +618,6 @@
                             class="px-4 py-2 text-sm border border-gray-300 text-gray-600 rounded-lg hover:bg-gray-100 transition-colors">
                         Close
                     </button>
-                    <a id="vm-edit-link" href="#"
-                       class="inline-flex items-center gap-1.5 px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium">
-                        <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16.862 4.487l1.687-1.687a1.875 1.875 0 112.652 2.652L7.5 19.153 3 21l1.847-4.5L16.862 4.487z"/>
-                        </svg>
-                        Edit Resource
-                    </a>
                 </div>
             </div>
         </div>
@@ -624,11 +633,16 @@
 <script>
 (function () {
     // ── PAGE-LEVEL TAB MANAGEMENT ───────────────────────────────────────
-    const STORAGE_KEY     = 'masterlist_activeTab';
     const pageTabBtns     = document.querySelectorAll('.page-tab-btn');
     const pageTabContents = document.querySelectorAll('.page-tab-content');
+    const isEditing       = {{ $isEditing ? 'true' : 'false' }};
 
-    function activatePageTab(targetId, save = true) {
+    function activatePageTab(targetId) {
+        if (isEditing && targetId !== 'tab-edit') {
+            window.location.href = '{{ route('masterlist.index') }}';
+            return;
+        }
+
         const validIds = Array.from(pageTabContents).map(c => c.id);
         if (!validIds.includes(targetId)) targetId = validIds[0] ?? 'tab-masterlist';
 
@@ -640,23 +654,24 @@
             btn.classList.toggle('text-gray-500',      !isActive);
         });
         pageTabContents.forEach(c => c.classList.toggle('hidden', c.id !== targetId));
-        if (save) sessionStorage.setItem(STORAGE_KEY, targetId);
     }
 
-    let initialTab = '{{ session('active_tab') }}'
-                  || (new URLSearchParams(location.search)).get('active_tab')
-                  || sessionStorage.getItem(STORAGE_KEY)
-                  || 'tab-masterlist';
-
-    // If editing, jump to edit tab
-    @if($isEditing)
-    initialTab = 'tab-edit';
-    @endif
-
-    activatePageTab(initialTab, false);
+    const initialTab = isEditing ? 'tab-edit' : 'tab-masterlist';
+    activatePageTab(initialTab);
 
     pageTabBtns.forEach(btn => {
-        btn.addEventListener('click', () => activatePageTab(btn.dataset.pageTab, true));
+        btn.addEventListener('click', () => activatePageTab(btn.dataset.pageTab));
+    });
+
+    // ── BFCACHE FIX: Re-stamp server-rendered values after browser restores page ──
+    // pageshow fires on both normal loads AND bfcache restores (persisted === true).
+    // DOMContentLoaded does NOT fire on bfcache restores, which is why the title
+    // was bleeding through when navigating between edit pages.
+    window.addEventListener('pageshow', function (e) {
+        const titleInput = document.getElementById('edit-title-input');
+        if (titleInput) {
+            titleInput.value = titleInput.getAttribute('data-server-value') ?? '';
+        }
     });
 
     // ── SGL TABS (inside edit form) ─────────────────────────────────────
@@ -706,7 +721,6 @@
     const vmIsbn       = document.getElementById('vm-isbn');
     const vmPages      = document.getElementById('vm-pages');
     const vmSubjects   = document.getElementById('vm-subjects');
-    const vmEditLink   = document.getElementById('vm-edit-link');
 
     function openViewModal(btn) {
         const id = btn.dataset.viewId;
@@ -722,7 +736,6 @@
         vmIsbn.textContent       = btn.dataset.isbn;
         vmPages.textContent      = btn.dataset.pages;
         vmSubjects.textContent   = btn.dataset.subjects;
-        vmEditLink.href          = `/masterlist/${id}/edit`;
 
         viewModal.classList.remove('hidden');
         document.body.style.overflow = 'hidden';
