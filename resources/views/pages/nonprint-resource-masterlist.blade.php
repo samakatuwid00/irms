@@ -98,14 +98,14 @@
                 <table class="w-full text-sm">
                     <thead class="bg-gray-50 text-xs text-gray-500 uppercase tracking-wide">
                         <tr>
-                            <th class="px-3 py-3 text-left w-10">Cover</th>
-                            <th class="px-3 py-3 text-left">Title</th>
-                            <th class="px-3 py-3 text-left">Type</th>
-                            <th class="px-3 py-3 text-left">Brand</th>
-                            <th class="px-3 py-3 text-left">Model</th>
-                            <th class="px-3 py-3 text-left">Version</th>
-                            <th class="px-3 py-3 text-left">Subjects / Grade Levels</th>
-                            <th class="px-3 py-3 text-center">Actions</th>
+                            <th class="px-2 py-3 text-left w-10">Cover</th>
+                            <th class="px-2 py-3 text-left">Title</th>
+                            <th class="px-2 py-3 text-left">Type</th>
+                            <th class="px-2 py-3 text-left">Brand</th>
+                            <th class="px-2 py-3 text-left">Model</th>
+                            <th class="px-2 py-3 text-left">Version</th>
+                            <th class="px-2 py-3 text-left">Subjects / Grade Levels</th>
+                            <th class="px-2 py-3 text-center">Actions</th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-gray-100">
@@ -115,24 +115,24 @@
                                 $sgls    = !empty($sglIds)
                                     ? \App\Models\SubjectGradeLevel::with(['subject','gradeLevel'])->whereIn('id', $sglIds)->get()
                                     : collect();
-                                $sglText = $sgls->map(fn($s) => ($s->subject->subject_name ?? '') . ' - Gr.' . ($s->gradeLevel->grade ?? ''))->join('; ') ?: '-';
+                                $sglText = $sgls->map(fn($s) => ($s->subject->subject_name ?? '') . ' - ' . ($s->gradeLevel->grade ?? ''))->join('; ') ?: '-';
                             @endphp
                             <tr class="hover:bg-gray-50 transition-colors">
-                                <td class="px-3 py-2">
+                                <td class="px-2 py-2">
                                     <img src="{{ $item->cover ? asset('storage/' . $item->cover) : asset('assets/images/def.jpg') }}"
                                          alt="cover" class="w-9 h-12 object-cover rounded border border-gray-200 shadow-sm">
                                 </td>
-                                <td class="px-3 py-2 font-medium text-gray-900 max-w-[180px]">
+                                <td class="px-2 py-2 font-medium text-gray-900 max-w-75">
                                     <span title="{{ $item->nonprintTitle->title ?? '' }}">{{ Str::limit($item->nonprintTitle->title ?? '-', 40) }}</span>
                                 </td>
-                                <td class="px-3 py-2 text-gray-600 whitespace-nowrap">{{ $item->type->type_name ?? '-' }}</td>
-                                <td class="px-3 py-2 text-gray-600">{{ $item->brand ?? '-' }}</td>
-                                <td class="px-3 py-2 text-gray-600">{{ $item->model ?? '-' }}</td>
-                                <td class="px-3 py-2 text-gray-600">{{ $item->version ?? '-' }}</td>
-                                <td class="px-3 py-2 text-gray-600 max-w-[220px] text-xs">
+                                <td class="px-2 py-2 text-gray-600 whitespace-nowrap">{{ $item->type->type_name ?? '-' }}</td>
+                                <td class="px-2 py-2 text-gray-600">{{ $item->brand ?? '-' }}</td>
+                                <td class="px-2 py-2 text-gray-600">{{ $item->model ?? '-' }}</td>
+                                <td class="px-2 py-2 text-gray-600">{{ $item->version ?? '-' }}</td>
+                                <td class="px-2 py-2 text-gray-600 max-w-55 text-xs">
                                     <span title="{{ $sglText }}">{{ Str::limit($sglText, 60) }}</span>
                                 </td>
-                                <td class="px-3 py-2 text-center">
+                                <td class="px-2 py-2 text-center">
                                     <div class="flex justify-center gap-2">
                                         {{-- View --}}
                                         <button type="button"
@@ -200,10 +200,10 @@
                 <h2 class="text-base font-semibold text-gray-800">Edit Resource</h2>
                 <p class="text-sm text-gray-500 mt-1">Update the details of this approved non-print resource.</p>
             </div>
-            <button type="button" data-page-tab="tab-masterlist"
-                    class="page-tab-btn text-sm text-blue-600 hover:underline flex items-center gap-1 mt-1">
+            <a href="{{ route('nonprint-masterlist.index') }}"
+               class="text-sm text-blue-600 hover:underline flex items-center gap-1 mt-1">
                 &larr; Back to Masterlist
-            </button>
+            </a>
         </div>
 
         <form id="editNpForm"
@@ -220,13 +220,15 @@
                 {{-- Cover image --}}
                 <div class="h-full">
                     <div class="h-full flex flex-col items-center justify-between border-2 border-dashed border-blue-500 rounded-lg p-4 text-center">
-                        <img id="npImagePreview"
-                             src="{{ $resource->cover ? asset('storage/' . $resource->cover) : asset('assets/images/def.jpg') }}"
-                             data-default-src="{{ $resource->cover ? asset('storage/' . $resource->cover) : asset('assets/images/def.jpg') }}"
-                             alt="Image preview"
-                             class="w-full flex-1 object-cover rounded mb-4">
+                        <div class="w-full" style="aspect-ratio: 3/3.5;">
+                            <img id="npImagePreview"
+                                src="{{ $resource->cover ? asset('storage/' . $resource->cover) : asset('assets/images/def.jpg') }}"
+                                data-default-src="{{ $resource->cover ? asset('storage/' . $resource->cover) : asset('assets/images/def.jpg') }}"
+                                alt="Image preview"
+                                class="w-full h-full object-cover rounded mb-4">
+                        </div>
                         <input type="file" name="image" id="npImageUpload" class="hidden" accept="image/*">
-                        <label for="npImageUpload" class="cursor-pointer px-4 py-2 bg-blue-600 text-white text-sm rounded-md hover:bg-blue-700">
+                        <label for="npImageUpload" class="cursor-pointer mt-2 px-4 py-2 bg-blue-600 text-white text-sm rounded-md hover:bg-blue-700">
                             Change Image
                         </label>
                         <p class="text-xs text-gray-500 mt-2">JPG, PNG &bull; Max 5MB. Leave blank to keep current.</p>
@@ -237,11 +239,6 @@
                 <div class="md:col-span-2 space-y-4">
                     <div>
                         <label class="block text-sm font-medium mb-1">Title <span class="text-red-500">*</span></label>
-                        {{--
-                            FIX: Never use old() for title. Always render the server value directly.
-                            The data-server-value attribute is used by the pageshow JS handler
-                            to re-stamp the correct value if the browser restores this page from bfcache.
-                        --}}
                         <input type="text" name="title" id="np-edit-title-input" required
                                value="{{ $resource->nonprintTitle->title ?? '' }}"
                                data-server-value="{{ $resource->nonprintTitle->title ?? '' }}"
@@ -367,10 +364,10 @@
             </div>
 
             <div class="flex justify-end gap-3">
-                <button type="button" data-page-tab="tab-masterlist"
-                        class="page-tab-btn px-5 py-2 border border-gray-300 text-gray-700 rounded hover:bg-gray-50 text-sm">
+                <a href="{{ route('nonprint-masterlist.index') }}"
+                   class="px-5 py-2 border border-gray-300 text-gray-700 rounded hover:bg-gray-50 text-sm">
                     Cancel
-                </button>
+                </a>
                 <button type="submit" id="saveNpBtn"
                         class="px-6 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed">
                     <span id="saveNpText">Save Changes</span>
@@ -434,21 +431,21 @@
                                 $reqSgls    = !empty($reqSglIds)
                                     ? \App\Models\SubjectGradeLevel::with(['subject','gradeLevel'])->whereIn('id', $reqSglIds)->get()
                                     : collect();
-                                $reqSglText = $reqSgls->map(fn($s) => ($s->subject->subject_name ?? '') . ' - Gr.' . ($s->gradeLevel->grade ?? ''))->join('; ') ?: '-';
+                                $reqSglText = $reqSgls->map(fn($s) => ($s->subject->subject_name ?? '') . ' - ' . ($s->gradeLevel->grade ?? ''))->join('; ') ?: '-';
                             @endphp
                             <tr class="hover:bg-gray-50 transition-colors">
                                 <td class="px-3 py-2">
                                     <img src="{{ $req->cover ? asset('storage/' . $req->cover) : asset('assets/images/def.jpg') }}"
                                          alt="cover" class="w-9 h-12 object-cover rounded border border-gray-200 shadow-sm">
                                 </td>
-                                <td class="px-3 py-2 font-medium text-gray-900 max-w-[160px]">
+                                <td class="px-3 py-2 font-medium text-gray-900 max-w-40">
                                     <span title="{{ $req->nonprintTitle->title ?? '' }}">{{ Str::limit($req->nonprintTitle->title ?? '-', 38) }}</span>
                                 </td>
                                 <td class="px-3 py-2 text-gray-600 whitespace-nowrap">{{ $req->type->type_name ?? '-' }}</td>
                                 <td class="px-3 py-2 text-gray-600">{{ $req->brand ?? '-' }}</td>
                                 <td class="px-3 py-2 text-gray-600">{{ $req->model ?? '-' }}</td>
                                 <td class="px-3 py-2 text-gray-600">{{ $req->version ?? '-' }}</td>
-                                <td class="px-3 py-2 text-gray-600 text-xs max-w-[200px]">
+                                <td class="px-3 py-2 text-gray-600 text-xs max-w-50">
                                     <span title="{{ $reqSglText }}">{{ Str::limit($reqSglText, 55) }}</span>
                                 </td>
                                 <td class="px-3 py-2 text-center text-gray-500 text-xs whitespace-nowrap">
@@ -538,7 +535,7 @@
     <div id="viewNpModal" class="fixed inset-0 z-50 hidden overflow-y-auto" role="dialog" aria-modal="true">
         <div id="viewNpModalBackdrop" class="fixed inset-0 bg-black/50 transition-opacity"></div>
         <div class="relative min-h-screen flex items-start justify-center p-4 pt-10">
-            <div class="relative bg-white rounded-xl shadow-2xl w-full max-w-2xl z-10 mb-10">
+            <div class="relative bg-white rounded-xl shadow-2xl w-full max-w-4xl z-10 mb-10">
 
                 {{-- Header --}}
                 <div class="flex items-center justify-between px-6 py-4 border-b border-gray-200">
@@ -556,7 +553,7 @@
                         {{-- Cover --}}
                         <div class="shrink-0">
                             <img id="vm-cover" src="" alt="Cover"
-                                 class="w-28 h-40 object-cover rounded-lg border border-gray-200 shadow-sm bg-gray-100">
+                                 class="w-100 h-120 object-cover rounded-lg border border-gray-200 shadow-sm bg-gray-100">
                         </div>
 
                         {{-- Core metadata --}}
@@ -567,10 +564,7 @@
 
                             <div class="flex flex-wrap gap-2 pt-0.5">
                                 <span id="vm-type-badge"
-                                      class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800"></span>
-                                <span id="vm-status-badge"
-                                      class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                                    ✓ Approved
+                                      class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
                                 </span>
                             </div>
 
@@ -599,14 +593,13 @@
                                     <dt class="text-xs font-semibold text-gray-400 uppercase tracking-wide">URL / Link</dt>
                                     <dd id="vm-url" class="text-gray-700 mt-0.5 text-xs break-all"></dd>
                                 </div>
+                                {{-- Subjects --}}
+                                <div class="mt-5">
+                                    <p class="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">Subjects / Grade Levels</p>
+                                    <p id="vm-subjects" class="text-sm text-gray-700 leading-relaxed"></p>
+                                </div>
                             </dl>
                         </div>
-                    </div>
-
-                    {{-- Subjects --}}
-                    <div class="mt-5 pt-4 border-t border-gray-100">
-                        <p class="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">Subjects / Grade Levels</p>
-                        <p id="vm-subjects" class="text-sm text-gray-700 leading-relaxed"></p>
                     </div>
                 </div>
 
@@ -616,13 +609,6 @@
                             class="px-4 py-2 text-sm border border-gray-300 text-gray-600 rounded-lg hover:bg-gray-100 transition-colors">
                         Close
                     </button>
-                    <a id="vm-edit-link" href="#"
-                       class="inline-flex items-center gap-1.5 px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium">
-                        <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16.862 4.487l1.687-1.687a1.875 1.875 0 112.652 2.652L7.5 19.153 3 21l1.847-4.5L16.862 4.487z"/>
-                        </svg>
-                        Edit Resource
-                    </a>
                 </div>
             </div>
         </div>
@@ -633,11 +619,16 @@
 <script>
 (function () {
     // ── PAGE-LEVEL TAB MANAGEMENT ───────────────────────────────────────
-    const STORAGE_KEY     = 'nonprint_masterlist_activeTab';
     const pageTabBtns     = document.querySelectorAll('.page-tab-btn');
     const pageTabContents = document.querySelectorAll('.page-tab-content');
+    const isEditing       = {{ $isEditing ? 'true' : 'false' }};
 
-    function activatePageTab(targetId, save = true) {
+    function activatePageTab(targetId) {
+        if (isEditing && targetId !== 'tab-edit') {
+            window.location.href = '{{ route('nonprint-masterlist.index') }}';
+            return;
+        }
+
         const validIds = Array.from(pageTabContents).map(c => c.id);
         if (!validIds.includes(targetId)) targetId = validIds[0] ?? 'tab-masterlist';
 
@@ -649,30 +640,13 @@
             btn.classList.toggle('text-gray-500',      !isActive);
         });
         pageTabContents.forEach(c => c.classList.toggle('hidden', c.id !== targetId));
-        if (save) sessionStorage.setItem(STORAGE_KEY, targetId);
     }
 
-    let initialTab = '{{ session('active_tab') }}'
-                  || (new URLSearchParams(location.search)).get('active_tab')
-                  || sessionStorage.getItem(STORAGE_KEY)
-                  || 'tab-masterlist';
-
-    @if($isEditing)
-    initialTab = 'tab-edit';
-    @endif
-
-    activatePageTab(initialTab, false);
+    const initialTab = isEditing ? 'tab-edit' : 'tab-masterlist';
+    activatePageTab(initialTab);
 
     pageTabBtns.forEach(btn => {
-        btn.addEventListener('click', () => activatePageTab(btn.dataset.pageTab, true));
-    });
-
-    // ── bfcache: re-stamp title input with server value on back/forward nav ──
-    window.addEventListener('pageshow', function (e) {
-        const titleInput = document.getElementById('np-edit-title-input');
-        if (titleInput) {
-            titleInput.value = titleInput.getAttribute('data-server-value') ?? '';
-        }
+        btn.addEventListener('click', () => activatePageTab(btn.dataset.pageTab));
     });
 
     // ── SGL TABS (inside edit form) ─────────────────────────────────────
@@ -694,16 +668,405 @@
     sglTabBtns.forEach(btn => btn.addEventListener('click', () => activateSglTab(btn.dataset.sglTab)));
     if (sglTabBtns.length) activateSglTab(sglTabBtns[0].dataset.sglTab);
 
-    // ── IMAGE PREVIEW ────────────────────────────────────────────────────
-    const npImageUpload  = document.getElementById('npImageUpload');
-    const npImagePreview = document.getElementById('npImagePreview');
-    if (npImageUpload && npImagePreview) {
-        npImageUpload.addEventListener('change', function () {
-            if (this.files[0]) {
-                npImagePreview.src = URL.createObjectURL(this.files[0]);
+    // ── IMAGE CROPPER + PREVIEW ──────────────────────────────────────────
+    (function () {
+
+        /* ── ImageCropperModal (inline) ─────────────────────────────── */
+        class ImageCropperModal {
+            constructor() {
+                this._modal = null; this._canvas = null; this._ctx = null;
+                this._image = null; this._originalFile = null; this._resolvePromise = null;
+                this._zoom = 1; this._panX = 0; this._panY = 0;
+                this._crop = null;
+                this._mode = 'idle'; this._resizeHandle = null;
+                this._saved = {}; this._drawStart = null;
+                this._canvasW = 0; this._canvasH = 0;
+                this._injectStyles();
+                this._buildModal();
             }
-        });
-    }
+            open(file) {
+                return new Promise(resolve => {
+                    this._resolvePromise = resolve;
+                    this._originalFile  = file;
+                    this._loadFile(file);
+                });
+            }
+            _buildModal() {
+                const el = document.createElement('div');
+                el.id = 'icpModal'; el.className = 'icp-overlay hidden';
+                el.innerHTML = `
+                    <div class="icp-dialog">
+                        <div class="icp-header">
+                            <div class="icp-header-title">
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>
+                                Crop &amp; Compress Image
+                            </div>
+                            <button type="button" id="icpCloseBtn" class="icp-close-btn" title="Cancel">&times;</button>
+                        </div>
+                        <div class="icp-hint">
+                            <span>🔍 <b>Scroll / buttons</b> to zoom</span>
+                            <span>✋ <b>Drag image</b> to pan</span>
+                            <span>✂️ <b>Drag on image</b> to draw crop</span>
+                            <span>↔️ <b>Drag handles</b> to resize</span>
+                        </div>
+                        <div class="icp-canvas-wrap"><canvas id="icpCanvas"></canvas></div>
+                        <div class="icp-footer">
+                            <div class="icp-zoom-bar">
+                                <button type="button" id="icpZoomOut" title="Zoom out"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="8" y1="11" x2="14" y2="11"/></svg></button>
+                                <span id="icpZoomLabel">100%</span>
+                                <button type="button" id="icpZoomIn" title="Zoom in"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="11" y1="8" x2="11" y2="14"/><line x1="8" y1="11" x2="14" y2="11"/></svg></button>
+                                <button type="button" id="icpZoomFit" class="icp-fit-btn">Fit</button>
+                            </div>
+                            <div class="icp-info">
+                                <span id="icpDimInfo">Draw a crop area on the image</span>
+                                <span id="icpSizeInfo"></span>
+                            </div>
+                            <div class="icp-actions">
+                                <button type="button" id="icpCancelBtn"  class="icp-btn-secondary">Cancel</button>
+                                <button type="button" id="icpResetBtn"   class="icp-btn-secondary"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-4.3"/></svg> Reset</button>
+                                <button type="button" id="icpApplyBtn"   class="icp-btn-primary"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg> Apply </button>
+                            </div>
+                        </div>
+                    </div>`;
+                document.body.appendChild(el);
+                this._modal  = el;
+                this._canvas = document.getElementById('icpCanvas');
+                this._ctx    = this._canvas.getContext('2d');
+                document.getElementById('icpCloseBtn').addEventListener('click',  () => this._cancel());
+                document.getElementById('icpCancelBtn').addEventListener('click', () => this._cancel());
+                document.getElementById('icpResetBtn').addEventListener('click',  () => { this._crop = null; this._draw(); this._updateInfo(); });
+                document.getElementById('icpApplyBtn').addEventListener('click',  () => this._apply());
+                document.getElementById('icpZoomIn').addEventListener('click',    () => this._zoomBy(0.15));
+                document.getElementById('icpZoomOut').addEventListener('click',   () => this._zoomBy(-0.15));
+                document.getElementById('icpZoomFit').addEventListener('click',   () => this._fitImage());
+                this._canvas.addEventListener('mousedown',  e => this._onDown(e));
+                this._canvas.addEventListener('mousemove',  e => this._onMove(e));
+                this._canvas.addEventListener('mouseup',    () => this._onUp());
+                this._canvas.addEventListener('mouseleave', () => this._onUp());
+                this._canvas.addEventListener('wheel',      e => this._onWheel(e), { passive: false });
+                this._canvas.addEventListener('touchstart', e => this._onDown(e), { passive: false });
+                this._canvas.addEventListener('touchmove',  e => this._onMove(e), { passive: false });
+                this._canvas.addEventListener('touchend',   () => this._onUp());
+            }
+            _loadFile(file) {
+                const reader = new FileReader();
+                reader.onload = e => {
+                    const img = new Image();
+                    img.onload = () => { this._image = img; this._crop = null; this._setupCanvas(); this._fitImage(); this._show(); };
+                    img.src = e.target.result;
+                };
+                reader.readAsDataURL(file);
+            }
+            _setupCanvas() {
+                const maxW = Math.min(780, window.innerWidth - 48);
+                const maxH = Math.min(500, window.innerHeight - 230);
+                this._canvasW = this._canvas.width  = maxW;
+                this._canvasH = this._canvas.height = maxH;
+            }
+            _fitImage() {
+                const img = this._image;
+                const scaleW = this._canvasW / img.naturalWidth;
+                const scaleH = this._canvasH / img.naturalHeight;
+                this._zoom = Math.min(scaleW, scaleH, 1);
+                this._panX = (this._canvasW - img.naturalWidth  * this._zoom) / 2;
+                this._panY = (this._canvasH - img.naturalHeight * this._zoom) / 2;
+                this._clampPan(); this._draw(); this._updateZoomLabel();
+            }
+            _zoomBy(delta, pivotX, pivotY) {
+                const oldZoom = this._zoom;
+                const newZoom = Math.min(10, Math.max(0.05, oldZoom + delta));
+                if (newZoom === oldZoom) return;
+                const px = pivotX ?? this._canvasW / 2;
+                const py = pivotY ?? this._canvasH / 2;
+                this._panX = px - (px - this._panX) * (newZoom / oldZoom);
+                this._panY = py - (py - this._panY) * (newZoom / oldZoom);
+                this._zoom = newZoom;
+                this._clampPan(); this._draw(); this._updateZoomLabel();
+            }
+            _clampPan() {
+                const imgW = this._image.naturalWidth  * this._zoom;
+                const imgH = this._image.naturalHeight * this._zoom;
+                const m = 50;
+                this._panX = Math.max(m - imgW, Math.min(this._canvasW - m, this._panX));
+                this._panY = Math.max(m - imgH, Math.min(this._canvasH - m, this._panY));
+            }
+            _updateZoomLabel() {
+                const el = document.getElementById('icpZoomLabel');
+                if (el) el.textContent = Math.round(this._zoom * 100) + '%';
+            }
+            _toImage(cx, cy) { return { x: (cx - this._panX) / this._zoom, y: (cy - this._panY) / this._zoom }; }
+            _draw() {
+                const ctx = this._ctx, cw = this._canvasW, ch = this._canvasH;
+                ctx.clearRect(0, 0, cw, ch);
+                this._drawCheckerboard();
+                ctx.save(); ctx.translate(this._panX, this._panY); ctx.scale(this._zoom, this._zoom);
+                ctx.drawImage(this._image, 0, 0); ctx.restore();
+                if (!this._crop) return;
+                const { x, y, w, h } = this._crop;
+                ctx.fillStyle = 'rgba(0,0,0,0.55)'; ctx.fillRect(0, 0, cw, ch);
+                ctx.save(); ctx.beginPath(); ctx.rect(x, y, w, h); ctx.clip();
+                ctx.translate(this._panX, this._panY); ctx.scale(this._zoom, this._zoom);
+                ctx.drawImage(this._image, 0, 0); ctx.restore();
+                ctx.strokeStyle = '#3B82F6'; ctx.lineWidth = 1.5; ctx.strokeRect(x + 0.5, y + 0.5, w, h);
+                ctx.strokeStyle = 'rgba(255,255,255,0.28)'; ctx.lineWidth = 1;
+                for (let i = 1; i <= 2; i++) {
+                    ctx.beginPath(); ctx.moveTo(x + w/3*i, y);   ctx.lineTo(x + w/3*i, y+h); ctx.stroke();
+                    ctx.beginPath(); ctx.moveTo(x, y + h/3*i);   ctx.lineTo(x+w, y + h/3*i); ctx.stroke();
+                }
+                const HS = 7;
+                this._handles(x, y, w, h).forEach(({ hx, hy }) => {
+                    ctx.fillStyle = '#fff'; ctx.strokeStyle = '#3B82F6'; ctx.lineWidth = 1.5;
+                    ctx.fillRect(hx - HS/2, hy - HS/2, HS, HS); ctx.strokeRect(hx - HS/2, hy - HS/2, HS, HS);
+                });
+            }
+            _drawCheckerboard() {
+                const ctx = this._ctx, s = 14;
+                for (let r = 0; r * s < this._canvasH; r++)
+                    for (let c = 0; c * s < this._canvasW; c++) {
+                        ctx.fillStyle = (r + c) % 2 === 0 ? '#c8cdd4' : '#e2e5ea';
+                        ctx.fillRect(c*s, r*s, s, s);
+                    }
+            }
+            _handles(x, y, w, h) {
+                return [
+                    {id:'nw',hx:x,    hy:y    },{id:'n', hx:x+w/2,hy:y    },{id:'ne',hx:x+w,hy:y    },
+                    {id:'e', hx:x+w,  hy:y+h/2},{id:'se',hx:x+w,  hy:y+h  },{id:'s', hx:x+w/2,hy:y+h},
+                    {id:'sw',hx:x,    hy:y+h  },{id:'w', hx:x,    hy:y+h/2},
+                ];
+            }
+            _hitHandle(mx, my) {
+                if (!this._crop) return null;
+                const { x, y, w, h } = this._crop, tol = 10;
+                for (const { id, hx, hy } of this._handles(x, y, w, h))
+                    if (Math.abs(mx - hx) <= tol && Math.abs(my - hy) <= tol) return id;
+                return null;
+            }
+            _insideCrop(mx, my) {
+                if (!this._crop) return false;
+                const { x, y, w, h } = this._crop;
+                return mx > x+8 && mx < x+w-8 && my > y+8 && my < y+h-8;
+            }
+            _insideImage(mx, my) {
+                return mx >= this._panX && mx <= this._panX + this._image.naturalWidth  * this._zoom &&
+                       my >= this._panY && my <= this._panY + this._image.naturalHeight * this._zoom;
+            }
+            _getPos(e) {
+                const rect = this._canvas.getBoundingClientRect();
+                const src  = e.touches ? e.touches[0] : e;
+                return { x: src.clientX - rect.left, y: src.clientY - rect.top };
+            }
+            _onDown(e) {
+                if (e.type === 'touchstart') e.preventDefault();
+                const pos = this._getPos(e);
+                const handle = this._hitHandle(pos.x, pos.y);
+                if (handle) { this._mode = 'resizing'; this._resizeHandle = handle; this._saved = { ...pos, crop: { ...this._crop } }; return; }
+                if (this._insideCrop(pos.x, pos.y)) { this._mode = 'moving'; this._saved = { ...pos, crop: { ...this._crop } }; return; }
+                if (this._insideImage(pos.x, pos.y)) { this._mode = 'drawing'; this._drawStart = { ...pos }; this._crop = null; return; }
+                this._mode = 'panning'; this._saved = { ...pos, panX: this._panX, panY: this._panY };
+            }
+            _onMove(e) {
+                if (e.type === 'touchmove') e.preventDefault();
+                const pos = this._getPos(e);
+                this._updateCursor(pos);
+                const dx = pos.x - (this._saved.x ?? pos.x);
+                const dy = pos.y - (this._saved.y ?? pos.y);
+                switch (this._mode) {
+                    case 'panning':
+                        this._panX = this._saved.panX + dx; this._panY = this._saved.panY + dy;
+                        this._clampPan(); this._draw(); break;
+                    case 'drawing': {
+                        const ds = this._drawStart;
+                        const x = Math.min(ds.x, pos.x), y = Math.min(ds.y, pos.y);
+                        const w = Math.abs(pos.x - ds.x), h = Math.abs(pos.y - ds.y);
+                        if (w > 5 || h > 5) this._crop = { x, y, w, h };
+                        this._draw(); this._updateInfo(); break;
+                    }
+                    case 'moving': {
+                        const { w, h } = this._saved.crop;
+                        const cw = this._canvasW, ch = this._canvasH;
+                        let nx = Math.max(0, Math.min(this._saved.crop.x + dx, cw - w));
+                        let ny = Math.max(0, Math.min(this._saved.crop.y + dy, ch - h));
+                        this._crop = { x: nx, y: ny, w, h };
+                        this._draw(); this._updateInfo(); break;
+                    }
+                    case 'resizing': this._doResize(pos); break;
+                }
+            }
+            _onUp() { this._mode = 'idle'; this._resizeHandle = null; }
+            _onWheel(e) {
+                e.preventDefault();
+                const pos = this._getPos(e);
+                this._zoomBy(e.deltaY < 0 ? 0.14 : -0.14, pos.x, pos.y);
+            }
+            _updateCursor(pos) {
+                const handle = this._hitHandle(pos.x, pos.y);
+                if (handle) {
+                    const map = { nw:'nwse-resize',se:'nwse-resize',ne:'nesw-resize',sw:'nesw-resize',n:'ns-resize',s:'ns-resize',e:'ew-resize',w:'ew-resize' };
+                    this._canvas.style.cursor = map[handle] || 'pointer';
+                } else if (this._insideCrop(pos.x, pos.y)) {
+                    this._canvas.style.cursor = 'move';
+                } else if (this._insideImage(pos.x, pos.y)) {
+                    this._canvas.style.cursor = this._mode === 'panning' ? 'grabbing' : 'crosshair';
+                } else {
+                    this._canvas.style.cursor = this._mode === 'panning' ? 'grabbing' : 'grab';
+                }
+            }
+            _doResize(pos) {
+                const MIN = 20, cw = this._canvasW, ch = this._canvasH;
+                const dx = pos.x - this._saved.x, dy = pos.y - this._saved.y;
+                let { x, y, w, h } = this._saved.crop;
+                const id = this._resizeHandle;
+                if (id.includes('e')) w = Math.max(MIN, Math.min(cw - x, w + dx));
+                if (id.includes('s')) h = Math.max(MIN, Math.min(ch - y, h + dy));
+                if (id.includes('w')) { const nx = Math.max(0, Math.min(x + w - MIN, x + dx)); w += x - nx; x = nx; }
+                if (id.includes('n')) { const ny = Math.max(0, Math.min(y + h - MIN, y + dy)); h += y - ny; y = ny; }
+                this._crop = { x, y, w, h }; this._draw(); this._updateInfo();
+            }
+            _updateInfo() {
+                const el = document.getElementById('icpDimInfo');
+                if (!el) return;
+                if (!this._crop) { el.textContent = 'Draw a crop area on the image'; return; }
+                const { w, h } = this._crop;
+                el.textContent = `Crop: ${Math.round(w / this._zoom)} × ${Math.round(h / this._zoom)} px`;
+            }
+            async _apply() {
+                const btn = document.getElementById('icpApplyBtn');
+                btn.disabled = true; btn.innerHTML = '<span class="icp-spinner"></span> Processing…';
+                try {
+                    const file = await this._cropAndCompress();
+                    const sizeEl = document.getElementById('icpSizeInfo');
+                    if (sizeEl) sizeEl.textContent = `Output: ${(file.size / 1024).toFixed(1)} KB`;
+                    this._hide(); this._resolvePromise(file);
+                } catch (err) {
+                    console.error(err); alert('Failed to process the image. Please try again.');
+                } finally {
+                    btn.disabled = false;
+                    btn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg> Apply & Compress`;
+                }
+            }
+            async _cropAndCompress() {
+                const img = this._image;
+                let natX, natY, natW, natH;
+                if (this._crop) {
+                    const { x, y, w, h } = this._crop;
+                    const tl = this._toImage(x, y), br = this._toImage(x + w, y + h);
+                    natX = Math.max(0, Math.round(tl.x)); natY = Math.max(0, Math.round(tl.y));
+                    natW = Math.min(img.naturalWidth  - natX, Math.round(br.x - tl.x));
+                    natH = Math.min(img.naturalHeight - natY, Math.round(br.y - tl.y));
+                } else { natX = 0; natY = 0; natW = img.naturalWidth; natH = img.naturalHeight; }
+                const off = document.createElement('canvas');
+                off.width = natW; off.height = natH;
+                off.getContext('2d').drawImage(img, natX, natY, natW, natH, 0, 0, natW, natH);
+                const MAX      = 1 * 1024 * 1024;
+                const baseName = (this._originalFile?.name || 'image.jpg').replace(/\.[^.]+$/, '');
+                const toBlob   = (canvas, type, quality) => new Promise((res, rej) => canvas.toBlob(b => b ? res(b) : rej(new Error('toBlob failed')), type, quality));
+                let quality = 0.92, blob;
+                while (quality >= 0.10) {
+                    blob = await toBlob(off, 'image/jpeg', quality);
+                    if (blob.size <= MAX) break;
+                    quality = parseFloat((quality - 0.07).toFixed(2));
+                }
+                if (blob.size > MAX) {
+                    const factor = Math.sqrt(MAX / blob.size) * 0.9;
+                    const sc = document.createElement('canvas');
+                    sc.width = Math.round(natW * factor); sc.height = Math.round(natH * factor);
+                    sc.getContext('2d').drawImage(off, 0, 0, sc.width, sc.height);
+                    quality = 0.88;
+                    while (quality >= 0.10) {
+                        blob = await toBlob(sc, 'image/jpeg', quality);
+                        if (blob.size <= MAX) break;
+                        quality = parseFloat((quality - 0.07).toFixed(2));
+                    }
+                }
+                return new File([blob], `${baseName}.jpg`, { type: 'image/jpeg' });
+            }
+            _cancel() { this._hide(); this._resolvePromise(null); }
+            _show() { this._modal.classList.remove('hidden'); document.body.style.overflow = 'hidden'; }
+            _hide() {
+                this._modal.classList.add('hidden'); document.body.style.overflow = '';
+                const si = document.getElementById('icpSizeInfo'), di = document.getElementById('icpDimInfo');
+                if (si) si.textContent = '';
+                if (di) di.textContent = 'Draw a crop area on the image';
+            }
+            _injectStyles() {
+                if (document.getElementById('icpStyles')) return;
+                const s = document.createElement('style'); s.id = 'icpStyles';
+                s.textContent = `
+                    .icp-overlay{position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.82);display:flex;align-items:center;justify-content:center;padding:16px;box-sizing:border-box;}
+                    .icp-overlay.hidden{display:none!important;}
+                    .icp-dialog{background:#fff;border-radius:16px;padding:20px;display:flex;flex-direction:column;gap:12px;max-width:840px;width:100%;box-shadow:0 32px 100px rgba(0,0,0,0.55);box-sizing:border-box;}
+                    .icp-header{display:flex;align-items:center;justify-content:space-between;}
+                    .icp-header-title{display:flex;align-items:center;gap:8px;font-weight:700;font-size:1rem;color:#0f172a;}
+                    .icp-close-btn{font-size:1.7rem;line-height:1;background:none;border:none;cursor:pointer;color:#94a3b8;padding:0 4px;transition:color .15s;}
+                    .icp-close-btn:hover{color:#ef4444;}
+                    .icp-hint{display:flex;flex-wrap:wrap;gap:8px 16px;font-size:0.73rem;color:#64748b;background:#f8fafc;border:1px solid #e2e8f0;padding:7px 14px;border-radius:8px;}
+                    .icp-canvas-wrap{background:#0f172a;border-radius:10px;display:flex;align-items:center;justify-content:center;overflow:hidden;}
+                    #icpCanvas{display:block;cursor:crosshair;user-select:none;-webkit-user-select:none;touch-action:none;}
+                    .icp-footer{display:flex;flex-wrap:wrap;align-items:center;gap:10px;justify-content:space-between;}
+                    .icp-zoom-bar{display:flex;align-items:center;gap:6px;}
+                    .icp-zoom-bar button{width:30px;height:30px;border-radius:7px;border:1px solid #cbd5e1;background:#f1f5f9;cursor:pointer;color:#334155;display:flex;align-items:center;justify-content:center;transition:background .15s;}
+                    .icp-zoom-bar button:hover{background:#dbeafe;border-color:#93c5fd;color:#1d4ed8;}
+                    .icp-fit-btn{width:auto!important;padding:0 12px;font-size:0.78rem;font-weight:600;}
+                    #icpZoomLabel{min-width:46px;text-align:center;font-size:0.82rem;color:#475569;font-variant-numeric:tabular-nums;font-weight:600;}
+                    .icp-info{display:flex;gap:14px;font-size:0.79rem;color:#64748b;flex:1;justify-content:center;}
+                    .icp-actions{display:flex;gap:8px;align-items:center;}
+                    .icp-btn-primary{display:inline-flex;align-items:center;gap:6px;background:#3b82f6;color:#fff;border:none;padding:8px 18px;border-radius:8px;cursor:pointer;font-size:0.86rem;font-weight:600;transition:background .15s,box-shadow .15s;box-shadow:0 2px 8px rgba(59,130,246,0.35);}
+                    .icp-btn-primary:hover:not(:disabled){background:#2563eb;}
+                    .icp-btn-primary:disabled{opacity:.55;cursor:not-allowed;}
+                    .icp-btn-secondary{display:inline-flex;align-items:center;gap:5px;background:#f1f5f9;color:#475569;border:1px solid #cbd5e1;padding:8px 14px;border-radius:8px;cursor:pointer;font-size:0.86rem;transition:background .15s;}
+                    .icp-btn-secondary:hover{background:#e2e8f0;}
+                    .icp-spinner{display:inline-block;width:13px;height:13px;border:2px solid rgba(255,255,255,0.4);border-top-color:#fff;border-radius:50%;animation:icpSpin 0.7s linear infinite;}
+                    @keyframes icpSpin{to{transform:rotate(360deg);}}
+                    @media(max-width:540px){.icp-dialog{padding:12px;gap:10px;}.icp-footer{flex-direction:column;align-items:stretch;}.icp-actions{flex-wrap:wrap;}.icp-actions button{flex:1;}.icp-info{justify-content:flex-start;}.icp-hint span{display:block;}}
+                `;
+                document.head.appendChild(s);
+            }
+        }
+
+        /* ── Singleton cropper ──────────────────────────────────────── */
+        let _cropperInstance = null;
+        function getCropper() {
+            if (!_cropperInstance) _cropperInstance = new ImageCropperModal();
+            return _cropperInstance;
+        }
+
+        /* ── setupImagePreview ──────────────────────────────────────── */
+        function setupImagePreview(uploadId, previewId) {
+            const imageUpload  = document.getElementById(uploadId);
+            const imagePreview = document.getElementById(previewId);
+            if (!imageUpload || !imagePreview) return;
+            if (!imagePreview.dataset.defaultSrc)
+                imagePreview.dataset.defaultSrc = imagePreview.src || '';
+            imageUpload.addEventListener('change', async (event) => {
+                const file = event.target.files[0];
+                if (!file) return;
+                const allowed = ['image/jpeg', 'image/jpg', 'image/png'];
+                if (!allowed.includes(file.type)) {
+                    alert('Please select a valid image file (JPEG or PNG).');
+                    imageUpload.value = ''; imagePreview.src = imagePreview.dataset.defaultSrc || ''; return;
+                }
+                if (file.size > 20 * 1024 * 1024) {
+                    alert('File is too large (max 20 MB before compression).');
+                    imageUpload.value = ''; imagePreview.src = imagePreview.dataset.defaultSrc || ''; return;
+                }
+                const croppedFile = await getCropper().open(file);
+                if (!croppedFile) {
+                    imageUpload.value = ''; imagePreview.src = imagePreview.dataset.defaultSrc || ''; return;
+                }
+                try {
+                    const dt = new DataTransfer();
+                    dt.items.add(croppedFile);
+                    imageUpload.files = dt.files;
+                } catch { /* fallback: original file submits, backend validates */ }
+                const reader = new FileReader();
+                reader.onload = e => { imagePreview.src = e.target.result; };
+                reader.readAsDataURL(croppedFile);
+            });
+        }
+
+        setupImagePreview('npImageUpload', 'npImagePreview');
+
+    })();
 
     // ── VIEW RESOURCE MODAL ──────────────────────────────────────────────
     const viewModal       = document.getElementById('viewNpModal');
@@ -722,7 +1085,6 @@
     const vmSize        = document.getElementById('vm-size');
     const vmUrl         = document.getElementById('vm-url');
     const vmSubjects    = document.getElementById('vm-subjects');
-    const vmEditLink    = document.getElementById('vm-edit-link');
 
     function openViewModal(btn) {
         const isRequest = btn.dataset.isRequest === 'true';
@@ -742,12 +1104,6 @@
         if (isRequest) {
             vmStatusBadge.textContent = '⏳ Pending Approval';
             vmStatusBadge.className   = 'inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800';
-            vmEditLink.classList.add('hidden');
-        } else {
-            vmStatusBadge.textContent = '✓ Approved';
-            vmStatusBadge.className   = 'inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800';
-            vmEditLink.href           = `/nonprint-masterlist/${btn.dataset.viewId}/edit`;
-            vmEditLink.classList.remove('hidden');
         }
 
         viewModal.classList.remove('hidden');
