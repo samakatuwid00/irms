@@ -9,37 +9,37 @@ use Illuminate\Http\Request;
 
 class BosyStatusService
 {
-public function getBosyStatusData(Request $request): array
-{
-    $user      = Auth::user();
-    $userLevel = $this->determineUserLevel($user);
-    $stationId = $this->determineStationId($user, $userLevel);
+    public function getBosyStatusData(Request $request): array
+    {
+        $user      = Auth::user();
+        $userLevel = $this->determineUserLevel($user);
+        $stationId = $this->determineStationId($user, $userLevel);
 
-    if (!in_array($userLevel, [1, 2, 3, 4])) {
-        return ['error' => 'Unauthorized', 'status' => 403];
+        if (!in_array($userLevel, [1, 2, 3, 4])) {
+            return ['error' => 'Unauthorized', 'status' => 403];
+        }
+
+        $hubFilter      = $request->query('hub_filter', '');
+        $districtFilter = $request->query('district_filter', '');
+
+        try {
+            return match ($userLevel) {
+                4 => $this->getRegionData($stationId, $hubFilter),
+                3 => $this->getDivisionData($stationId, $districtFilter),
+                2 => $this->getDistrictData($stationId),
+                1 => $this->getSchoolData($stationId),
+            };
+        } catch (\Exception $e) {
+            Log::error('BOSY Status data failed', [
+                'message'    => $e->getMessage(),
+                'user_level' => $userLevel,
+                'station_id' => $stationId,
+                'trace'      => $e->getTraceAsString()
+            ]);
+
+            return ['error' => $e->getMessage(), 'status' => 500];
+        }
     }
-
-    $hubFilter      = $request->query('hub_filter', '');
-    $districtFilter = $request->query('district_filter', '');
-
-    try {
-        return match ($userLevel) {
-            4 => $this->getRegionData($stationId, $hubFilter),
-            3 => $this->getDivisionData($stationId, $districtFilter),
-            2 => $this->getDistrictData($stationId),
-            1 => $this->getSchoolData($stationId),
-        };
-    } catch (\Exception $e) {
-        Log::error('BOSY Status data failed', [
-            'message'    => $e->getMessage(),
-            'user_level' => $userLevel,
-            'station_id' => $stationId,
-            'trace'      => $e->getTraceAsString()
-        ]);
-
-        return ['error' => $e->getMessage(), 'status' => 500];
-    }
-}
 
     private function getSchoolData(string $schoolId): array
     {
@@ -89,8 +89,8 @@ public function getBosyStatusData(Request $request): array
             ->whereIn('pa.encoded_by', $userIds)
             ->where('pa.library_id', function ($q) use ($schoolId) {
                 $q->select('id')
-                ->from('lrmis.school_libraries')
-                ->where('school_id', $schoolId);
+                    ->from('lrmis.school_libraries')
+                    ->where('school_id', $schoolId);
             })
             ->select(
                 'pa.encoded_by',
@@ -105,8 +105,8 @@ public function getBosyStatusData(Request $request): array
             ->whereIn('na.encoded_by', $userIds)
             ->where('na.library_id', function ($q) use ($schoolId) {
                 $q->select('id')
-                ->from('lrmis.school_libraries')
-                ->where('school_id', $schoolId);
+                    ->from('lrmis.school_libraries')
+                    ->where('school_id', $schoolId);
             })
             ->select(
                 'na.encoded_by',
@@ -129,8 +129,8 @@ public function getBosyStatusData(Request $request): array
                 'name'               => $user->full_name,
                 'shortname'          => $user->full_name,
                 'logo'               => $user->photo
-                                            ? asset('storage/' . $user->photo)
-                                            : 'https://upload.wikimedia.org/wikipedia/commons/2/20/Department_of_Education.svg',
+                    ? asset('storage/' . $user->photo)
+                    : asset('assets/images/default.jpg'),
                 'role'               => $user->type_name,
                 'total_lr'           => $userTotal,
                 'total_print'        => $userPrint,
@@ -197,7 +197,9 @@ public function getBosyStatusData(Request $request): array
             'id' => $school->school_id,
             'name' => $school->school_name,
             'shortname' => $school->shortname ?? $this->getSchoolShortname($school->school_name),
-            'logo' => $school->logo ?? 'https://upload.wikimedia.org/wikipedia/commons/2/20/Department_of_Education.svg',
+            'logo' => $school->logo
+                ? asset('storage/' . $school->logo)
+                : asset('assets/images/no_image.jpg'),
             'total_lr' => (int) $school->total_actual_lr,
             'estimated_resource' => (int) $school->total_estimated_resource,
             'percentage' => (int) $school->percentage,
@@ -289,7 +291,9 @@ public function getBosyStatusData(Request $request): array
                 'id' => $division->division_id,
                 'name' => $division->division_name,  // always the same
                 'shortname' => $division->shortname ?? $this->getShortname($division->division_name),
-                'logo' => $division->logo ?? 'https://upload.wikimedia.org/wikipedia/commons/2/20/Department_of_Education.svg',
+                'logo' => $division->logo
+                    ? asset('storage/' . $division->logo)
+                    : asset('assets/images/no_image.jpg'),
                 'total_lr' => $actualLr,
                 'estimated_resource' => $estimatedResource,
                 'percentage' => $percentage,
@@ -362,7 +366,9 @@ public function getBosyStatusData(Request $request): array
             'id' => $school->school_id,
             'name' => $school->school_name,
             'shortname' => $school->shortname ?? $this->getSchoolShortname($school->school_name),
-            'logo' => $school->logo ?? 'https://upload.wikimedia.org/wikipedia/commons/2/20/Department_of_Education.svg',
+            'logo' => $school->logo
+                ? asset('storage/' . $school->logo)
+                : asset('assets/images/no_image.jpg'),
             'total_lr' => (int) $school->total_actual_lr,
             'estimated_resource' => (int) $school->total_estimated_resource,
             'percentage' => (int) $school->percentage,
@@ -434,37 +440,37 @@ public function getBosyStatusData(Request $request): array
         return $total > 0 ? 100 : 0;
     }
 
-private function emptyResponse(string $level, string $stationId): array
-{
-    $labelMap = [
-        'region'   => 'Divisions',
-        'division' => 'Schools',
-        'district' => 'Schools',
-        'school'   => 'Users',
-    ];
+    private function emptyResponse(string $level, string $stationId): array
+    {
+        $labelMap = [
+            'region'   => 'Divisions',
+            'division' => 'Schools',
+            'district' => 'Schools',
+            'school'   => 'Users',
+        ];
 
-    return [
-        'level'          => $level,
-        'items'          => [],
-        'station_id'     => $stationId,
-        'summary'        => [
-            'total_items'        => 0,
-            'item_label'         => $labelMap[$level] ?? 'Items',
-            'total_libraries'    => 0,
-            'total_lr'           => 0,
-            'total_estimated'    => 0,
-            'overall_percentage' => 0,
-            'status'             => 'Not Started',
-            'color'              => 'bg-gray-400',
-        ],
-        'period' => [
-            'start' => '05 June',
-            'end'   => '25 Dec',
-            'year'  => '2026'
-        ],
-        'mv_refreshed_at' => now()->format('Y-m-d H:i:s')
-    ];
-}
+        return [
+            'level'          => $level,
+            'items'          => [],
+            'station_id'     => $stationId,
+            'summary'        => [
+                'total_items'        => 0,
+                'item_label'         => $labelMap[$level] ?? 'Items',
+                'total_libraries'    => 0,
+                'total_lr'           => 0,
+                'total_estimated'    => 0,
+                'overall_percentage' => 0,
+                'status'             => 'Not Started',
+                'color'              => 'bg-gray-400',
+            ],
+            'period' => [
+                'start' => '05 June',
+                'end'   => '25 Dec',
+                'year'  => '2026'
+            ],
+            'mv_refreshed_at' => now()->format('Y-m-d H:i:s')
+        ];
+    }
 
     private function getRegionName(string $regionId): string
     {
