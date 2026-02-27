@@ -115,6 +115,7 @@ class DashboardController extends BaseController
                 // For division users (level 3) - show their districts
                 $query = District::select('id', 'district_name as name')
                     ->where('division_id', $stationId) // Assuming District has division_id
+                    ->where('id', '!=', '39b30b89-89e5-48fb-a879-6551aad12121') // Exclude specific district
                     ->orderBy('district_name');
             } else {
                 // For region users (level 4) and above - show all divisions
