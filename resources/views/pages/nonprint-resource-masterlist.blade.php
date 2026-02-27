@@ -534,72 +534,91 @@
     {{-- ===== VIEW RESOURCE MODAL ===== --}}
     <div id="viewNpModal" class="fixed inset-0 z-50 hidden overflow-y-auto" role="dialog" aria-modal="true">
         <div id="viewNpModalBackdrop" class="fixed inset-0 bg-black/50 transition-opacity"></div>
+
         <div class="relative min-h-screen flex items-start justify-center p-4 pt-10">
             <div class="relative bg-white rounded-xl shadow-2xl w-full max-w-4xl z-10 mb-10">
 
                 {{-- Header --}}
                 <div class="flex items-center justify-between px-6 py-4 border-b border-gray-200">
                     <h3 class="text-base font-semibold text-gray-800">Resource Details</h3>
-                    <button id="closeNpViewModal" class="text-gray-400 hover:text-gray-600 transition-colors rounded-full p-1 hover:bg-gray-100">
+                    <button id="closeNpViewModal"
+                            class="text-gray-400 hover:text-gray-600 transition-colors rounded-full p-1 hover:bg-gray-100">
                         <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M6 18L18 6M6 6l12 12"/>
                         </svg>
                     </button>
                 </div>
 
                 {{-- Body --}}
                 <div class="p-6">
-                    <div class="flex gap-5">
-                        {{-- Cover --}}
-                        <div class="shrink-0">
-                            <img id="vm-cover" src="" alt="Cover"
-                                 class="w-100 h-120 object-cover rounded-lg border border-gray-200 shadow-sm bg-gray-100">
+                    <div class="flex gap-8 items-start">
+
+                    {{-- LEFT SIDE (Image) --}}
+                    <div class="shrink-0 flex justify-center" style="width:290px;">
+                        <img id="vm-cover" src="" alt="Cover"
+                            class="w-full max-h-[460px] object-contain rounded-lg border border-gray-300 shadow-md bg-gray-100">
+                    </div>
+
+                    {{-- RIGHT SIDE (Details) --}}
+                    <div class="flex-1 min-w-0 flex flex-col gap-3">
+
+                        {{-- Title --}}
+                        <div class="rounded-lg border border-dashed border-gray-300 bg-gray-50/50 px-4 py-3">
+                            <h4 id="vm-title" class="text-base font-bold text-gray-900 leading-snug"></h4>
                         </div>
 
-                        {{-- Core metadata --}}
-                        <div class="flex-1 min-w-0 space-y-2.5">
-                            <div>
-                                <h4 id="vm-title" class="text-lg font-bold text-gray-900 leading-snug"></h4>
-                            </div>
-
-                            <div class="flex flex-wrap gap-2 pt-0.5">
-                                <span id="vm-type-badge"
-                                      class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                                </span>
-                            </div>
-
-                            <dl class="grid grid-cols-2 gap-x-6 gap-y-3 text-sm pt-1">
-                                <div>
-                                    <dt class="text-xs font-semibold text-gray-400 uppercase tracking-wide">Brand</dt>
-                                    <dd id="vm-brand" class="text-gray-700 mt-0.5"></dd>
-                                </div>
-                                <div>
-                                    <dt class="text-xs font-semibold text-gray-400 uppercase tracking-wide">Code</dt>
-                                    <dd id="vm-code" class="text-gray-700 mt-0.5"></dd>
-                                </div>
-                                <div>
-                                    <dt class="text-xs font-semibold text-gray-400 uppercase tracking-wide">Version</dt>
-                                    <dd id="vm-version" class="text-gray-700 mt-0.5"></dd>
-                                </div>
-                                <div>
-                                    <dt class="text-xs font-semibold text-gray-400 uppercase tracking-wide">Model</dt>
-                                    <dd id="vm-model" class="text-gray-700 mt-0.5"></dd>
-                                </div>
-                                <div>
-                                    <dt class="text-xs font-semibold text-gray-400 uppercase tracking-wide">Size</dt>
-                                    <dd id="vm-size" class="text-gray-700 mt-0.5"></dd>
-                                </div>
-                                <div>
-                                    <dt class="text-xs font-semibold text-gray-400 uppercase tracking-wide">URL / Link</dt>
-                                    <dd id="vm-url" class="text-gray-700 mt-0.5 text-xs break-all"></dd>
-                                </div>
-                                {{-- Subjects --}}
-                                <div class="mt-5">
-                                    <p class="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">Subjects / Grade Levels</p>
-                                    <p id="vm-subjects" class="text-sm text-gray-700 leading-relaxed"></p>
-                                </div>
-                            </dl>
+                        {{-- Type Badge --}}
+                        <div class="rounded-lg border border-dashed border-gray-300 bg-gray-50/50 px-4 py-2.5 flex items-center gap-2">
+                            <span class="text-[10px] font-semibold uppercase tracking-widest text-gray-400">Type</span>
+                            <span id="vm-type-badge"
+                                class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-blue-50 text-blue-700 border border-blue-100">
+                            </span>
                         </div>
+
+                        {{-- Metadata Grid --}}
+                        <div class="grid grid-cols-2 gap-3">
+
+                            <div class="rounded-lg border border-dashed border-gray-300 bg-gray-50/50 px-4 py-2.5">
+                                <p class="text-[10px] font-semibold uppercase tracking-widest text-gray-400 mb-0.5">Brand</p>
+                                <p id="vm-brand" class="text-sm font-medium text-gray-700"></p>
+                            </div>
+
+                            <div class="rounded-lg border border-dashed border-gray-300 bg-gray-50/50 px-4 py-2.5">
+                                <p class="text-[10px] font-semibold uppercase tracking-widest text-gray-400 mb-0.5">Code</p>
+                                <p id="vm-code" class="text-sm font-medium text-gray-700"></p>
+                            </div>
+
+                            <div class="rounded-lg border border-dashed border-gray-300 bg-gray-50/50 px-4 py-2.5">
+                                <p class="text-[10px] font-semibold uppercase tracking-widest text-gray-400 mb-0.5">Version</p>
+                                <p id="vm-version" class="text-sm font-medium text-gray-700"></p>
+                            </div>
+
+                            <div class="rounded-lg border border-dashed border-gray-300 bg-gray-50/50 px-4 py-2.5">
+                                <p class="text-[10px] font-semibold uppercase tracking-widest text-gray-400 mb-0.5">Model</p>
+                                <p id="vm-model" class="text-sm font-medium text-gray-700"></p>
+                            </div>
+
+                            <div class="rounded-lg border border-dashed border-gray-300 bg-gray-50/50 px-4 py-2.5">
+                                <p class="text-[10px] font-semibold uppercase tracking-widest text-gray-400 mb-0.5">Size</p>
+                                <p id="vm-size" class="text-sm font-medium text-gray-700"></p>
+                            </div>
+
+                            <div class="rounded-lg border border-dashed border-gray-300 bg-gray-50/50 px-4 py-2.5">
+                                <p class="text-[10px] font-semibold uppercase tracking-widest text-gray-400 mb-0.5">URL / Link</p>
+                                <p id="vm-url" class="text-sm font-medium text-gray-700 text-xs break-all"></p>
+                            </div>
+
+                        </div>
+
+                        {{-- Subjects --}}
+                        <div class="rounded-lg border border-dashed border-gray-300 bg-gray-50/50 px-4 py-3">
+                            <p class="text-[10px] font-semibold uppercase tracking-widest text-gray-400 mb-1">Subjects / Grade Levels</p>
+                            <p id="vm-subjects" class="text-sm text-gray-600 leading-relaxed"></p>
+                        </div>
+
+                    </div>
+
                     </div>
                 </div>
 
@@ -610,6 +629,7 @@
                         Close
                     </button>
                 </div>
+
             </div>
         </div>
     </div>
