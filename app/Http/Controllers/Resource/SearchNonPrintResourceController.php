@@ -48,7 +48,7 @@ class SearchNonPrintResourceController extends BaseController
             ->whereIn('nonprint_title_id', $titleIds)
             ->where('status', 1)
             ->get()
-            ->groupBy('uniqueness_hash'); // one card per unique hash
+            ->groupBy('uniqueness_hash');
 
         $results = $resources->map(function ($group) {
             // Use the first resource in the group as the representative
@@ -107,13 +107,19 @@ class SearchNonPrintResourceController extends BaseController
     /**
      * AJAX: Get full details of a NonprintTitle (all variants) for the view modal.
      */
-    public function show(string $id)
+    public function show(Request $request, string $id)
     {
         $title = NonprintTitle::with([
             'nonprintResources.type',
         ])->findOrFail($id);
 
-        $allSglIds = $title->nonprintResources
+        // Filter resources by uniqueness_hash so only the clicked group shows
+        $hash      = $request->input('hash');
+        $resources = $hash
+            ? $title->nonprintResources->where('uniqueness_hash', $hash)
+            : $title->nonprintResources;
+
+        $allSglIds = $resources
             ->pluck('subject_grade_level_ids')
             ->filter()
             ->flatMap(fn($csv) => explode(',', $csv))
@@ -135,12 +141,12 @@ class SearchNonPrintResourceController extends BaseController
                 ->join(', ');
         }
 
-        $cover = $title->nonprintResources
+        $cover = $resources
             ->map(fn($r) => $r->cover ? asset('storage/' . $r->cover) : null)
             ->filter()
             ->first() ?? asset('assets/images/def.jpg');
 
-        $editions = $title->nonprintResources->map(fn($r) => [
+        $editions = $resources->map(fn($r) => [
             'id'      => $r->id,
             'type'    => $r->type->type_name ?? '-',
             'brand'   => $r->brand ?? '-',

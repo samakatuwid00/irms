@@ -825,6 +825,7 @@
                     </div>
                     <div class="flex-shrink-0 self-center">
                         <button data-title-id="${esc(title.id)}"
+                                data-uniqueness-hash="${esc(title.uniqueness_hash)}"
                                 class="view-btn text-xs px-4 py-2 bg-indigo-50 text-indigo-700 border border-indigo-200 rounded-lg hover:bg-indigo-100 transition-colors whitespace-nowrap font-medium">
                             View Details
                         </button>
@@ -832,19 +833,19 @@
                 </div>`;
 
             card.querySelector('.view-btn').addEventListener('click', function () {
-                openModal(this.dataset.titleId);
+                openModal(this.dataset.titleId, this.dataset.uniquenessHash);
             });
             resultsList.appendChild(card);
         });
     }
 
-    function openModal(titleId) {
+    function openModal(titleId, uniquenessHash) {
         detailModal.classList.remove('hidden');
         document.body.style.overflow = 'hidden';
         modalBody.classList.add('hidden');
         modalLoading.classList.remove('hidden');
 
-        fetch(`{{ url('search-print') }}/${titleId}/details`, {
+        fetch(`{{ url('search-print') }}/${titleId}/details?hash=${encodeURIComponent(uniquenessHash)}`, {
             headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' }
         })
         .then(r => r.json())

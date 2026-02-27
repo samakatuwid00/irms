@@ -7,7 +7,7 @@
  * - Draw a NEW crop box by dragging anywhere on the image
  * - Move the crop box by dragging inside it
  * - Resize via 8 edge + corner handles
- * - Compress output to < 1 MB (JPEG quality iteration + dimension downscale fallback)
+ * - Compress output to < 100 KB (JPEG quality iteration ONLY — original dimensions preserved)
  * - Returns a File via Promise; null if cancelled
  */
 export class ImageCropperModal {
@@ -539,38 +539,26 @@ export class ImageCropperModal {
             natH = img.naturalHeight;
         }
 
-        // Draw at native resolution
+        // Draw at native resolution — dimensions are NEVER changed
         const off = document.createElement('canvas');
         off.width  = natW;
         off.height = natH;
         off.getContext('2d').drawImage(img, natX, natY, natW, natH, 0, 0, natW, natH);
 
-        const MAX      = 1 * 1024 * 1024; // 1 MB
+        const MAX      = 100 * 1024; // 100 KB hard limit
         const baseName = (this._originalFile?.name || 'image.jpg').replace(/\.[^.]+$/, '');
 
-        // Phase 1 – reduce JPEG quality
-        let quality = 0.92, blob;
-        while (quality >= 0.10) {
+        // Quality iteration only — NO dimension downscaling
+        let quality = 0.92;
+        let blob;
+        while (quality >= 0.01) {
             blob = await _toBlob(off, 'image/jpeg', quality);
             if (blob.size <= MAX) break;
-            quality = parseFloat((quality - 0.07).toFixed(2));
+            quality = parseFloat((quality - 0.05).toFixed(2));
         }
 
-        // Phase 2 – scale down dimensions if still too large
-        if (blob.size > MAX) {
-            const factor = Math.sqrt(MAX / blob.size) * 0.9;
-            const sc = document.createElement('canvas');
-            sc.width  = Math.round(natW * factor);
-            sc.height = Math.round(natH * factor);
-            sc.getContext('2d').drawImage(off, 0, 0, sc.width, sc.height);
-            quality = 0.88;
-            while (quality >= 0.10) {
-                blob = await _toBlob(sc, 'image/jpeg', quality);
-                if (blob.size <= MAX) break;
-                quality = parseFloat((quality - 0.07).toFixed(2));
-            }
-        }
-
+        // If even quality=0.01 exceeds 100 KB the image is extremely large/complex;
+        // we still return the best (lowest quality) result rather than silently failing.
         return new File([blob], `${baseName}.jpg`, { type: 'image/jpeg' });
     }
 

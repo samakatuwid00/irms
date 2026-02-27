@@ -750,6 +750,7 @@
                     </div>
                     <div class="flex-shrink-0 self-center">
                         <button data-title-id="${esc(title.id)}"
+                                data-uniqueness-hash="${esc(title.uniqueness_hash)}"
                                 class="np-view-btn text-xs px-4 py-2 bg-indigo-50 text-indigo-700 border border-indigo-200 rounded-lg hover:bg-indigo-100 transition-colors whitespace-nowrap font-medium">
                             View Details
                         </button>
@@ -757,19 +758,19 @@
                 </div>`;
 
             card.querySelector('.np-view-btn').addEventListener('click', function () {
-                openDetailModal(this.dataset.titleId);
+                openDetailModal(this.dataset.titleId, this.dataset.uniquenessHash);
             });
             resultsList.appendChild(card);
         });
     }
 
-    function openDetailModal(titleId) {
+    function openDetailModal(titleId, uniquenessHash) {
         npModal.classList.remove('hidden');
         document.body.style.overflow = 'hidden';
         npModalBody.classList.add('hidden');
         npModalLoad.classList.remove('hidden');
 
-        fetch(`{{ url('search-nonprint') }}/${titleId}/details`, {
+        fetch(`{{ url('search-nonprint') }}/${titleId}/details?hash=${encodeURIComponent(uniquenessHash)}`, {
             headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' }
         })
         .then(r => r.json())
@@ -839,16 +840,16 @@
     function openReqModal(btn) {
         const status = parseInt(btn.dataset.status);
 
-        document.getElementById('nprvm-cover').src          = btn.dataset.cover;
-        document.getElementById('nprvm-title').textContent  = btn.dataset.title;
-        document.getElementById('nprvm-type-badge').textContent = btn.dataset.type;
-        document.getElementById('nprvm-brand').textContent  = btn.dataset.brand;
-        document.getElementById('nprvm-code').textContent   = btn.dataset.code;
-        document.getElementById('nprvm-version').textContent= btn.dataset.version;
-        document.getElementById('nprvm-model').textContent  = btn.dataset.model;
-        document.getElementById('nprvm-url').textContent    = btn.dataset.url;
-        document.getElementById('nprvm-size').textContent   = btn.dataset.size;
-        document.getElementById('nprvm-subjects').textContent = btn.dataset.subjects;
+        document.getElementById('nprvm-cover').src             = btn.dataset.cover;
+        document.getElementById('nprvm-title').textContent     = btn.dataset.title;
+        document.getElementById('nprvm-type-badge').textContent= btn.dataset.type;
+        document.getElementById('nprvm-brand').textContent     = btn.dataset.brand;
+        document.getElementById('nprvm-code').textContent      = btn.dataset.code;
+        document.getElementById('nprvm-version').textContent   = btn.dataset.version;
+        document.getElementById('nprvm-model').textContent     = btn.dataset.model;
+        document.getElementById('nprvm-url').textContent       = btn.dataset.url;
+        document.getElementById('nprvm-size').textContent      = btn.dataset.size;
+        document.getElementById('nprvm-subjects').textContent  = btn.dataset.subjects;
         document.getElementById('nprvm-submitted').textContent = btn.dataset.submitted;
 
         const statusBadge = document.getElementById('nprvm-status-badge');

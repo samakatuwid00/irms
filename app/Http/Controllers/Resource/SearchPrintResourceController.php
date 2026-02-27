@@ -123,15 +123,21 @@ class SearchPrintResourceController extends BaseController
      * Accepts a PrintTitle ID. Subject/grade levels are aggregated and
      * deduplicated across every resource edition under this title.
      */
-    public function show(string $id)
+    public function show(Request $request, string $id)
     {
         $title = PrintTitle::with([
             'authors',
             'printResources.type',
         ])->findOrFail($id);
 
-        // Collect all SGL ids across every resource edition
-        $allSglIds = $title->printResources
+        // Filter resources by uniqueness_hash so only the clicked group shows
+        $hash      = $request->input('hash');
+        $resources = $hash
+            ? $title->printResources->where('uniqueness_hash', $hash)
+            : $title->printResources;
+
+        // Collect all SGL ids across filtered resources
+        $allSglIds = $resources
             ->pluck('subject_grade_level_ids')
             ->filter()
             ->flatMap(fn($csv) => explode(',', $csv))
@@ -139,7 +145,6 @@ class SearchPrintResourceController extends BaseController
             ->values()
             ->all();
 
-        // Build comma-joined subject string
         $subjectString = '';
         if (!empty($allSglIds)) {
             $sgls = SubjectGradeLevel::with(['subject', 'gradeLevel'])
@@ -154,14 +159,12 @@ class SearchPrintResourceController extends BaseController
                 ->join(', ');
         }
 
-        // Pick the first available cover
-        $cover = $title->printResources
+        $cover = $resources
             ->map(fn($r) => $r->cover ? asset('storage/' . $r->cover) : null)
             ->filter()
             ->first() ?? asset('assets/images/def.jpg');
 
-        // Build edition details (each edition links to its own add-form)
-        $editions = $title->printResources->map(fn($r) => [
+        $editions = $resources->map(fn($r) => [
             'id'        => $r->id,
             'type'      => $r->type->type_name ?? '-',
             'publisher' => $r->publisher ?? '-',
