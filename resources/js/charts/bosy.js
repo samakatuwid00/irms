@@ -145,10 +145,10 @@ function renderAllItems(container) {
 
     if (bosyAllItems.length === 0) {
         const labelMap = {
-            school:   'users',
+            school: 'users',
             district: 'schools',
             division: 'schools',
-            region:   'divisions',
+            region: 'divisions',
         };
         const label = labelMap[currentBosyLevel] || 'items';
         container.innerHTML = `
@@ -178,17 +178,20 @@ function createItemElement(item) {
     // For school level, show role under name instead of pre-inventory count
     const subtitleHtml = item.role
         ? `<p class="text-xs text-indigo-500 mt-0.5 truncate">${escapeHtml(item.role)}</p>`
-        : `<p class="text-xs text-gray-500 mt-0.5 truncate">Pre-Inventory: ${formatNumber(item.estimated_resource || 0)}</p>`;
+        : `<p class="text-xs text-indigo-500 mt-0.5 truncate">Pre-Inventory: ${formatNumber(item.estimated_resource || 0)}</p>`;
+
+    // Determine initial logo source
+    const logoSource = item.logo || '/assets/images/no_image.jpg';
 
     div.innerHTML = `
         <div class="w-12 h-12 sm:w-14 sm:h-14 flex-shrink-0">
             <img
-                src="${item.logo}"
+                src="${logoSource}"
                 alt="${item.name}"
                 class="w-full h-full rounded-full object-cover bg-white p-1 shadow-sm border border-gray-200"
                 loading="lazy"
                 decoding="async"
-                onerror="this.src='https://upload.wikimedia.org/wikipedia/commons/2/20/Department_of_Education.svg'">
+                onerror="this.src='/assets/images/no_image.jpg'; this.onerror=null;">
         </div>
         <div class="flex-1 grid items-center bosy-row-grid gap-2 sm:gap-3 min-w-0">
 
