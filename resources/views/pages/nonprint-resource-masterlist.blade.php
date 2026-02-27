@@ -98,7 +98,7 @@
                 <table class="w-full text-sm">
                     <thead class="bg-gray-50 text-xs text-gray-500 uppercase tracking-wide">
                         <tr>
-                            <th class="px-2 py-3 text-left w-10">Cover</th>
+                            <th class="px-2 py-3 text-left w-18">Cover</th>
                             <th class="px-2 py-3 text-left">Title</th>
                             <th class="px-2 py-3 text-left">Type</th>
                             <th class="px-2 py-3 text-left">Brand</th>
@@ -120,7 +120,7 @@
                             <tr class="hover:bg-gray-50 transition-colors">
                                 <td class="px-2 py-2">
                                     <img src="{{ $item->cover ? asset('storage/' . $item->cover) : asset('assets/images/def.jpg') }}"
-                                         alt="cover" class="w-9 h-12 object-cover rounded border border-gray-200 shadow-sm">
+                                         alt="cover" class="w-14 h-18 object-cover rounded border border-gray-200 shadow-sm">
                                 </td>
                                 <td class="px-2 py-2 font-medium text-gray-900 max-w-75">
                                     <span title="{{ $item->nonprintTitle->title ?? '' }}">{{ Str::limit($item->nonprintTitle->title ?? '-', 40) }}</span>
@@ -947,37 +947,47 @@
             async _cropAndCompress() {
                 const img = this._image;
                 let natX, natY, natW, natH;
+
                 if (this._crop) {
                     const { x, y, w, h } = this._crop;
                     const tl = this._toImage(x, y), br = this._toImage(x + w, y + h);
                     natX = Math.max(0, Math.round(tl.x)); natY = Math.max(0, Math.round(tl.y));
                     natW = Math.min(img.naturalWidth  - natX, Math.round(br.x - tl.x));
                     natH = Math.min(img.naturalHeight - natY, Math.round(br.y - tl.y));
-                } else { natX = 0; natY = 0; natW = img.naturalWidth; natH = img.naturalHeight; }
-                const off = document.createElement('canvas');
-                off.width = natW; off.height = natH;
-                off.getContext('2d').drawImage(img, natX, natY, natW, natH, 0, 0, natW, natH);
-                const MAX      = 1 * 1024 * 1024;
-                const baseName = (this._originalFile?.name || 'image.jpg').replace(/\.[^.]+$/, '');
-                const toBlob   = (canvas, type, quality) => new Promise((res, rej) => canvas.toBlob(b => b ? res(b) : rej(new Error('toBlob failed')), type, quality));
-                let quality = 0.92, blob;
-                while (quality >= 0.10) {
-                    blob = await toBlob(off, 'image/jpeg', quality);
-                    if (blob.size <= MAX) break;
-                    quality = parseFloat((quality - 0.07).toFixed(2));
+                } else {
+                    natX = 0; natY = 0; natW = img.naturalWidth; natH = img.naturalHeight;
                 }
-                if (blob.size > MAX) {
-                    const factor = Math.sqrt(MAX / blob.size) * 0.9;
-                    const sc = document.createElement('canvas');
-                    sc.width = Math.round(natW * factor); sc.height = Math.round(natH * factor);
-                    sc.getContext('2d').drawImage(off, 0, 0, sc.width, sc.height);
-                    quality = 0.88;
-                    while (quality >= 0.10) {
-                        blob = await toBlob(sc, 'image/jpeg', quality);
-                        if (blob.size <= MAX) break;
-                        quality = parseFloat((quality - 0.07).toFixed(2));
+
+                const off = document.createElement('canvas');
+                off.width = natW;
+                off.height = natH;
+                off.getContext('2d').drawImage(img, natX, natY, natW, natH, 0, 0, natW, natH);
+
+                const TARGET = 100 * 1024;
+                const baseName = (this._originalFile?.name || 'image.jpg').replace(/\.[^.]+$/, '');
+                const toBlob = (canvas, type, quality) =>
+                    new Promise((res, rej) => canvas.toBlob(b => b ? res(b) : rej(new Error('toBlob failed')), type, quality));
+
+                let quality = 0.92, blob;
+                while (quality >= 0.05) {
+                    blob = await toBlob(off, 'image/jpeg', quality);
+                    if (blob.size <= TARGET) break;
+                    quality = parseFloat((quality - 0.05).toFixed(2));
+                }
+
+                if (blob.size > TARGET) {
+                    let scale = 0.9;
+                    while (scale >= 0.2) {
+                        const sc = document.createElement('canvas');
+                        sc.width  = Math.round(natW * scale);
+                        sc.height = Math.round(natH * scale);
+                        sc.getContext('2d').drawImage(off, 0, 0, sc.width, sc.height);
+                        blob = await toBlob(sc, 'image/jpeg', 0.85);
+                        if (blob.size <= TARGET) break;
+                        scale = parseFloat((scale - 0.1).toFixed(2));
                     }
                 }
+
                 return new File([blob], `${baseName}.jpg`, { type: 'image/jpeg' });
             }
             _cancel() { this._hide(); this._resolvePromise(null); }
