@@ -226,12 +226,12 @@ class AddPrintResourceController extends BaseController
             'authors'              => 'nullable|string',
             'type'                 => 'required|exists:print_types,id',
             'publisher'            => 'nullable|string|max:255',
-            'volume'               => 'nullable|string|max:50',
-            'edition'              => 'nullable|string|max:50',
-            'copyright'            => 'nullable|integer',
-            'isbn'                 => 'nullable|string|max:50',
+            'volume'               => 'nullable|string|max:255',
+            'edition'              => 'nullable|string|max:255',
+            'copyright'            => 'nullable|string|max:255',
+            'isbn'                 => 'nullable|string|max:255',
             'pages'                => 'nullable|integer',
-            'subject_grade_levels' => 'nullable|array',
+            'subject_grade_levels' => 'required|array',
             'image'                => 'nullable|image|mimes:jpeg,png,jpg|max:5120',
         ]);
 

@@ -623,6 +623,17 @@
     const pageTabBtns      = document.querySelectorAll('.page-tab-btn');
     const pageTabContents  = document.querySelectorAll('.page-tab-content');
 
+    window.addEventListener('pageshow', function (e) {
+        if (isEditing && e.persisted) {
+            sessionStorage.setItem(STORAGE_KEY, 'tab-requests');
+            window.location.replace('{{ route('nonprint-resource.create') }}');
+        }
+    });
+
+    if (isEditing) {
+        history.replaceState(null, '', '{{ url('/edit-request') }}');
+    }
+
     // ── PAGE-LEVEL TABS ──────────────────────────────────────────────────────
     function activatePageTab(targetId, saveToStorage = true) {
         if (!VALID_TABS.includes(targetId)) targetId = 'tab-search';
@@ -648,7 +659,18 @@
     activatePageTab(initialTab, false);
 
     pageTabBtns.forEach(btn => {
-        btn.addEventListener('click', () => activatePageTab(btn.dataset.pageTab, true));
+        btn.addEventListener('click', () => {
+            const targetTab = btn.dataset.pageTab;
+
+            // If in edit mode and navigating away from tab-add, reset to create mode
+            if (isEditing && targetTab !== 'tab-add') {
+                sessionStorage.setItem(STORAGE_KEY, targetTab);
+                window.location.href = '{{ route('nonprint-resource.create') }}?tab=' + targetTab;
+                return;
+            }
+
+            activatePageTab(targetTab, true);
+        });
     });
 
     // ── BACK / CANCEL ────────────────────────────────────────────────────────

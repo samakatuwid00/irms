@@ -250,9 +250,16 @@
                         <div class="space-y-4">
                             <div>
                                 <label class="block text-sm mb-1">Copyright</label>
-                                <input name="copyright" type="number"
-                                    value="{{ old('copyright', $isEditing ? $editResource->copyright : '') }}"
-                                    class="w-full border border-gray-300 rounded px-3 py-2">
+                                <select name="copyright" class="w-full border border-gray-300 rounded px-3 py-2">
+                                    <option value="">Select year</option>
+                                    <option value="no_copyright" {{ (string)old('copyright', $isEditing ? $editResource->copyright : '') === 'no_copyright' ? 'selected' : '' }}>No Copyright</option>
+                                    @php $selectedCopyright = old('copyright', $isEditing ? $editResource->copyright : ''); @endphp
+                                    @for ($year = date('Y'); $year >= 1900; $year--)
+                                        <option value="{{ $year }}" {{ (string)$selectedCopyright === (string)$year ? 'selected' : '' }}>
+                                            {{ $year }}
+                                        </option>
+                                    @endfor
+                                </select>
                             </div>
                             <div>
                                 <label class="block text-sm mb-1">ISBN</label>
@@ -674,6 +681,17 @@
     const pageTabBtns     = document.querySelectorAll('.page-tab-btn');
     const pageTabContents = document.querySelectorAll('.page-tab-content');
 
+    window.addEventListener('pageshow', function (e) {
+        if (isEditing && e.persisted) {
+            sessionStorage.setItem(STORAGE_KEY, 'tab-requests');
+            window.location.replace('{{ route('print-resource.create') }}');
+        }
+    });
+
+    if (isEditing) {
+        history.replaceState(null, '', '{{ url('/edit-request') }}');
+    }
+
     // ────────────────────────────────────────────────────────────────────────
     // PAGE-LEVEL TAB MANAGEMENT
     // ────────────────────────────────────────────────────────────────────────
@@ -710,7 +728,18 @@
 
     // Normal tab-button clicks
     pageTabBtns.forEach(btn => {
-        btn.addEventListener('click', () => activatePageTab(btn.dataset.pageTab, true));
+        btn.addEventListener('click', () => {
+            const targetTab = btn.dataset.pageTab;
+
+            // If in edit mode and navigating away from tab-add, reset to create mode
+            if (isEditing && targetTab !== 'tab-add') {
+                sessionStorage.setItem(STORAGE_KEY, targetTab);
+                window.location.href = '{{ route('print-resource.create') }}?tab=' + targetTab;
+                return;
+            }
+
+            activatePageTab(targetTab, true);
+        });
     });
 
     // ────────────────────────────────────────────────────────────────────────

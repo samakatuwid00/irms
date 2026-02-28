@@ -67,16 +67,16 @@
                     <table class="w-full text-sm">
                         <thead class="bg-gray-100 text-gray-600 uppercase text-xs sticky top-0 z-10">
                             <tr>
-                                <th class="px-4 py-3 w-xl">Title</th>
-                                <th class="px-4 py-3">Author</th>
-                                {{-- <th class="px-4 py-3">Publisher</th> --}}
-                                <th class="px-4 py-3">Type</th>
-                                <th class="px-4 py-3 w-xl">Subject</th>
-                                {{-- <th class="px-4 py-3">ISBN</th> --}}
-                                {{-- <th class="px-4 py-3">Copyright</th> --}}
-                                <th class="px-4 py-3">Library</th>
-                                <th class="px-4 py-3 text-center">Quantity Breakdown</th>
-                                <th class="px-4 py-3 text-center">Actions</th>
+                                <th class="px-2 py-3 w-xl">Title</th>
+                                <th class="px-2 py-3">Author</th>
+                                <th class="px-2 py-3">Publisher</th>
+                                <th class="px-2 py-3">Type</th>
+                                <th class="px-2 py-3 w-xl">Subject</th>
+                                <th class="px-2 py-3">ISBN</th>
+                                <th class="px-2 py-3">Copyright</th>
+                                <th class="px-2 py-3">Library</th>
+                                <th class="px-2 py-3 text-center">Quantity Breakdown</th>
+                                <th class="px-2 py-3 text-center">Actions</th>
                             </tr>
                         </thead>
                         <tbody class="divide-y">
@@ -87,13 +87,26 @@
                                     $total = array_sum($qty);
                                 @endphp
                                 <tr class="hover:bg-gray-50">
-                                    <td class="px-4 py-3 text-center font-medium text-gray-800 max-w-xs">{{ $item->printTitle->title }}</td>
-                                    <td class="px-4 py-3 text-gray-600">{{ $authors }}</td>
-                                    {{-- <td class="px-4 py-3 text-gray-600">{{ $item->publisher }}</td> --}}
-                                    <td class="px-4 py-3">
+                                    <td class="px-2 py-3">
+                                        @if($item->cover)
+                                            <img
+                                                src="{{ asset('storage/' . $item->cover) }}"
+                                                alt="{{ $item->printTitle->title }}"
+                                                class="w-12 h-16 object-cover rounded shadow"
+                                            >
+                                        @else
+                                            <div class="w-12 h-16 bg-gray-200 rounded flex items-center justify-center text-gray-400 text-xs">
+                                                No Cover
+                                            </div>
+                                        @endif
+                                    </td>
+                                    <td class="px-2 py-3 text-center font-medium text-gray-800 max-w-xs">{{ $item->printTitle->title }}</td>
+                                    <td class="px-2 py-3 text-gray-600">{{ $authors }}</td>
+                                    <td class="px-2 py-3 text-gray-600">{{ $item->publisher }}</td>
+                                    <td class="px-2 py-3">
                                         <span class="px-2 py-1 text-xs rounded-full bg-blue-100 text-blue-700">{{ $item->type->type_name }}</span>
                                     </td>
-                                    <td class="px-4 py-3 text-xs">
+                                    <td class="px-2 py-3 text-xs">
                                         @if($item->subjects()->count())
                                             <div class="flex flex-wrap gap-1">
                                                 @foreach($item->subjects() as $sub)
@@ -106,14 +119,14 @@
                                             <span class="text-gray-500 text-xs">No assignment</span>
                                         @endif
                                     </td>
-                                    {{-- <td class="px-4 py-3 text-gray-600 font-mono text-xs">{{ $item->isbn }}</td>
-                                    <td class="px-4 py-3 text-center">{{ $item->copyright }}</td> --}}
-                                    <td class="px-4 py-3 text-gray-700">
+                                    <td class="px-2 py-3 text-gray-600 font-mono text-xs">{{ $item->isbn }}</td>
+                                    <td class="px-2 py-3 text-center">{{ $item->copyright }}</td>
+                                    <td class="px-2 py-3 text-gray-700">
                                         <span class="text-xs font-medium text-blue-600">
                                             {{ $item->library_name ?? 'N/A' }}
                                         </span>
                                     </td>
-                                    <td class="px-4 py-3 text-center text-xs">
+                                    <td class="px-2 py-3 text-center text-xs">
                                         <div class="space-y-1">
                                             <div class="flex justify-center gap-3 text-gray-700">
                                                 <span title="Usable"><strong class="text-green-600">{{ $qty['usable'] }}</strong> Usable</span>
@@ -127,7 +140,7 @@
                                             <div class="font-semibold text-gray-800 border-t pt-1">Total: {{ $total }}</div>
                                         </div>
                                     </td>
-                                    <td class="px-4 py-3">
+                                    <td class="px-2 py-3">
                                         <div class="flex justify-center gap-2">
                                             <button onclick='openPrintModal(@json($item->showDetails()))'
                                                     class="px-3 py-1 text-xs rounded-lg bg-blue-100 text-blue-600 hover:bg-blue-200">
@@ -225,16 +238,17 @@
                         <table class="w-full text-sm">
                             <thead class="bg-gray-100 text-gray-600 uppercase text-xs sticky top-0 z-10">
                                 <tr>
-                                    <th class="px-4 py-3">Title</th>
-                                    <th class="px-4 py-3">Author</th>
-                                    <th class="px-4 py-3">Publisher</th>
-                                    <th class="px-4 py-3">Type</th>
-                                    <th class="px-4 py-3">Subject</th>
-                                    <th class="px-4 py-3">ISBN</th>
-                                    <th class="px-4 py-3">Copyright</th>
-                                    <th class="px-4 py-3">School</th>
-                                    <th class="px-4 py-3 text-center">Quantity Breakdown</th>
-                                    <th class="px-6 py-3 text-center">Actions</th>
+                                    <th class="px-2 py-3">Cover</th>
+                                    <th class="px-2 py-3">Title</th>
+                                    <th class="px-2 py-3">Author</th>
+                                    <th class="px-2 py-3">Publisher</th>
+                                    <th class="px-2 py-3">Type</th>
+                                    <th class="px-2 py-3">Subject</th>
+                                    <th class="px-2 py-3">ISBN</th>
+                                    <th class="px-2 py-3">Copyright</th>
+                                    <th class="px-2 py-3">School</th>
+                                    <th class="px-2 py-3 text-center">Quantity Breakdown</th>
+                                    <th class="px-2 py-3 text-center">Actions</th>
                                 </tr>
                             </thead>
                             <tbody class="divide-y">
@@ -245,13 +259,26 @@
                                         $total = array_sum($qty);
                                     @endphp
                                     <tr class="hover:bg-gray-50 border border-gray-300">
-                                        <td class="px-4 py-3 font-medium text-gray-800 max-w-xs">{{ $item->printTitle->title }}</td>
-                                        <td class="px-4 py-3 text-gray-600">{{ $authors }}</td>
-                                        <td class="px-4 py-3 text-gray-600">{{ $item->publisher }}</td>
-                                        <td class="px-4 py-3">
+                                        <td class="px-2 py-3">
+                                            @if($item->cover)
+                                                <img
+                                                    src="{{ asset('storage/' . $item->cover) }}"
+                                                    alt="{{ $item->printTitle->title }}"
+                                                    class="w-12 h-16 object-cover rounded shadow"
+                                                >
+                                            @else
+                                                <div class="w-12 h-16 bg-gray-200 rounded flex items-center justify-center text-gray-400 text-xs">
+                                                    No Cover
+                                                </div>
+                                            @endif
+                                        </td>
+                                        <td class="px-2 py-3 font-medium text-gray-800 max-w-xs">{{ $item->printTitle->title }}</td>
+                                        <td class="px-2 py-3 text-gray-600">{{ $authors }}</td>
+                                        <td class="px-2 py-3 text-gray-600">{{ $item->publisher }}</td>
+                                        <td class="px-2 py-3">
                                             <span class="px-2 py-1 text-xs rounded-full bg-blue-100 text-blue-700">{{ $item->type->type_name }}</span>
                                         </td>
-                                        <td class="px-4 py-3 text-xs">
+                                        <td class="px-2 py-3 text-xs">
                                             @if($item->subjects()->count())
                                                 <div class="flex flex-wrap gap-1">
                                                     @foreach($item->subjects() as $sub)
@@ -264,14 +291,14 @@
                                                 <span class="text-gray-500 text-xs">No assignment</span>
                                             @endif
                                         </td>
-                                        <td class="px-4 py-3 text-gray-600 font-mono text-xs">{{ $item->isbn }}</td>
-                                        <td class="px-4 py-3 text-center">{{ $item->copyright }}</td>
-                                        <td class="px-4 py-3 text-gray-700">
+                                        <td class="px-2 py-3 text-gray-600 font-mono text-xs">{{ $item->isbn }}</td>
+                                        <td class="px-2 py-3 text-center">{{ $item->copyright }}</td>
+                                        <td class="px-2 py-3 text-gray-700">
                                             <span class="text-xs font-medium text-blue-600">
                                                 {{ $item->library_name ?? 'N/A' }}
                                             </span>
                                         </td>
-                                        <td class="px-4 py-3 text-center text-xs">
+                                        <td class="px-2 py-3 text-center text-xs">
                                             <div class="space-y-1">
                                                 <div class="flex justify-center gap-3 text-gray-700">
                                                     <span title="Usable"><strong class="text-green-600">{{ $qty['usable'] }}</strong> Usable</span>
@@ -285,7 +312,7 @@
                                                 <div class="font-semibold text-gray-800 border-t pt-1">Total: {{ $total }}</div>
                                             </div>
                                         </td>
-                                        <td class="px-4 py-3">
+                                        <td class="px-2 py-3">
                                             <div class="flex justify-center gap-2">
                                                 <button onclick='openPrintModal(@json($item->showDetails()))'
                                                         class="px-3 py-1 text-xs rounded-lg bg-blue-100 text-blue-600 hover:bg-blue-200">
