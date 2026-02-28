@@ -26,7 +26,7 @@
          style="display: none;">
     </div>
 
-    <div class="space-y-4">
+    <div id="print-resources-wrapper" class="space-y-4">
 
         {{-- <!-- ================= HEADER ================= -->
         <div class="flex justify-end items-center">

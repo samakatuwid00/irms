@@ -1,63 +1,61 @@
 <h2 class="text-lg font-semibold">School Library Resources</h2>
 
-    <form method="GET"
-        class="bg-white p-4 rounded-xl shadow space-y-4">
+<form method="GET" data-ajax class="bg-white p-4 rounded-xl shadow space-y-4">
 
-        <!-- TOP ROW: Search -->
+    <!-- TOP ROW: Search -->
+    <div class="flex gap-3">
+        <div class="relative w-full">
+            <input type="text"
+                name="search"
+                placeholder="Search by Title, Author, ISBN, Publisher, Grade, Subject..."
+                value="{{ request('search') }}"
+                class="w-full h-10 pl-10 pr-3 border rounded-lg text-sm">
+            <svg class="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-gray-400"
+                xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor"
+                stroke-width="2" viewBox="0 0 24 24">
+                <circle cx="11" cy="11" r="8"/>
+                <path d="m21 21-4.3-4.3"/>
+            </svg>
+        </div>
+
+        <button type="submit" class="h-10 w-32 bg-blue-600 text-white rounded-lg">
+            Search
+        </button>
+    </div>
+
+    <!-- SECOND ROW -->
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+
+        <select name="school" id="school" class="h-10 border px-3 rounded-lg">
+            <option value="all" {{ request('school') === 'all' ? 'selected' : '' }}>
+                All Schools (this District)
+            </option>
+            @foreach($schools as $school)
+                <option value="{{ $school->id }}"
+                        {{ request('school') == $school->id ? 'selected' : '' }}>
+                    {{ $school->school_name }}
+                </option>
+            @endforeach
+        </select>
+
         <div class="flex gap-3">
-            <div class="relative w-full">
-                <input type="text"
-                    name="search"
-                    placeholder="Search by Title, Author, ISBN, Publisher, Grade, Subject..."
-                    value="{{ request('search') }}"
-                    class="w-full h-10 pl-10 pr-3 border rounded-lg text-sm">
-                <svg class="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-gray-400"
-                    xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor"
-                    stroke-width="2" viewBox="0 0 24 24">
-                    <circle cx="11" cy="11" r="8"/>
-                    <path d="m21 21-4.3-4.3"/>
-                </svg>
-            </div>
+            <button type="submit" class="h-10 w-32 bg-blue-600 text-white rounded-lg">
+                Load Data
+            </button>
 
-            <button class="h-10 w-32 bg-blue-600 text-white rounded-lg">
-                Search
+            <button type="button"
+                    id="resetFilters"
+                    class="h-10 w-32 bg-gray-200 hover:bg-gray-300 text-sm text-gray-800 rounded-lg">
+                Reset
             </button>
         </div>
+    </div>
+</form>
 
-        <!-- SECOND ROW -->
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-
-            <select name="school" id="school"
-                    class="h-10 border px-3 rounded-lg">
-                <option value="all" {{ request('school') === 'all' ? 'selected' : '' }}>
-                    All Schools (this District)
-                </option>
-                @foreach($schools as $school)
-                    <option value="{{ $school->id }}"
-                            {{ request('school') == $school->id ? 'selected' : '' }}>
-                        {{ $school->school_name }}
-                    </option>
-                @endforeach
-            </select>
-
-            <div class="flex gap-3">
-                <button type="submit"
-                        class="h-10 w-32 bg-blue-600 text-white rounded-lg">
-                    Load Data
-                </button>
-
-                <button type="button"
-                        id="resetFilters"
-                        class="h-10 w-32 bg-gray-200 hover:bg-gray-300 text-sm text-gray-800 rounded-lg">
-                    Reset
-                </button>
-            </div>
-        </div>
-    </form>
-
+<div id="table-results-container">
     @if(request()->has('school'))
         <!-- Export Button -->
-        <div class="flex justify-end mt-4">
+        <div class="export-btn-wrapper flex justify-end mt-4">
             <a href="{{ route('print-resources.export', request()->query()) }}"
                class="inline-flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -96,15 +94,11 @@
                             <tr class="hover:bg-gray-50 border border-gray-300">
                                 <td class="px-2 py-3">
                                     @if($item->cover)
-                                        <img
-                                            src="{{ asset('storage/' . $item->cover) }}"
-                                            alt="{{ $item->printTitle->title }}"
-                                            class="w-12 h-16 object-cover rounded shadow"
-                                        >
+                                        <img src="{{ asset('storage/' . $item->cover) }}"
+                                             alt="{{ $item->printTitle->title }}"
+                                             class="w-12 h-16 object-cover rounded shadow">
                                     @else
-                                        <div class="w-12 h-16 bg-gray-200 rounded flex items-center justify-center text-gray-400 text-xs">
-                                            No Cover
-                                        </div>
+                                        <div class="w-12 h-16 bg-gray-200 rounded flex items-center justify-center text-gray-400 text-xs">No Cover</div>
                                     @endif
                                 </td>
                                 <td class="px-2 py-3 font-medium text-gray-800 max-w-xs">{{ $item->printTitle->title }}</td>
@@ -129,9 +123,7 @@
                                 <td class="px-2 py-3 text-gray-600 font-mono text-xs">{{ $item->isbn }}</td>
                                 <td class="px-2 py-3 text-center">{{ $item->copyright }}</td>
                                 <td class="px-2 py-3 text-gray-700">
-                                    <span class="text-xs font-medium text-blue-600">
-                                        {{ $item->library_name ?? 'N/A' }}
-                                    </span>
+                                    <span class="text-xs font-medium text-blue-600">{{ $item->library_name ?? 'N/A' }}</span>
                                 </td>
                                 <td class="px-2 py-3 text-center text-xs">
                                     <div class="space-y-1">
@@ -147,9 +139,7 @@
                                         <div class="font-semibold text-gray-800 border-t pt-1">Total: {{ $total }}</div>
                                     </div>
                                 </td>
-                                <td class="px-2 py-3 text-center text-xs">
-                                    School Library
-                                </td>
+                                <td class="px-2 py-3 text-center text-xs">School Library</td>
                                 <td class="px-2 py-3">
                                     <div class="flex justify-center gap-2">
                                         <button onclick='openPrintModal(@json($item->showDetails()))'
@@ -161,9 +151,7 @@
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="11" class="text-center py-8 text-gray-500">
-                                    No resources found.
-                                </td>
+                                <td colspan="12" class="text-center py-8 text-gray-500">No resources found.</td>
                             </tr>
                         @endforelse
                     </tbody>
@@ -181,3 +169,4 @@
             Select a school (or All Schools) and click "Load Data" to view school library resources.
         </div>
     @endif
+</div>

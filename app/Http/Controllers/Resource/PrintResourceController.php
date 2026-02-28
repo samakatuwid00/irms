@@ -45,6 +45,22 @@ class PrintResourceController extends BaseController
             'countPercent'  => $schoolEstimatedPercent,
         ]);
 
+        // AJAX request: the JS sends X-Requested-With: XMLHttpRequest when using fetch().
+        // Return only the relevant component partial so the sidebar is never re-rendered.
+        if ($request->ajax() || $request->boolean('_ajax')) {
+            $partial = match ($level) {
+                1 => 'pages.components.print-resource-school-account',
+                2 => 'pages.components.print-resource-district-account',
+                3 => 'pages.components.print-resource-division-account',
+                4 => 'pages.components.print-resource-region-account',
+                default => null,
+            };
+
+            if ($partial) {
+                return response()->view($partial, $data);
+            }
+        }
+
         return view('pages.print-resources', $data);
-    }
+        }
 }

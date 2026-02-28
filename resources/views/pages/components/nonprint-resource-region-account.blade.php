@@ -1,96 +1,90 @@
 <h2 class="text-lg font-semibold">Region Resources</h2>
 
-    <form method="GET" class="bg-white p-4 rounded-xl shadow space-y-4">
+<form method="GET" data-ajax class="bg-white p-4 rounded-xl shadow space-y-4">
 
-        <!--  SEARCH  -->
-        <div class="flex gap-2">
-            <div class="relative flex-1">
-                <input type="text"
-                    name="search"
-                    placeholder="Search School Library... Search by Title, Brand, Code, Version, Model, Subject..."
-                    value="{{ request('search') }}"
-                    class="w-full pl-10 py-2 border rounded-lg text-sm">
-
-                <svg class="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-gray-400"
-                    xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor"
-                    stroke-width="2" viewBox="0 0 24 24">
-                    <circle cx="11" cy="11" r="8"/>
-                    <path d="m21 21-4.3-4.3"/>
-                </svg>
-            </div>
-
-            <button type="submit" class="bg-blue-600 text-white rounded-lg px-4 py-2">
-                Search
-            </button>
+    <!--  SEARCH  -->
+    <div class="flex gap-2">
+        <div class="relative flex-1">
+            <input type="text"
+                name="search"
+                placeholder="Search School Library... Search by Title, Brand, Code, Version, Model, Subject..."
+                value="{{ request('search') }}"
+                class="w-full pl-10 py-2 border rounded-lg text-sm">
+            <svg class="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-gray-400"
+                xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor"
+                stroke-width="2" viewBox="0 0 24 24">
+                <circle cx="11" cy="11" r="8"/>
+                <path d="m21 21-4.3-4.3"/>
+            </svg>
         </div>
 
-        <!-- FILTERS (BELOW SEARCH) -->
-        <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <button type="submit" class="bg-blue-600 text-white rounded-lg px-4 py-2">
+            Search
+        </button>
+    </div>
 
-            <select name="division" id="division"
-                    class="h-10 border px-3 rounded-lg">
-                <option value="all" {{ request('division') === 'all' ? 'selected' : '' }}>
-                    All Divisions
+    <!-- FILTERS -->
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+
+        <select name="division" id="division" class="h-10 border px-3 rounded-lg">
+            <option value="all" {{ request('division') === 'all' ? 'selected' : '' }}>
+                All Divisions
+            </option>
+            @foreach($divisions as $div)
+                <option value="{{ $div->id }}"
+                        {{ request('division') == $div->id ? 'selected' : '' }}>
+                    {{ $div->division_name }}
                 </option>
-                @foreach($divisions as $div)
-                    <option value="{{ $div->id }}"
-                            {{ request('division') == $div->id ? 'selected' : '' }}>
-                        {{ $div->division_name }}
+            @endforeach
+        </select>
+
+        <select name="district" id="district" class="h-10 border px-3 rounded-lg">
+            <option value="all" {{ request('district') === 'all' ? 'selected' : '' }}>
+                All Districts
+            </option>
+            @if(request('division') && request('division') !== 'all')
+                @foreach($districts as $d)
+                    <option value="{{ $d->id }}"
+                            {{ request('district') == $d->id ? 'selected' : '' }}>
+                        {{ $d->district_name }}
                     </option>
                 @endforeach
-            </select>
+            @endif
+        </select>
 
-            <select name="district" id="district"
-                    class="h-10 border px-3 rounded-lg">
-                <option value="all" {{ request('district') === 'all' ? 'selected' : '' }}>
-                    All Districts
-                </option>
-                @if(request('division') && request('division') !== 'all')
-                    @foreach($districts as $d)
-                        <option value="{{ $d->id }}"
-                                {{ request('district') == $d->id ? 'selected' : '' }}>
-                            {{ $d->district_name }}
-                        </option>
-                    @endforeach
-                @endif
-            </select>
+        <select name="school" id="school" class="h-10 border px-3 rounded-lg">
+            <option value="all" {{ request('school') === 'all' ? 'selected' : '' }}>
+                All Schools
+            </option>
+            @if(request('district') && request('district') !== 'all')
+                @foreach($schools as $s)
+                    <option value="{{ $s->id }}"
+                            {{ request('school') == $s->id ? 'selected' : '' }}>
+                        {{ $s->school_name }}
+                    </option>
+                @endforeach
+            @endif
+        </select>
 
-            <select name="school" id="school"
-                    class="h-10 border px-3 rounded-lg">
-                <option value="all" {{ request('school') === 'all' ? 'selected' : '' }}>
-                    All Schools
-                </option>
-                @if(request('district') && request('district') !== 'all')
-                    @foreach($schools as $s)
-                        <option value="{{ $s->id }}"
-                                {{ request('school') == $s->id ? 'selected' : '' }}>
-                            {{ $s->school_name }}
-                        </option>
-                    @endforeach
-                @endif
-            </select>
+        <!-- Load + Reset -->
+        <div class="flex gap-3">
+            <button type="submit" class="h-10 w-32 bg-blue-600 text-white rounded-lg">
+                Load Data
+            </button>
 
-            <!-- Load + Reset -->
-            <div class="flex gap-3">
-                <button type="submit"
-                        class="h-10 w-32 bg-blue-600 text-white rounded-lg">
-                    Load Data
-                </button>
-
-                <button type="button"
-                        id="resetFilters"
-                        class="h-10 w-32 bg-gray-200 hover:bg-gray-300 text-sm text-gray-800 rounded-lg">
-                    Reset
-                </button>
-            </div>
-
+            <button type="button"
+                    id="resetFilters"
+                    class="h-10 w-32 bg-gray-200 hover:bg-gray-300 text-sm text-gray-800 rounded-lg">
+                Reset
+            </button>
         </div>
+    </div>
+</form>
 
-    </form>
-
+<div id="table-results-container">
     @if(request()->has('division') || request()->has('district') || request()->has('school'))
         <!-- Export Button -->
-        <div class="flex justify-end mt-4">
+        <div class="export-btn-wrapper flex justify-end mt-4">
             <a href="{{ route('nonprint-resources.export', request()->query()) }}"
                class="inline-flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -137,9 +131,7 @@
                                 <td class="px-4 py-3 text-gray-600">{{ $item->size }}</td>
                                 <td class="px-4 py-3 text-gray-600">{{ $item->model }}</td>
                                 <td class="px-4 py-3 text-gray-700">
-                                    <span class="text-xs font-medium text-blue-600">
-                                        {{ $item->library_name ?? 'N/A' }}
-                                    </span>
+                                    <span class="text-xs font-medium text-blue-600">{{ $item->library_name ?? 'N/A' }}</span>
                                 </td>
                                 <td class="px-4 py-3 text-xs">
                                     @if($item->subjects()->count())
@@ -170,18 +162,16 @@
                                 </td>
                                 <td class="px-4 py-3">
                                     <div class="flex justify-center gap-2">
-                                            <button onclick='openNonPrintModal(@json($item->showDetails()))'
-                                                    class="px-3 py-1 text-xs rounded-lg bg-blue-100 text-blue-600 hover:bg-blue-200">
-                                                View
-                                            </button>
+                                        <button onclick='openNonPrintModal(@json($item->showDetails()))'
+                                                class="px-3 py-1 text-xs rounded-lg bg-blue-100 text-blue-600 hover:bg-blue-200">
+                                            View
+                                        </button>
                                     </div>
                                 </td>
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="12" class="text-center py-8 text-gray-500">
-                                    No resources found.
-                                </td>
+                                <td colspan="12" class="text-center py-8 text-gray-500">No resources found.</td>
                             </tr>
                         @endforelse
                     </tbody>
@@ -199,3 +189,4 @@
             Select division/district/school and click "Load Data" to view resources.
         </div>
     @endif
+</div>

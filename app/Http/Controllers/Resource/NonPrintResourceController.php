@@ -46,6 +46,23 @@ class NonPrintResourceController extends BaseController
             'countPercent'  => $schoolEstimatedPercent,
         ]);
 
+        // AJAX request: the JS sends X-Requested-With: XMLHttpRequest when using fetch().
+        // Return only the relevant component partial so the sidebar is never re-rendered.
+        if ($request->ajax()) {
+            $partial = match ($level) {
+                1 => 'pages.components.nonprint-resource-school-account',
+                2 => 'pages.components.nonprint-resource-district-account',
+                3 => 'pages.components.nonprint-resource-division-account',
+                4 => 'pages.components.nonprint-resource-region-account',
+                default => null,
+            };
+
+            if ($partial) {
+                return response()->view($partial, $data);
+            }
+        }
+
+        // Normal full-page request — return the full layout as before
         return view('pages.nonprint-resources', $data);
     }
 }
