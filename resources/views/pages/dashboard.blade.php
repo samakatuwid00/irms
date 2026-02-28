@@ -298,29 +298,10 @@
                 <p>
                     <span class="font-bold text-red-600">Note:</span>
                     <span class="font-semibold text-gray-800"> Status</span>
-                    = Progress based on total LR vs estimated resources.
+                    = Progress based on total LR vs estimated resources. BOSY / EOSY is set by the Regional Account.
+                    It automatically RESETS ALL to 0 when period changes. Finalized data from past periods becomes permanent
                 </p>
-
-                <p>
-                    <span class="font-semibold text-gray-800">BOSY / EOSY</span>
-                    is set by the Regional Account.
-                    It
-                    <span class="font-semibold text-gray-800">
-                        automatically RESETS ALL to 0
-                    </span>
-                    when period changes.
-                </p>
-
-                <p>
-                    <span class="font-semibold text-gray-800">
-                        Finalized data
-                    </span>
-                    from past periods becomes
-                    <span class="font-semibold text-gray-800">
-                        permanent
-                    </span>.
-                </p>
-
+                
             </div>
 
         </x-chart-card>

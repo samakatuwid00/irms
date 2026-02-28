@@ -184,7 +184,7 @@ class BosyStatusService
 
     private function getDistrictData(string $districtId): array
     {
-        $schools = DB::table('lrmis.mv_bosy_division_schools_status')
+        $schools = DB::table('lrmis.mv_bosy_district_schools_status')
             ->where('district_id', $districtId)
             ->orderBy('school_name')
             ->get();
