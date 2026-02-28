@@ -423,7 +423,9 @@ class PrintResourceService
         $query = $this->buildLibraryQuery($libraryIds);
         $this->applySearch($query, (string) $request->input('search', ''));
 
-        return $query->paginate(self::PER_PAGE)->withQueryString();
+        $paginated = $query->paginate(self::PER_PAGE)->withQueryString();
+        $this->attachLibraryNames($paginated);
+        return $paginated;
     }
 
     private function getDivisionResources(Request $request, Collection $libraryIds)
@@ -435,7 +437,9 @@ class PrintResourceService
         $query = $this->buildLibraryQuery($libraryIds);
         $this->applySearch($query, (string) $request->input('division_search', ''));
 
-        return $query->paginate(self::PER_PAGE)->withQueryString();
+        $paginated = $query->paginate(self::PER_PAGE)->withQueryString();
+        $this->attachLibraryNames($paginated);
+        return $paginated;
     }
 
     private function getFilteredResources(Request $request, int $level, Collection $libraryIds)
@@ -450,7 +454,9 @@ class PrintResourceService
         $searchParam = $level === self::LEVEL_DIVISION ? 'school_search' : 'search';
         $this->applySearch($query, (string) $request->input($searchParam, ''));
 
-        return $query->paginate(self::PER_PAGE)->withQueryString();
+        $paginated = $query->paginate(self::PER_PAGE)->withQueryString();
+        $this->attachLibraryNames($paginated);
+        return $paginated;
     }
 
     private function shouldShowFilteredResources(Request $request, int $level): bool
