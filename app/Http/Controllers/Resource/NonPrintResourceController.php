@@ -26,18 +26,24 @@ class NonPrintResourceController extends BaseController
 
     public function index(Request $request)
     {
-        $user = Auth::user();
+        $user  = Auth::user();
         $level = $user->userType?->level ?? 0;
+
+        // Cast to string — station_id is a UUID and the FK column is varchar,
+        // type mismatch can silently return null on some drivers
         $stationId = (string) $user->station_id;
 
-        $schoolLibrary = SchoolLibrary::where('school_id', $stationId)->first();
+        // Only needed for school-level users — will be null for division/region
+        $schoolLibrary          = SchoolLibrary::where('school_id', $stationId)->first();
         $schoolEstimatedPercent = EstimatedResourcePrecentageNP::where('school_id', $stationId)->first();
 
+        // Service handles all level-based filtering and table building
         $data = $this->nonprintResourceService->getResourcesData($request, $level, $stationId);
 
+        // Merge the school extras — they're separate from the service's core concern
         $data = array_merge($data, [
             'schoolLibrary' => $schoolLibrary,
-            'countPercent' => $schoolEstimatedPercent,
+            'countPercent'  => $schoolEstimatedPercent,
         ]);
 
         return view('pages.nonprint-resources', $data);

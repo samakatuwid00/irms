@@ -28,11 +28,6 @@ class SearchNonPrintResourceController extends BaseController
         $this->addAcquisitionService = $addAcquisitionService;
     }
 
-    /**
-     * AJAX: Search non-print titles by keyword.
-     * Returns one card per NonprintTitle with all its resource variants and a
-     * deduplicated, comma-joined subject/grade-level string.
-     */
     public function search(Request $request)
     {
         $query = trim($request->input('q', ''));
@@ -44,6 +39,8 @@ class SearchNonPrintResourceController extends BaseController
         $titleIds = NonprintTitle::where('title', 'ILIKE', '%' . $query . '%')
             ->pluck('id');
 
+        // Group by uniqueness_hash so we show one card per variant group,
+        // not one card per title (a title can have many different type/brand combos)
         $resources = NonprintResource::with(['nonprintTitle', 'type'])
             ->whereIn('nonprint_title_id', $titleIds)
             ->where('status', 1)
@@ -51,11 +48,11 @@ class SearchNonPrintResourceController extends BaseController
             ->groupBy('uniqueness_hash');
 
         $results = $resources->map(function ($group) {
-            // Use the first resource in the group as the representative
             $resource = $group->first();
             $title    = $resource->nonprintTitle;
 
-            // Aggregate SGL ids across all resources in this hash group
+            // Aggregate SGL IDs across all resources in the group — different variants
+            // may cover different subjects, so the card should show the union of all of them
             $allSglIds = $group
                 ->pluck('subject_grade_level_ids')
                 ->filter()
@@ -78,6 +75,7 @@ class SearchNonPrintResourceController extends BaseController
                     ->join(', ');
             }
 
+            // Use the first uploaded cover in the group — not all variants may have one
             $cover = $group
                 ->map(fn($r) => $r->cover ? asset('storage/' . $r->cover) : null)
                 ->filter()
@@ -104,17 +102,15 @@ class SearchNonPrintResourceController extends BaseController
         return response()->json($results);
     }
 
-    /**
-     * AJAX: Get full details of a NonprintTitle (all variants) for the view modal.
-     */
     public function show(Request $request, string $id)
     {
         $title = NonprintTitle::with([
             'nonprintResources.type',
         ])->findOrFail($id);
 
-        // Filter resources by uniqueness_hash so only the clicked group shows
-        $hash      = $request->input('hash');
+        $hash = $request->input('hash');
+
+        // Filter to the clicked hash group so the modal doesn't show unrelated variants
         $resources = $hash
             ? $title->nonprintResources->where('uniqueness_hash', $hash)
             : $title->nonprintResources;
@@ -168,10 +164,6 @@ class SearchNonPrintResourceController extends BaseController
         ]);
     }
 
-    /**
-     * Show the "Add Acquisition" form for an existing non-print resource.
-     * All resource fields are pre-filled and read-only; only acquisitions are editable.
-     */
     public function addForm(string $id)
     {
         $user     = Auth::user();
@@ -180,7 +172,7 @@ class SearchNonPrintResourceController extends BaseController
             'type',
         ])->findOrFail($id);
 
-        // Resolve subjects for display
+        // Resolve the SGL objects so the blade can display subject/grade labels
         $subjects = collect();
         if ($resource->subject_grade_level_ids) {
             $ids      = explode(',', $resource->subject_grade_level_ids);
@@ -189,7 +181,8 @@ class SearchNonPrintResourceController extends BaseController
                 ->get();
         }
 
-        // Resolve library options based on user level
+        // Library options vary by user level — default everything to empty/null
+        // so the blade doesn't need isset() guards everywhere
         $divisionLibraries = collect();
         $regionLibrary     = null;
         $schoolLibrary     = null;
@@ -214,15 +207,13 @@ class SearchNonPrintResourceController extends BaseController
         ));
     }
 
-    /**
-     * Store new acquisition batches for an existing non-print resource.
-     * library_id and library_name are embedded inside each acquisition entry in the JSON.
-     */
     public function store(Request $request, string $id)
     {
         $resource = NonprintResource::findOrFail($id);
 
         $validated = $request->validate([
+            // JSON string because the number of acquisition entries is dynamic
+            // and encoded by the JS layer — named array fields wouldn't work here
             'acquisitions' => 'required|string',
         ]);
 
@@ -231,6 +222,7 @@ class SearchNonPrintResourceController extends BaseController
             $validated['acquisitions']
         );
 
+        // Back to the search tab so they can add acquisitions to another resource right away
         return redirect()
             ->route('nonprint-resource.create')
             ->with('success', 'Acquisition successfully added to "' . ($resource->nonprintTitle->title ?? 'resource') . '".')

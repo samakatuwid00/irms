@@ -34,15 +34,13 @@ class EditResourceController extends BaseController
         $this->nonPrintResourceService = $nonPrintResourceService;
     }
 
-    // -------------------------------------------------------------------------
-    // index — load the edit page
-    // -------------------------------------------------------------------------
-
     public function index($id)
     {
         $user       = Auth::user();
         $station_id = $user->station_id;
 
+        // The same ID could belong to either table, so try both.
+        // The blade uses whichever one is non-null to decide which form to show.
         $printResource = PrintResource::with([
             'printTitle.authors',
             'type',
@@ -67,6 +65,7 @@ class EditResourceController extends BaseController
             ->orderBy('library_name')
             ->first();
 
+        // Load SGLs once — needed for both print and non-print forms on the same page
         $subjectGradeLevels = SubjectGradeLevel::query()
             ->select(
                 'subject_grade_levels.id as subject_grade_level_id',
@@ -85,12 +84,15 @@ class EditResourceController extends BaseController
         $printTypes    = PrintType::all();
         $nonprintTypes = NonPrintType::all();
 
+        // Explode CSV into array so the blade can pre-check the right SGL checkboxes
         $selectedSubjectGradeLevels = $printResource
             ? ($printResource->subject_grade_level_ids
                 ? explode(',', $printResource->subject_grade_level_ids)
                 : [])
             : [];
 
+        // Separate variable so both forms can be on the same page without their
+        // checkbox states bleeding into each other
         $selectedSubjectGradeLevelsNP = $nonprintResource
             ? ($nonprintResource->subject_grade_level_ids
                 ? explode(',', $nonprintResource->subject_grade_level_ids)
@@ -112,23 +114,15 @@ class EditResourceController extends BaseController
         ));
     }
 
-    // -------------------------------------------------------------------------
-    // updatePrintResource — acquisitions only
-    // -------------------------------------------------------------------------
-
-    /**
-     * Only the acquisition list is editable from the revised form.
-     * Resource metadata (title, authors, cover, type, etc.) is read-only in
-     * the blade and is NOT updated here.
-     */
     public function updatePrintResource(Request $request, $id)
     {
         $validated = $request->validate([
+            // library_id is required — an acquisition must always be assigned somewhere
             'library_id'   => 'required|string|max:36',
             'acquisitions' => 'nullable|string',
         ]);
 
-        // Default to an empty JSON array if nothing was submitted
+        // Default to empty array so the service always gets valid JSON
         $validated['acquisitions'] = $validated['acquisitions'] ?? '[]';
 
         $this->printResourceService->updatePrintResource($id, $validated);
@@ -138,10 +132,6 @@ class EditResourceController extends BaseController
             ->with('success', 'Acquisitions updated successfully.');
     }
 
-    // -------------------------------------------------------------------------
-    // updateNonPrintResource — unchanged
-    // -------------------------------------------------------------------------
-
     public function updateNonPrintResource(Request $request, $id)
     {
         $validated = $request->validate([
@@ -149,11 +139,13 @@ class EditResourceController extends BaseController
             'acquisitions' => 'nullable|string',
         ]);
 
-        // Default to an empty JSON array if nothing was submitted
+        // Default to empty array so the service always gets valid JSON
         $validated['acquisitions'] = $validated['acquisitions'] ?? '[]';
 
         $result = $this->nonPrintResourceService->updateNonPrintResource($id, $validated);
 
+        // Service deletes the resource when all quantities hit zero — redirect to
+        // the list instead of back to the edit page which would 404
         if ($result['deleted']) {
             return redirect()
                 ->route('nonprint-resources')

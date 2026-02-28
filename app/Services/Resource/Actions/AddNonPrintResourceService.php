@@ -17,37 +17,23 @@ use Illuminate\Support\Str;
 
 class AddNonPrintResourceService
 {
-    // -----------------------------------------------------------------------
-    // PUBLIC API
-    // -----------------------------------------------------------------------
-
-    /**
-     * Create a new non-print resource.
-     * - Level 1 (school):   status = 0 (pending), approver_station = division UUID
-     * - Level 3 (division): status = 1 (approved), no approver_station needed
-     *
-     * @param  array  $data  Validated form data.
-     * @return string|null   The new NonprintResource UUID, or null on failure.
-     */
     public function addNonPrintResource(array $data): ?string
     {
         $nonprintResourceId = null;
 
         DB::transaction(function () use ($data, &$nonprintResourceId) {
-            // 1. Create or get title
             $title = $this->createOrGetTitle($data['title']);
 
-            // 2. Handle optional image upload
             $coverPath = null;
             if (isset($data['image'])) {
                 $coverPath = $this->handleImageUpload($data['image'], $data['title']);
             }
 
-            // 3. Create the resource
             $resource           = $this->createNonprintResource($data, $title->id, $coverPath);
             $nonprintResourceId = $resource->id;
         });
 
+        // Rebuild outside the transaction so the committed row is visible to the index
         if ($nonprintResourceId) {
             $this->updateSearchVector($nonprintResourceId);
         }
@@ -55,26 +41,21 @@ class AddNonPrintResourceService
         return $nonprintResourceId;
     }
 
-    /**
-     * Update an existing non-print resource (pending school request).
-     * Acquisitions are NOT changed on edit — only resource metadata.
-     */
+    // Acquisitions are intentionally NOT changed on edit — only resource metadata
     public function updateNonPrintResource(NonprintResource $resource, array $data): void
     {
         DB::transaction(function () use ($resource, $data) {
-            // 1. Update or replace the title
             $title = $this->createOrGetTitle($data['title']);
 
-            // 2. Handle optional new image
             $coverPath = $resource->cover;
             if (isset($data['image'])) {
+                // Delete old file before replacing — otherwise it's orphaned on disk
                 if ($resource->cover && Storage::disk('public')->exists($resource->cover)) {
                     Storage::disk('public')->delete($resource->cover);
                 }
                 $coverPath = $this->handleImageUpload($data['image'], $data['title']);
             }
 
-            // 3. Rebuild uniqueness hash with new values
             $uniquenessHash = $this->buildUniquenessHash($title->id, $data['type'], $data);
 
             $gradeLevelIds = !empty($data['subject_grade_levels'])
@@ -103,10 +84,6 @@ class AddNonPrintResourceService
         $this->updateSearchVector($resource->id);
     }
 
-    // -----------------------------------------------------------------------
-    // PRIVATE — core steps
-    // -----------------------------------------------------------------------
-
     private function createOrGetTitle(string $titleName): NonprintTitle
     {
         $normalizedTitle = ucwords(strtolower($titleName));
@@ -125,6 +102,7 @@ class AddNonPrintResourceService
         $storagePath  = 'nonprint_cover';
         $fullPath     = $storagePath . '/' . $fileName;
 
+        // Increment the suffix until we find a filename that doesn't exist
         $counter = 1;
         while (Storage::disk('public')->exists($fullPath)) {
             $fileName = $baseFileName . '_' . $counter . '.' . $extension;
@@ -137,15 +115,14 @@ class AddNonPrintResourceService
         return $fullPath;
     }
 
-    /**
-     * Build a deterministic SHA-256 hash over all fields that define uniqueness
-     * for a non-print resource (title + type + brand + model + version + code + url + size + sgls).
-     */
+    // SHA-256 over all fields that make a resource unique — same title with different
+    // type/brand/model/version is a different resource, not a duplicate
     private function buildUniquenessHash(string $titleId, string $typeId, array $data): string
     {
         $sglIds = !empty($data['subject_grade_levels']) ? $data['subject_grade_levels'] : [];
         sort($sglIds);
 
+        // __none__ sentinel keeps hashes distinct when optional fields are absent vs empty string
         $sentinel = '__none__';
 
         $parts = [
@@ -163,7 +140,7 @@ class AddNonPrintResourceService
         return hash('sha256', json_encode($parts, JSON_UNESCAPED_UNICODE));
     }
 
-    // Resolve library_name from whichever table owns this library_id
+    // Try all three library tables — library_id could belong to any of them
     private function resolveLibraryName(?string $libraryId): string
     {
         if (!$libraryId) return 'Unknown Library';
@@ -174,10 +151,7 @@ class AddNonPrintResourceService
             ?? 'Unknown Library';
     }
 
-    /**
-     * Resolve the division UUID for a school user.
-     * School → District → Division.
-     */
+    // Walk school → district → division to find which division should approve this request
     private function resolveDivisionId(string $stationId): ?string
     {
         $school = School::with('district.division')->find($stationId);
@@ -185,19 +159,6 @@ class AddNonPrintResourceService
         return $school?->district?->division?->id ?? null;
     }
 
-    /**
-     * Create a new NonprintResource row.
-     *
-     * Level 1 (school):
-     *   status           = 0  (pending)
-     *   station_type     = 'school'
-     *   approver_station = division UUID
-     *
-     * Level 3 (division):
-     *   status           = 1  (auto-approved)
-     *   station_type     = 'division'
-     *   approver_station = null
-     */
     private function createNonprintResource(array $data, string $titleId, ?string $coverPath): NonprintResource
     {
         $gradeLevelIds = !empty($data['subject_grade_levels'])
@@ -213,6 +174,8 @@ class AddNonPrintResourceService
         $user  = Auth::user();
         $level = $user->userType?->level ?? 0;
 
+        // Division (3): auto-approve and skip the queue
+        // School (1) or anything else: pending, needs division approval
         if ($level === 3) {
             $status          = 1;
             $stationType     = 'division';
@@ -251,6 +214,7 @@ class AddNonPrintResourceService
                 ]
             );
         } catch (UniqueConstraintViolationException) {
+            // Race condition — another request created the same hash between our check and insert
             return NonprintResource::where('uniqueness_hash', $uniquenessHash)->firstOrFail();
         }
     }

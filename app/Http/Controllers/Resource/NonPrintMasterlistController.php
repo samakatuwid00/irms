@@ -28,17 +28,12 @@ class NonPrintMasterlistController extends BaseController
         $this->nonPrintResourceService = $nonPrintResourceService;
     }
 
-    // -----------------------------------------------------------------------
-    // index — show the masterlist page
-    //   level 3 (division): masterlist + school requests tabs
-    //   level 4 (region):   masterlist tab only
-    // -----------------------------------------------------------------------
-
     public function index(Request $request)
     {
         $user  = Auth::user();
         $level = $user->userType?->level ?? 0;
 
+        // Only division (3) and region (4) manage the masterlist
         abort_unless(in_array($level, [3, 4]), 403, 'Unauthorized access.');
 
         [$masterlist, $requests] = $this->buildTabData($request, $user, $level);
@@ -50,10 +45,6 @@ class NonPrintMasterlistController extends BaseController
             'user'
         ));
     }
-
-    // -----------------------------------------------------------------------
-    // editForm — show the edit form for a single approved resource
-    // -----------------------------------------------------------------------
 
     public function editForm(Request $request, string $id)
     {
@@ -70,11 +61,11 @@ class NonPrintMasterlistController extends BaseController
         $nonprintTypes      = NonprintType::all();
         $subjectGradeLevels = $this->getSubjectGradeLevels();
 
+        // subject_grade_level_ids is stored as CSV, so explode it for the checkbox loop
         $editingSglIds = $resource->subject_grade_level_ids
             ? explode(',', $resource->subject_grade_level_ids)
             : [];
 
-        // Build tab data so the blade has $masterlist and $requests
         [$masterlist, $requests] = $this->buildTabData($request, $user, $level);
 
         return view('pages.nonprint-resource-masterlist', compact(
@@ -88,10 +79,6 @@ class NonPrintMasterlistController extends BaseController
             'user'
         ));
     }
-
-    // -----------------------------------------------------------------------
-    // update — save edits to an approved resource (division or region)
-    // -----------------------------------------------------------------------
 
     public function update(Request $request, string $id)
     {
@@ -114,10 +101,6 @@ class NonPrintMasterlistController extends BaseController
             ->with('active_tab', 'tab-masterlist');
     }
 
-    // -----------------------------------------------------------------------
-    // approve — approve a school request (division only, level 3)
-    // -----------------------------------------------------------------------
-
     public function approve(string $id)
     {
         $user  = Auth::user();
@@ -125,6 +108,7 @@ class NonPrintMasterlistController extends BaseController
 
         abort_unless($level === 3, 403, 'Only division accounts can approve requests.');
 
+        // approver_station scopes this to the division's own queue
         $resource = NonprintResource::where('id', $id)
             ->where('status', 0)
             ->where('approver_station', $user->station_id)
@@ -132,7 +116,7 @@ class NonPrintMasterlistController extends BaseController
 
         $resource->update(['status' => 1]);
 
-        // Rebuild search vector after approval
+        // Rebuild the search vector immediately so the record is searchable right away
         DB::statement('
             UPDATE nonprint_resources
             SET search_vector = build_nonprint_resource_search_vector(id)
@@ -144,12 +128,6 @@ class NonPrintMasterlistController extends BaseController
             ->with('success', 'Request approved and added to the masterlist.')
             ->with('active_tab', 'tab-requests');
     }
-
-    // -----------------------------------------------------------------------
-    // reject — reject (and delete) a school request (division only, level 3)
-    //          NOTE: title is intentionally NOT deleted here,
-    //          as it may be referenced by other resources.
-    // -----------------------------------------------------------------------
 
     public function reject(string $id)
     {
@@ -163,12 +141,13 @@ class NonPrintMasterlistController extends BaseController
             ->where('approver_station', $user->station_id)
             ->firstOrFail();
 
-        // Delete cover image if it exists
+        // Delete the cover file before the DB row — otherwise it's orphaned on disk
         if ($resource->cover && Storage::disk('public')->exists($resource->cover)) {
             Storage::disk('public')->delete($resource->cover);
         }
 
-        // Delete the resource only — do NOT touch the title
+        // Only delete the resource — intentionally leaving the title intact because
+        // it may still be referenced by other approved resources
         $resource->delete();
 
         return redirect()
@@ -176,10 +155,6 @@ class NonPrintMasterlistController extends BaseController
             ->with('success', 'Request rejected and removed.')
             ->with('active_tab', 'tab-requests');
     }
-
-    // -----------------------------------------------------------------------
-    // search (AJAX) — full-text search on masterlist
-    // -----------------------------------------------------------------------
 
     public function search(Request $request)
     {
@@ -193,6 +168,7 @@ class NonPrintMasterlistController extends BaseController
         $query = NonprintResource::with(['nonprintTitle', 'type'])
             ->where('status', 1);
 
+        // Skip FTS filter for short queries — a single char matches almost everything
         if (strlen($q) >= 2) {
             $query->whereRaw(
                 "search_vector @@ plainto_tsquery('english', ?)",
@@ -212,10 +188,6 @@ class NonPrintMasterlistController extends BaseController
         ]);
     }
 
-    // -----------------------------------------------------------------------
-    // requestSearch (AJAX) — search pending requests for division
-    // -----------------------------------------------------------------------
-
     public function requestSearch(Request $request)
     {
         $user  = Auth::user();
@@ -225,6 +197,7 @@ class NonPrintMasterlistController extends BaseController
 
         $q = trim($request->input('q', ''));
 
+        // Scope to this division's queue only
         $query = NonprintResource::with(['nonprintTitle', 'type'])
             ->where('status', 0)
             ->where('approver_station', $user->station_id);
@@ -248,13 +221,9 @@ class NonPrintMasterlistController extends BaseController
         ]);
     }
 
-    // -----------------------------------------------------------------------
-    // Private helpers
-    // -----------------------------------------------------------------------
-
+    // Shared between index() and editForm() to avoid duplicating the tab queries
     private function buildTabData(Request $request, $user, int $level): array
     {
-        // Masterlist: all approved resources
         $mlSearch = trim($request->input('ml_search', ''));
         $masterlistQuery = NonprintResource::with(['nonprintTitle', 'type'])
             ->where('status', 1);
@@ -266,9 +235,10 @@ class NonPrintMasterlistController extends BaseController
             );
         }
 
+        // Named paginator 'ml_page' avoids colliding with 'rq_page' on the same page
         $masterlist = $masterlistQuery->orderByDesc('created_at')->paginate(15, ['*'], 'ml_page');
 
-        // Requests: only for division (level 3)
+        // Region users don't have a pending queue, so $requests stays null
         $requests = null;
         if ($level === 3) {
             $rqSearch = trim($request->input('rq_search', ''));
@@ -289,22 +259,23 @@ class NonPrintMasterlistController extends BaseController
         return [$masterlist, $requests];
     }
 
+    // Shared JSON shape for both search() and requestSearch()
     private function formatResource(NonprintResource $r): array
     {
         return [
-            'id'       => $r->id,
-            'cover'    => $r->cover ? asset('storage/' . $r->cover) : asset('assets/images/def.jpg'),
-            'title'    => $r->nonprintTitle->title ?? '-',
-            'type'     => $r->type->type_name ?? '-',
-            'brand'    => $r->brand ?? '-',
-            'code'     => $r->code ?? '-',
-            'version'  => $r->version ?? '-',
-            'model'    => $r->model ?? '-',
-            'url'      => $r->url ?? '-',
-            'size'     => $r->size ?? '-',
-            'status'   => $r->status,
-            'submitted'=> $r->created_at?->format('M d, Y'),
-            'subjects' => $this->formatSubjects($r),
+            'id'        => $r->id,
+            'cover'     => $r->cover ? asset('storage/' . $r->cover) : asset('assets/images/def.jpg'),
+            'title'     => $r->nonprintTitle->title ?? '-',
+            'type'      => $r->type->type_name ?? '-',
+            'brand'     => $r->brand ?? '-',
+            'code'      => $r->code ?? '-',
+            'version'   => $r->version ?? '-',
+            'model'     => $r->model ?? '-',
+            'url'       => $r->url ?? '-',
+            'size'      => $r->size ?? '-',
+            'status'    => $r->status,
+            'submitted' => $r->created_at?->format('M d, Y'),
+            'subjects'  => $this->formatSubjects($r),
         ];
     }
 
@@ -341,6 +312,7 @@ class NonPrintMasterlistController extends BaseController
             ->get();
     }
 
+    // Same rules for both store() and update() — keeps them from drifting apart
     private function validateResourceRequest(Request $request): array
     {
         $validated = $request->validate([
@@ -356,6 +328,7 @@ class NonPrintMasterlistController extends BaseController
             'image'                => 'nullable|image|mimes:jpeg,png,jpg|max:5120',
         ]);
 
+        // validate() strips the UploadedFile, so re-attach it manually
         if ($request->hasFile('image')) {
             $validated['image'] = $request->file('image');
         }

@@ -16,25 +16,15 @@ use Illuminate\Support\Facades\Cache;
 
 class ExportPrintResourceService
 {
-    /** Cache TTL constants */
-    private const CACHE_TTL_LIBRARIES = 1800; // 30 minutes
-    private const CACHE_TTL_HIERARCHY = 7200; // 2 hours
+    private const CACHE_TTL_LIBRARIES = 1800;
+    private const CACHE_TTL_HIERARCHY = 7200;
 
-    /** Organizational hierarchy level constants */
-    public const LEVEL_SCHOOL    = 1;
-    public const LEVEL_DISTRICT  = 2;
-    public const LEVEL_DIVISION  = 3;
-    public const LEVEL_REGION    = 4;
+    public const LEVEL_SCHOOL   = 1;
+    public const LEVEL_DISTRICT = 2;
+    public const LEVEL_DIVISION = 3;
+    public const LEVEL_REGION   = 4;
 
-    // ─── Public API ───────────────────────────────────────────────────────────
-
-    /**
-     * Get all filtered resources for export (no pagination).
-     *
-     * library_id now lives on print_acquisitions, so we scope the query
-     * via whereHas and let the eager-loaded relation carry all acquisition
-     * rows to the model accessors (quantities, library_name, showDetails…).
-     */
+    // No pagination — exports dump everything matching the current filter
     public function getExportData(Request $request, int $level, string $stationId): Collection
     {
         $libraryIds = $this->getLibraryIds($request, $level, $stationId);
@@ -43,41 +33,38 @@ class ExportPrintResourceService
             return collect();
         }
 
+        // library_id lives on print_acquisitions, not on the resource itself —
+        // scope via whereHas and let eager loading pull the acquisitions through
         $query = PrintResource::with(['printTitle.authors', 'type', 'printAcquisitions'])
             ->whereHas('printAcquisitions', function ($q) use ($libraryIds) {
                 $q->whereIn('library_id', $libraryIds->toArray());
             });
 
-        $searchParam = $this->getSearchParam($request, $level);
-        $this->applySearch($query, $searchParam);
+        $this->applySearch($query, $this->getSearchParam($request, $level));
 
         return $query->get();
     }
 
-    // ─── Search param helper ──────────────────────────────────────────────────
-
     private function getSearchParam(Request $request, int $level): string
     {
         if ($level === self::LEVEL_DIVISION) {
-            if ($request->has('district') || $request->has('school')) {
-                return (string) $request->input('school_search', '');
-            }
-            return (string) $request->input('division_search', '');
+            // Division has two separate search boxes — one for its own tab, one for the school tab
+            return $request->has('district') || $request->has('school')
+                ? (string) $request->input('school_search', '')
+                : (string) $request->input('division_search', '');
         }
 
         return (string) $request->input('search', '');
     }
 
-    // ─── Library ID resolution (unchanged logic, caching intact) ─────────────
-
     private function getLibraryIds(Request $request, int $level, string $stationId): Collection
     {
         return match($level) {
-            self::LEVEL_SCHOOL    => $this->getLevel1LibraryIds($stationId),
-            self::LEVEL_DISTRICT  => $this->getLevel2LibraryIds($request, $stationId),
-            self::LEVEL_DIVISION  => $this->getLevel3LibraryIds($request, $stationId),
-            self::LEVEL_REGION    => $this->getLevel4LibraryIds($request, $stationId),
-            default               => collect(),
+            self::LEVEL_SCHOOL   => $this->getLevel1LibraryIds($stationId),
+            self::LEVEL_DISTRICT => $this->getLevel2LibraryIds($request, $stationId),
+            self::LEVEL_DIVISION => $this->getLevel3LibraryIds($request, $stationId),
+            self::LEVEL_REGION   => $this->getLevel4LibraryIds($request, $stationId),
+            default              => collect(),
         };
     }
 
@@ -94,6 +81,7 @@ class ExportPrintResourceService
     {
         $selectedSchool = $request->input('school');
 
+        // Require a filter — exporting everything without one would be too broad
         if (!$request->has('school')) {
             return collect();
         }
@@ -106,6 +94,7 @@ class ExportPrintResourceService
             );
         }
 
+        // "All schools" selected
         return Cache::remember(
             "district_school_libraries_{$districtId}",
             self::CACHE_TTL_HIERARCHY,
@@ -118,6 +107,7 @@ class ExportPrintResourceService
 
     private function getLevel3LibraryIds(Request $request, string $divisionId): Collection
     {
+        // If a filter is active, export the filtered (school) tab; otherwise export the division tab
         if ($request->has('district') || $request->has('school')) {
             return $this->getLevel3FilteredLibraryIds($request, $divisionId);
         }
@@ -153,6 +143,7 @@ class ExportPrintResourceService
             );
         }
 
+        // "All districts" selected — walk the full hierarchy
         return Cache::remember(
             "division_all_school_libraries_{$divisionId}",
             self::CACHE_TTL_HIERARCHY,
@@ -170,10 +161,12 @@ class ExportPrintResourceService
         $selectedDistrict = $request->input('district');
         $selectedSchool   = $request->input('school');
 
+        // Require at least one filter — exporting the entire region without one is too broad
         if (!$request->has('division') && !$request->has('district') && !$request->has('school')) {
             return collect();
         }
 
+        // Most specific filter wins — school > district > division > all
         if ($selectedSchool && $selectedSchool !== 'all') {
             return Cache::remember(
                 "school_libraries_{$selectedSchool}",
@@ -234,16 +227,8 @@ class ExportPrintResourceService
         );
     }
 
-    // ─── Search ───────────────────────────────────────────────────────────────
-
-    /**
-     * Apply full-text search via print_acquisitions.search_vector.
-     *
-     * Uses WHERE EXISTS so each print_resources row appears at most once
-     * even when multiple acquisitions match. Ranking picks the best-matching
-     * acquisition to determine sort order — identical behaviour to
-     * PrintResourceService::applySearch().
-     */
+    // WHERE EXISTS keeps each resource row appearing once even when multiple
+    // acquisitions match — MAX(ts_rank) floats the best-matching resource to the top
     private function applySearch($query, string $search)
     {
         $search = trim($search);
@@ -272,10 +257,7 @@ class ExportPrintResourceService
         return $query;
     }
 
-    /**
-     * ILIKE fallback — used when the FTS vector is unavailable.
-     * library_name is now looked up via the printAcquisitions relation.
-     */
+    // ILIKE fallback for when the FTS vector hasn't been built yet
     private function applySearchFallback($query, string $search)
     {
         $search = trim($search);
@@ -287,30 +269,23 @@ class ExportPrintResourceService
         $searchLower = '%' . strtolower($search) . '%';
 
         return $query->where(function ($q) use ($searchLower) {
-            // Fields that moved to print_acquisitions
             $q->whereHas('printAcquisitions', function ($aq) use ($searchLower) {
                     $aq->where('isbn',         'ILIKE', $searchLower)
                        ->orWhere('publisher',   'ILIKE', $searchLower)
                        ->orWhere('copyright',   'ILIKE', $searchLower)
                        ->orWhere('library_name','ILIKE', $searchLower);
                 })
-
-                // Title
                 ->orWhereHas('printTitle', fn($qt) =>
                     $qt->where('title', 'ILIKE', $searchLower)
                 )
-
-                // Authors
                 ->orWhereHas('printTitle.authors', fn($qa) =>
                     $qa->where('author_name', 'ILIKE', $searchLower)
                 )
-
-                // Subject / Grade
                 ->orWhereExists(function ($exists) use ($searchLower) {
                     $exists->select(DB::raw(1))
                         ->from('subject_grade_levels as sgl')
                         ->join('subjects as subj', 'sgl.subject_id', '=', 'subj.id')
-                        ->join('grade_levels as gl',   'sgl.grade_level_id', '=', 'gl.id')
+                        ->join('grade_levels as gl', 'sgl.grade_level_id', '=', 'gl.id')
                         ->whereRaw("sgl.id::text = ANY(string_to_array(print_resources.subject_grade_level_ids, ','))")
                         ->where(function ($match) use ($searchLower) {
                             $match->where('subj.subject_name', 'ILIKE', $searchLower)
@@ -320,20 +295,18 @@ class ExportPrintResourceService
         });
     }
 
-    // ─── Cache management ─────────────────────────────────────────────────────
-
     public function clearStationCache(string $stationId, int $level): void
     {
         $patterns = match($level) {
-            self::LEVEL_SCHOOL    => ["school_libraries_{$stationId}"],
-            self::LEVEL_DISTRICT  => ["district_school_libraries_{$stationId}"],
-            self::LEVEL_DIVISION  => [
+            self::LEVEL_SCHOOL   => ["school_libraries_{$stationId}"],
+            self::LEVEL_DISTRICT => ["district_school_libraries_{$stationId}"],
+            self::LEVEL_DIVISION => [
                 "division_libraries_{$stationId}",
                 "division_all_school_libraries_{$stationId}",
                 "division_all_libraries_{$stationId}",
             ],
-            self::LEVEL_REGION    => ["region_all_libraries_{$stationId}"],
-            default               => [],
+            self::LEVEL_REGION   => ["region_all_libraries_{$stationId}"],
+            default              => [],
         };
 
         foreach ($patterns as $key) {
@@ -343,8 +316,7 @@ class ExportPrintResourceService
 
     public function clearLibraryCache(): void
     {
-        // Targeted cache eviction can be added here if library_name cache
-        // keys are tracked explicitly. Cache::flush() intentionally omitted
-        // to avoid clearing unrelated application caches.
+        // Intentionally empty — Cache::flush() would wipe unrelated app caches.
+        // Add targeted key eviction here if library_name keys are tracked explicitly.
     }
 }

@@ -28,19 +28,10 @@ class AddPrintResourceController extends BaseController
         $this->printResourceService = $printResourceService;
     }
 
-    // -----------------------------------------------------------------------
-    // index — show the page (Search Existing / Manual Add / My Requests tabs)
-    //         Division users (level 3) do not see the My Requests tab.
-    // -----------------------------------------------------------------------
-
     public function index()
     {
         return view('pages.add-print-resource', $this->buildViewData());
     }
-
-    // -----------------------------------------------------------------------
-    // store — save a new print-resource request or direct entry
-    // -----------------------------------------------------------------------
 
     public function store(Request $request)
     {
@@ -52,24 +43,19 @@ class AddPrintResourceController extends BaseController
         $level = $user->userType?->level ?? 0;
 
         if ($level === 3) {
-            // Division: redirect to masterlist since it's auto-approved
+            // Division entries are auto-approved and land on the masterlist immediately
             return redirect()
                 ->route('masterlist.index')
                 ->with('success', 'Resource has been added to the masterlist.')
                 ->with('active_tab', 'tab-masterlist');
         }
 
-        // School: redirect back to add page, show My Requests tab
+        // School users go to My Requests so they can track the pending approval
         return redirect()
             ->route('print-resource.create')
             ->with('success', 'Your resource request has been submitted and is pending approval.')
             ->with('active_tab', 'tab-requests');
     }
-
-    // -----------------------------------------------------------------------
-    // edit — reuse the same page/form, just pass the resource to pre-fill
-    //        Only level 1 (school) users may edit their own pending requests.
-    // -----------------------------------------------------------------------
 
     public function edit(string $id)
     {
@@ -77,7 +63,7 @@ class AddPrintResourceController extends BaseController
         $level = $user->userType?->level ?? 0;
 
         if ($level == 1) {
-
+            // Only their own pending records — not approved ones, not other users'
             $resource = PrintResource::with(['printTitle.authors', 'type'])
                 ->where('id', $id)
                 ->where('station_type', 'school')
@@ -85,18 +71,19 @@ class AddPrintResourceController extends BaseController
                 ->where('encoded_by', $user->id)
                 ->where('status', 0)
                 ->firstOrFail();
-
         } else {
             abort(403, 'Unauthorized access.');
         }
 
         $data = $this->buildViewData();
+        $data['editResource'] = $resource;
 
-        $data['editResource']   = $resource;
+        // Pull author names out of the pivot so the blade can render them in the input field
         $data['editingAuthors'] = $resource->printTitle->authors
             ->pluck('author_name')
             ->toArray();
 
+        // subject_grade_level_ids is stored as CSV, so explode it for the checkbox loop
         $data['editingSglIds'] = $resource->subject_grade_level_ids
             ? explode(',', $resource->subject_grade_level_ids)
             : [];
@@ -104,13 +91,11 @@ class AddPrintResourceController extends BaseController
         return view('pages.add-print-resource', $data);
     }
 
-    // -----------------------------------------------------------------------
-    // update — save edits to a pending resource request (school only)
-    // -----------------------------------------------------------------------
-
     public function update(Request $request, string $id)
     {
-        $user     = Auth::user();
+        $user = Auth::user();
+
+        // Re-check ownership here too — don't rely solely on the edit form guard
         $resource = PrintResource::where('id',           $id)
             ->where('station_type', 'school')
             ->where('station_id',   $user->station_id)
@@ -128,15 +113,10 @@ class AddPrintResourceController extends BaseController
             ->with('active_tab', 'tab-requests');
     }
 
-    // -----------------------------------------------------------------------
-    // destroy — delete a pending request (school only).
-    //           Title and authors are cleaned up only if nothing else
-    //           references them.
-    // -----------------------------------------------------------------------
-
     public function destroy(string $id)
     {
-        $user     = Auth::user();
+        $user = Auth::user();
+
         $resource = PrintResource::with('printTitle.authors')
             ->where('id',           $id)
             ->where('station_type', 'school')
@@ -146,19 +126,23 @@ class AddPrintResourceController extends BaseController
             ->firstOrFail();
 
         DB::transaction(function () use ($resource) {
+            // Save title ID before deleting — relationship is gone after delete()
             $titleId = $resource->print_title_id;
 
             $resource->delete();
 
-            // Clean up title + authors only if nothing else references the title
+            // Only clean up the title if no other resource still references it
             if (PrintResource::where('print_title_id', $titleId)->doesntExist()) {
                 $title = PrintTitle::with('authors')->find($titleId);
 
                 if ($title) {
                     $authorIds = $title->authors->pluck('id')->toArray();
+
+                    // Detach pivot rows first so the author deletes don't hit FK constraints
                     $title->authors()->detach();
 
                     foreach ($authorIds as $authorId) {
+                        // Don't delete the author if they're still linked to other titles
                         $stillUsed = DB::table('author_print_title')
                             ->where('author_id', $authorId)
                             ->exists();
@@ -179,20 +163,14 @@ class AddPrintResourceController extends BaseController
             ->with('active_tab', 'tab-requests');
     }
 
-    // -----------------------------------------------------------------------
-    // Private helpers
-    // -----------------------------------------------------------------------
-
-    /**
-     * Shared data needed by both index() and edit().
-     * For division users (level 3), myRequests and pendingCount are omitted.
-     */
+    // Shared between index() and edit() so dropdowns are always built the same way
     private function buildViewData(): array
     {
         $user      = Auth::user();
         $level     = $user->userType?->level ?? 0;
         $stationId = $user->station_id;
 
+        // Single query to get the joined subject+grade data needed for the multi-select
         $subjectGradeLevels = SubjectGradeLevel::query()
             ->select(
                 'subject_grade_levels.id as subject_grade_level_id',
@@ -210,12 +188,13 @@ class AddPrintResourceController extends BaseController
 
         $printTypes = PrintType::all();
 
-        // Division users (level 3) don't have a "My Requests" tab on this page
+        // Division users add directly — no pending queue, no My Requests tab
         if ($level === 3) {
-            $myRequests   = collect(); // empty
+            $myRequests   = collect();
             $pendingCount = 0;
             $isDivision   = true;
         } else {
+            // Only show this user's own submissions, not everyone at the school
             $myRequests = PrintResource::with(['printTitle.authors', 'type'])
                 ->where('station_type', 'school')
                 ->where('station_id',   $stationId)
@@ -223,6 +202,7 @@ class AddPrintResourceController extends BaseController
                 ->latest()
                 ->paginate(15);
 
+            // Counts only the current page — fine for a badge indicator
             $pendingCount = $myRequests->where('status', 0)->count();
             $isDivision   = false;
         }
@@ -238,9 +218,7 @@ class AddPrintResourceController extends BaseController
         );
     }
 
-    /**
-     * Shared validation rules for store() and update().
-     */
+    // Same rules for both store() and update() — keeps them from drifting apart
     private function validateResourceRequest(Request $request): array
     {
         $validated = $request->validate([
@@ -257,6 +235,7 @@ class AddPrintResourceController extends BaseController
             'image'                => 'nullable|image|mimes:jpeg,png,jpg|max:5120',
         ]);
 
+        // validate() strips the UploadedFile, so re-attach it manually
         if ($request->hasFile('image')) {
             $validated['image'] = $request->file('image');
         }

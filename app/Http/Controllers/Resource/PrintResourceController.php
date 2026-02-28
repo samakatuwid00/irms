@@ -25,22 +25,26 @@ class PrintResourceController extends BaseController
 
     public function index(Request $request)
     {
-        $user = Auth::user();
+        $user  = Auth::user();
         $level = $user->userType?->level ?? 0;
+
+        // Cast to string — station_id is a UUID and the FK column is varchar,
+        // type mismatch can silently return null on some drivers
         $stationId = (string) $user->station_id;
 
-        $schoolLibrary = SchoolLibrary::where('school_id', $stationId)->first();
+        // Only relevant for school-level users — will be null for everyone else
+        $schoolLibrary          = SchoolLibrary::where('school_id', $stationId)->first();
         $schoolEstimatedPercent = EstimatedResourcePrecentage::where('school_id', $stationId)->first();
 
+        // Service handles all level-based filtering and table building
         $data = $this->printResourceService->getResourcesData($request, $level, $stationId);
 
-        // Merge additional variables into $data
+        // Merge the school extras — they're outside the service's core concern
         $data = array_merge($data, [
             'schoolLibrary' => $schoolLibrary,
-            'countPercent' => $schoolEstimatedPercent,
+            'countPercent'  => $schoolEstimatedPercent,
         ]);
 
         return view('pages.print-resources', $data);
     }
-
 }

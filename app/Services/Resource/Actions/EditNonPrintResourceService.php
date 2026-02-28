@@ -19,19 +19,12 @@ class EditNonPrintResourceService
         'condemnable'       => 'CONDEMNABLE',
     ];
 
-    /**
-     * Update acquisitions for an existing NonprintResource.
-     *
-     * Resource metadata (title, type, brand, cover, etc.) is intentionally
-     * NOT touched here — only NonprintAcquisition and NonprintMasterlist
-     * rows are written.
-     *
-     * Returns ['deleted' => bool, 'resource' => NonprintResource|null].
-     */
+    // Only acquisition rows are touched here — title/type/cover/etc. are managed
+    // by AddNonPrintResourceService::updateNonPrintResource()
     public function updateNonPrintResource(string $id, array $data): array
     {
-        $shouldDelete      = false;
-        $nonprintResource  = null;
+        $shouldDelete     = false;
+        $nonprintResource = null;
 
         DB::transaction(function () use ($id, $data, &$shouldDelete, &$nonprintResource) {
             $nonprintResource = NonprintResource::with('nonprintAcquisitions')->findOrFail($id);
@@ -40,7 +33,7 @@ class EditNonPrintResourceService
 
             $nonprintResource->refresh();
 
-            // If all acquisitions were removed/zeroed out, delete the resource
+            // If the user zeroed out everything, clean up the resource entirely
             if ($nonprintResource->nonprintAcquisitions()->count() === 0) {
                 $nonprintResource->delete();
                 $shouldDelete     = true;
@@ -48,7 +41,7 @@ class EditNonPrintResourceService
             }
         });
 
-        if (! $shouldDelete) {
+        if (!$shouldDelete) {
             $this->updateSearchVector($id);
         }
 
@@ -58,16 +51,10 @@ class EditNonPrintResourceService
         ];
     }
 
-    // -------------------------------------------------------------------------
-    // ACQUISITIONS
-    // -------------------------------------------------------------------------
-
-    /**
-     * Reconcile submitted acquisition JSON against the DB rows:
-     *   - Existing rows with an id  → update or delete (qty = 0)
-     *   - New rows without an id    → insert
-     *   - DB rows absent from submission → delete
-     */
+    // Reconcile the submitted JSON against DB rows:
+    // - rows with an id  → update or delete (if qty zeroed out)
+    // - rows without an id → insert as new
+    // - DB rows not present in submission → delete (user removed them)
     private function updateAcquisitions(NonprintResource $nonprintResource, string $acquisitionsJson): void
     {
         $acquisitions = json_decode($acquisitionsJson, true) ?? [];
@@ -82,8 +69,7 @@ class EditNonPrintResourceService
         foreach ($acquisitions as $acqData) {
             $totalQty = (int) ($acqData['total_quantity'] ?? 0);
 
-            if (! empty($acqData['id'])) {
-                // ── Update existing acquisition ──────────────────────────────
+            if (!empty($acqData['id'])) {
                 $result = $this->updateExistingAcquisition(
                     $acqData,
                     $totalQty,
@@ -97,7 +83,6 @@ class EditNonPrintResourceService
                     $keptIds[] = $result['id'];
                 }
             } else {
-                // ── Insert new acquisition ───────────────────────────────────
                 $newId = $this->createNewAcquisition(
                     $nonprintResource->id,
                     $acqData,
@@ -113,16 +98,12 @@ class EditNonPrintResourceService
             }
         }
 
-        // ── Bulk DB operations ───────────────────────────────────────────────
         $this->processBulkMasterlistOperations($masterlistInserts, $masterlistDeletes);
         $this->deleteZeroQuantityAcquisitions($zeroQtyIds);
         $this->deleteRemovedAcquisitions($nonprintResource, $keptIds);
     }
 
-    /**
-     * Update an existing NonprintAcquisition row.
-     * Returns ['delete' => bool, 'id' => string].
-     */
+    // Returns ['delete' => bool, 'id' => string] so the caller can route to the right bucket
     private function updateExistingAcquisition(
         array $acqData,
         int   $totalQty,
@@ -131,6 +112,7 @@ class EditNonPrintResourceService
     ): array {
         $acquisition = NonprintAcquisition::findOrFail($acqData['id']);
 
+        // Zero-quantity rows get queued for deletion, not updated
         if ($totalQty === 0) {
             return ['delete' => true, 'id' => $acquisition->id];
         }
@@ -152,12 +134,13 @@ class EditNonPrintResourceService
         ];
 
         $acquisition->update([
+            // Fall back to existing library if the form sent an empty value
             'library_id'        => $acqData['library_id']   ?: ($acquisition->library_id ?? null),
             'library_name'      => $acqData['library_name'] ?: ($acquisition->library_name ?? null),
             'source'            => $acqData['source'],
             'date_acquired'     => $acqData['date_acquired'],
-            'cost'              => $acqData['cost']    !== '' ? $acqData['cost']    : 0,
-            'iar'               => $acqData['iar']     !== '' ? $acqData['iar']     : null,
+            'cost'              => $acqData['cost'] !== '' ? $acqData['cost'] : 0,
+            'iar'               => $acqData['iar']  !== '' ? $acqData['iar']  : null,
             'remarks'           => $acqData['remarks'] ?? null,
             'usable'            => $newQuantities['usable'],
             'partially_damaged' => $newQuantities['partially_damaged'],
@@ -178,10 +161,7 @@ class EditNonPrintResourceService
         return ['delete' => false, 'id' => $acquisition->id];
     }
 
-    /**
-     * Insert a brand-new NonprintAcquisition and queue its masterlist entries.
-     * Returns the new UUID, or null if qty is zero (nothing to insert).
-     */
+    // Returns the new UUID so the caller can add it to $keptIds, or null if qty was 0
     private function createNewAcquisition(
         string $nonprintResourceId,
         array  $acqData,
@@ -203,8 +183,8 @@ class EditNonPrintResourceService
             'library_name'      => $acqData['library_name'] ?: null,
             'source'            => $acqData['source'],
             'date_acquired'     => $acqData['date_acquired'],
-            'cost'              => $acqData['cost']    !== '' ? $acqData['cost']    : 0,
-            'iar'               => $acqData['iar']     !== '' ? $acqData['iar']     : null,
+            'cost'              => $acqData['cost'] !== '' ? $acqData['cost'] : 0,
+            'iar'               => $acqData['iar']  !== '' ? $acqData['iar']  : null,
             'remarks'           => $acqData['remarks'] ?? null,
             'usable'            => (int) ($acqData['usable']            ?? 0),
             'partially_damaged' => (int) ($acqData['partially_damaged'] ?? 0),
@@ -220,9 +200,9 @@ class EditNonPrintResourceService
             $qty = (int) ($acqData[$field] ?? 0);
             for ($i = 0; $i < $qty; $i++) {
                 $masterlistInserts[] = [
-                    'id'                       => (string) Str::uuid(),
-                    'nonprint_acquisition_id'  => $acquisitionId,
-                    'status'                   => $statusName,
+                    'id'                      => (string) Str::uuid(),
+                    'nonprint_acquisition_id' => $acquisitionId,
+                    'status'                  => $statusName,
                 ];
             }
         }
@@ -230,10 +210,7 @@ class EditNonPrintResourceService
         return $acquisitionId;
     }
 
-    // -------------------------------------------------------------------------
-    // MASTERLIST HELPERS
-    // -------------------------------------------------------------------------
-
+    // Diff old vs new per-status quantities and queue inserts or deletes accordingly
     private function prepareMasterlistChanges(
         NonprintAcquisition $acquisition,
         array $oldQuantities,
@@ -253,6 +230,7 @@ class EditNonPrintResourceService
                     ];
                 }
             } elseif ($diff < 0) {
+                // Pick arbitrary rows to delete — the status is what matters, not which specific row
                 $toDelete = NonprintMasterlist::where('nonprint_acquisition_id', $acquisition->id)
                     ->where('status', $statusName)
                     ->limit(abs($diff))
@@ -266,20 +244,22 @@ class EditNonPrintResourceService
 
     private function processBulkMasterlistOperations(array $inserts, array $deletes): void
     {
-        if (! empty($inserts)) {
+        if (!empty($inserts)) {
+            // Batch in chunks of 500 to avoid hitting DB parameter limits
             foreach (array_chunk($inserts, 500) as $chunk) {
                 NonprintMasterlist::insert($chunk);
             }
         }
 
-        if (! empty($deletes)) {
+        if (!empty($deletes)) {
             NonprintMasterlist::whereIn('id', $deletes)->delete();
         }
     }
 
     private function deleteZeroQuantityAcquisitions(array $ids): void
     {
-        if (! empty($ids)) {
+        if (!empty($ids)) {
+            // Masterlist first — FK constraint requires it before we can delete the acquisition
             NonprintMasterlist::whereIn('nonprint_acquisition_id', $ids)->delete();
             NonprintAcquisition::whereIn('id', $ids)->delete();
         }
@@ -290,15 +270,11 @@ class EditNonPrintResourceService
         $existingIds = $nonprintResource->nonprintAcquisitions->pluck('id')->toArray();
         $toDelete    = array_diff($existingIds, $keptIds);
 
-        if (! empty($toDelete)) {
+        if (!empty($toDelete)) {
             NonprintMasterlist::whereIn('nonprint_acquisition_id', $toDelete)->delete();
             NonprintAcquisition::whereIn('id', $toDelete)->delete();
         }
     }
-
-    // -------------------------------------------------------------------------
-    // SEARCH VECTOR
-    // -------------------------------------------------------------------------
 
     private function updateSearchVector(string $id): void
     {

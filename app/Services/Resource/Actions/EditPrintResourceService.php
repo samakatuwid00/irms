@@ -19,15 +19,8 @@ class EditPrintResourceService
         'condemnable'       => 'CONDEMNABLE',
     ];
 
-    /**
-     * Update acquisitions for an existing PrintResource.
-     *
-     * Resource metadata (title, authors, cover, type, publisher, etc.) is
-     * intentionally NOT touched here — only PrintAcquisition and
-     * PrintMasterlist rows are written.
-     *
-     * Returns ['resource' => PrintResource].
-     */
+    // Only acquisition rows are touched here — title/authors/cover/etc. are managed
+    // by AddPrintResourceService::updatePrintResource()
     public function updatePrintResource(string $id, array $data): array
     {
         $printResource = null;
@@ -42,39 +35,28 @@ class EditPrintResourceService
 
         $this->updateSearchVector($id);
 
-        return [
-            'resource' => $printResource,
-        ];
+        return ['resource' => $printResource];
     }
 
-
-
-    // -------------------------------------------------------------------------
-    // ACQUISITIONS
-    // -------------------------------------------------------------------------
-
-    /**
-     * Reconcile submitted acquisition JSON against the DB rows:
-     *   - Existing rows with an id  → update or delete (qty = 0)
-     *   - New rows without an id    → insert
-     *   - DB rows absent from submission → delete
-     */
+    // Reconcile the submitted JSON against DB rows:
+    // - rows with an id  → update or delete (if qty zeroed out)
+    // - rows without an id → insert as new
+    // - DB rows not present in submission → delete (user removed them)
     private function updateAcquisitions(PrintResource $printResource, string $acquisitionsJson): void
     {
         $acquisitions = json_decode($acquisitionsJson, true) ?? [];
 
-        $userId           = Auth::id();
-        $now              = now();
-        $keptIds          = [];      // ids that survive (update path)
+        $userId            = Auth::id();
+        $now               = now();
+        $keptIds           = [];
         $masterlistInserts = [];
         $masterlistDeletes = [];
-        $zeroQtyIds       = [];     // existing rows zeroed out → delete
+        $zeroQtyIds        = [];
 
         foreach ($acquisitions as $acqData) {
             $totalQty = (int) ($acqData['total_quantity'] ?? 0);
 
-            if (! empty($acqData['id'])) {
-                // ── Update existing acquisition ──────────────────────────────
+            if (!empty($acqData['id'])) {
                 $result = $this->updateExistingAcquisition(
                     $acqData,
                     $totalQty,
@@ -88,7 +70,6 @@ class EditPrintResourceService
                     $keptIds[] = $result['id'];
                 }
             } else {
-                // ── Insert new acquisition ───────────────────────────────────
                 $newId = $this->createNewAcquisition(
                     $printResource->id,
                     $acqData,
@@ -104,16 +85,12 @@ class EditPrintResourceService
             }
         }
 
-        // ── Bulk DB operations ───────────────────────────────────────────────
         $this->processBulkMasterlistOperations($masterlistInserts, $masterlistDeletes);
         $this->deleteZeroQuantityAcquisitions($zeroQtyIds);
         $this->deleteRemovedAcquisitions($printResource, $keptIds);
     }
 
-    /**
-     * Update an existing PrintAcquisition row.
-     * Returns ['delete' => bool, 'id' => string].
-     */
+    // Returns ['delete' => bool, 'id' => string] so the caller can route to the right bucket
     private function updateExistingAcquisition(
         array $acqData,
         int   $totalQty,
@@ -122,7 +99,7 @@ class EditPrintResourceService
     ): array {
         $acquisition = PrintAcquisition::findOrFail($acqData['id']);
 
-        // Zero-quantity rows are queued for deletion instead
+        // Zero-quantity rows get queued for deletion, not updated
         if ($totalQty === 0) {
             return ['delete' => true, 'id' => $acquisition->id];
         }
@@ -148,8 +125,8 @@ class EditPrintResourceService
             'library_name'      => $acqData['library_name'] ?? $acquisition->library_name,
             'source'            => $acqData['source'],
             'date_acquired'     => $acqData['date_acquired'],
-            'cost'              => $acqData['cost']    !== '' ? $acqData['cost']    : 0,
-            'iar'               => $acqData['iar']     !== '' ? $acqData['iar']     : null,
+            'cost'              => $acqData['cost'] !== '' ? $acqData['cost'] : 0,
+            'iar'               => $acqData['iar']  !== '' ? $acqData['iar']  : null,
             'remarks'           => $acqData['remarks'] ?? null,
             'usable'            => $newQuantities['usable'],
             'partially_damaged' => $newQuantities['partially_damaged'],
@@ -170,10 +147,7 @@ class EditPrintResourceService
         return ['delete' => false, 'id' => $acquisition->id];
     }
 
-    /**
-     * Insert a brand-new PrintAcquisition and queue its masterlist entries.
-     * Returns the new UUID, or null if qty is zero (nothing to insert).
-     */
+    // Returns the new UUID so the caller can add it to $keptIds, or null if qty was 0
     private function createNewAcquisition(
         string $printResourceId,
         array  $acqData,
@@ -195,8 +169,8 @@ class EditPrintResourceService
             'library_name'      => $acqData['library_name'] ?? null,
             'source'            => $acqData['source'],
             'date_acquired'     => $acqData['date_acquired'],
-            'cost'              => $acqData['cost']    !== '' ? $acqData['cost']    : 0,
-            'iar'               => $acqData['iar']     !== '' ? $acqData['iar']     : null,
+            'cost'              => $acqData['cost'] !== '' ? $acqData['cost'] : 0,
+            'iar'               => $acqData['iar']  !== '' ? $acqData['iar']  : null,
             'remarks'           => $acqData['remarks'] ?? null,
             'usable'            => (int) ($acqData['usable']            ?? 0),
             'partially_damaged' => (int) ($acqData['partially_damaged'] ?? 0),
@@ -222,13 +196,7 @@ class EditPrintResourceService
         return $acquisitionId;
     }
 
-    // -------------------------------------------------------------------------
-    // MASTERLIST HELPERS
-    // -------------------------------------------------------------------------
-
-    /**
-     * Diff old vs new quantities and queue inserts / deletes for the masterlist.
-     */
+    // Diff old vs new per-status quantities and queue inserts or deletes accordingly
     private function prepareMasterlistChanges(
         PrintAcquisition $acquisition,
         array $oldQuantities,
@@ -248,6 +216,7 @@ class EditPrintResourceService
                     ];
                 }
             } elseif ($diff < 0) {
+                // Pick arbitrary rows to delete — the status is what matters, not which specific row
                 $toDelete = PrintMasterlist::where('print_acquisition_id', $acquisition->id)
                     ->where('status', $statusName)
                     ->limit(abs($diff))
@@ -261,43 +230,37 @@ class EditPrintResourceService
 
     private function processBulkMasterlistOperations(array $inserts, array $deletes): void
     {
-        if (! empty($inserts)) {
+        if (!empty($inserts)) {
+            // Batch in chunks of 500 to avoid hitting DB parameter limits
             foreach (array_chunk($inserts, 500) as $chunk) {
                 PrintMasterlist::insert($chunk);
             }
         }
 
-        if (! empty($deletes)) {
+        if (!empty($deletes)) {
             PrintMasterlist::whereIn('id', $deletes)->delete();
         }
     }
 
     private function deleteZeroQuantityAcquisitions(array $ids): void
     {
-        if (! empty($ids)) {
+        if (!empty($ids)) {
+            // Masterlist first — FK constraint requires it before we can delete the acquisition
             PrintMasterlist::whereIn('print_acquisition_id', $ids)->delete();
             PrintAcquisition::whereIn('id', $ids)->delete();
         }
     }
 
-    /**
-     * Delete any DB acquisition rows that were not present in the submission
-     * (i.e. the user removed them from the table entirely).
-     */
     private function deleteRemovedAcquisitions(PrintResource $printResource, array $keptIds): void
     {
         $existingIds = $printResource->printAcquisitions->pluck('id')->toArray();
         $toDelete    = array_diff($existingIds, $keptIds);
 
-        if (! empty($toDelete)) {
+        if (!empty($toDelete)) {
             PrintMasterlist::whereIn('print_acquisition_id', $toDelete)->delete();
             PrintAcquisition::whereIn('id', $toDelete)->delete();
         }
     }
-
-    // -------------------------------------------------------------------------
-    // SEARCH VECTOR
-    // -------------------------------------------------------------------------
 
     private function updateSearchVector(string $id): void
     {

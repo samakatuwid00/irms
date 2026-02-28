@@ -28,34 +28,29 @@ class NonPrintResourceExportController extends BaseController
         $this->exportService = $exportService;
     }
 
-    /**
-     * Export filtered non-print resources to Excel
-     */
     public function export(Request $request)
     {
-        $user = Auth::user();
-        $level = $user->userType?->level ?? 0;
+        $user      = Auth::user();
+        $level     = $user->userType?->level ?? 0;
         $stationId = (string) $user->station_id;
 
-        // Get export data
+        // Service applies the same level-based scoping as the list view
         $resources = $this->exportService->getExportData($request, $level, $stationId);
 
+        // Bail early rather than producing a confusingly empty spreadsheet
         if ($resources->isEmpty()) {
             return back()->with('error', 'No data available to export with the current filters.');
         }
 
-        // Create spreadsheet
         $spreadsheet = new Spreadsheet();
-        $sheet = $spreadsheet->getActiveSheet();
+        $sheet       = $spreadsheet->getActiveSheet();
 
-        // Set document properties
         $spreadsheet->getProperties()
             ->setCreator(config('app.name'))
             ->setTitle('Non-Print Resources Export')
             ->setSubject('Library Non-Print Resources')
             ->setDescription('Export of library non-print resources');
 
-        // Define headers
         $headers = [
             'A1' => 'Title',
             'B1' => 'Type',
@@ -75,67 +70,64 @@ class NonPrintResourceExportController extends BaseController
             'P1' => 'Total Quantity'
         ];
 
-        // Apply headers
         foreach ($headers as $cell => $value) {
             $sheet->setCellValue($cell, $value);
         }
 
-        // Style header row
         $headerStyle = [
             'font' => [
-                'bold' => true,
+                'bold'  => true,
                 'color' => ['rgb' => 'FFFFFF'],
-                'size' => 12
+                'size'  => 12
             ],
             'fill' => [
-                'fillType' => Fill::FILL_SOLID,
-                'startColor' => ['rgb' => '2563EB'] // Blue
+                'fillType'   => Fill::FILL_SOLID,
+                'startColor' => ['rgb' => '2563EB']
             ],
             'alignment' => [
                 'horizontal' => Alignment::HORIZONTAL_CENTER,
-                'vertical' => Alignment::VERTICAL_CENTER
+                'vertical'   => Alignment::VERTICAL_CENTER
             ],
             'borders' => [
                 'allBorders' => [
                     'borderStyle' => Border::BORDER_THIN,
-                    'color' => ['rgb' => '000000']
+                    'color'       => ['rgb' => '000000']
                 ]
             ]
         ];
 
         $sheet->getStyle('A1:P1')->applyFromArray($headerStyle);
 
-        // Set column widths
         $columnWidths = [
-            'A' => 35, // Title
-            'B' => 15, // Type
-            'C' => 20, // Brand
-            'D' => 15, // Code
-            'E' => 12, // Version
-            'F' => 30, // URL
-            'G' => 12, // Size
-            'H' => 20, // Model
-            'I' => 25, // Library/Station
-            'J' => 30, // Subject & Grade
-            'K' => 10, // Usable
-            'L' => 12, // Partially Damaged
-            'M' => 10, // Damaged
-            'N' => 10, // Lost
-            'O' => 12, // Condemnable
-            'P' => 12  // Total
+            'A' => 35,
+            'B' => 15,
+            'C' => 20,
+            'D' => 15,
+            'E' => 12,
+            'F' => 30,
+            'G' => 12,
+            'H' => 20,
+            'I' => 25,
+            'J' => 30,
+            'K' => 10,
+            'L' => 12,
+            'M' => 10,
+            'N' => 10,
+            'O' => 12,
+            'P' => 12
         ];
 
         foreach ($columnWidths as $column => $width) {
             $sheet->getColumnDimension($column)->setWidth($width);
         }
 
-        // Populate data
         $row = 2;
+
         foreach ($resources as $resource) {
-            // Get the first acquisition (for fields like brand, code, etc.)
+            // Non-print resources can have multiple acquisitions with different brands/codes —
+            // using the first one is an approximation, but acceptable for the export format
             $acquisition = $resource->nonprintAcquisitions->first();
 
-            // Get subjects and grades
             $subjects = [];
             if ($resource->subjects()->count()) {
                 foreach ($resource->subjects() as $sub) {
@@ -144,25 +136,23 @@ class NonPrintResourceExportController extends BaseController
             }
             $subjectsText = $subjects ? implode(', ', $subjects) : 'No assignment';
 
-            // Resolve library_name from acquisitions
+            // Library name lives at the acquisition level for non-print resources
             $libraryName = $resource->nonprintAcquisitions
                 ->whereNotNull('library_name')
                 ->value('library_name')
                 ?? ($resource->nonprintAcquisitions->isNotEmpty() ? 'Unknown Library' : 'No Library Assigned');
 
-            // Get quantities
-            $qty = $resource->quantities;
+            $qty   = $resource->quantities;
             $total = array_sum($qty);
 
-            // Set cell values
             $sheet->setCellValue('A' . $row, $resource->nonprintTitle->title);
             $sheet->setCellValue('B' . $row, $resource->type->type_name);
-            $sheet->setCellValue('C' . $row, $acquisition?->brand ?? 'N/A');
-            $sheet->setCellValue('D' . $row, $acquisition?->code ?? 'N/A');
+            $sheet->setCellValue('C' . $row, $acquisition?->brand   ?? 'N/A');
+            $sheet->setCellValue('D' . $row, $acquisition?->code    ?? 'N/A');
             $sheet->setCellValue('E' . $row, $acquisition?->version ?? 'N/A');
-            $sheet->setCellValue('F' . $row, $acquisition?->url ?? 'N/A');
-            $sheet->setCellValue('G' . $row, $acquisition?->size ?? 'N/A');
-            $sheet->setCellValue('H' . $row, $acquisition?->model ?? 'N/A');
+            $sheet->setCellValue('F' . $row, $acquisition?->url     ?? 'N/A');
+            $sheet->setCellValue('G' . $row, $acquisition?->size    ?? 'N/A');
+            $sheet->setCellValue('H' . $row, $acquisition?->model   ?? 'N/A');
             $sheet->setCellValue('I' . $row, $libraryName);
             $sheet->setCellValue('J' . $row, $subjectsText);
             $sheet->setCellValue('K' . $row, $qty['usable']);
@@ -172,35 +162,34 @@ class NonPrintResourceExportController extends BaseController
             $sheet->setCellValue('O' . $row, $qty['condemnable']);
             $sheet->setCellValue('P' . $row, $total);
 
-            // Apply text wrapping for long text columns
+            // Wrap text on columns that can get long so they stay readable without manual resizing
             $sheet->getStyle('A' . $row)->getAlignment()->setWrapText(true);
             $sheet->getStyle('F' . $row)->getAlignment()->setWrapText(true);
             $sheet->getStyle('J' . $row)->getAlignment()->setWrapText(true);
 
-            // Center align quantity columns
-            $sheet->getStyle('K' . $row . ':P' . $row)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+            $sheet->getStyle('K' . $row . ':P' . $row)
+                  ->getAlignment()
+                  ->setHorizontal(Alignment::HORIZONTAL_CENTER);
 
             $row++;
         }
 
-        // Apply borders to all data
         $dataRange = 'A1:P' . ($row - 1);
         $sheet->getStyle($dataRange)->applyFromArray([
             'borders' => [
                 'allBorders' => [
                     'borderStyle' => Border::BORDER_THIN,
-                    'color' => ['rgb' => 'CCCCCC']
+                    'color'       => ['rgb' => 'CCCCCC']
                 ]
             ]
         ]);
 
-        // Add totals row if there are resources
         if ($row > 2) {
             $totalRow = $row;
             $sheet->setCellValue('A' . $totalRow, 'TOTAL');
             $sheet->mergeCells('A' . $totalRow . ':J' . $totalRow);
 
-            // Sum formulas for quantity columns
+            // Use Excel formulas so the totals stay correct if the user edits the file
             $sheet->setCellValue('K' . $totalRow, '=SUM(K2:K' . ($row - 1) . ')');
             $sheet->setCellValue('L' . $totalRow, '=SUM(L2:L' . ($row - 1) . ')');
             $sheet->setCellValue('M' . $totalRow, '=SUM(M2:M' . ($row - 1) . ')');
@@ -208,51 +197,45 @@ class NonPrintResourceExportController extends BaseController
             $sheet->setCellValue('O' . $totalRow, '=SUM(O2:O' . ($row - 1) . ')');
             $sheet->setCellValue('P' . $totalRow, '=SUM(P2:P' . ($row - 1) . ')');
 
-            // Style totals row
             $totalStyle = [
                 'font' => ['bold' => true],
                 'fill' => [
-                    'fillType' => Fill::FILL_SOLID,
-                    'startColor' => ['rgb' => 'E5E7EB'] // Gray
+                    'fillType'   => Fill::FILL_SOLID,
+                    'startColor' => ['rgb' => 'E5E7EB']
                 ],
                 'alignment' => [
                     'horizontal' => Alignment::HORIZONTAL_CENTER,
-                    'vertical' => Alignment::VERTICAL_CENTER
+                    'vertical'   => Alignment::VERTICAL_CENTER
                 ]
             ];
             $sheet->getStyle('A' . $totalRow . ':P' . $totalRow)->applyFromArray($totalStyle);
         }
 
-        // Freeze header row
+        // Keep the header visible while scrolling through large exports
         $sheet->freezePane('A2');
 
-        // Generate filename with timestamp
         $timestamp = now()->format('Y-m-d_His');
         $levelName = $this->getLevelName($level);
-        $filename = "NonPrint_Resources_{$levelName}_{$timestamp}.xlsx";
+        $filename  = "NonPrint_Resources_{$levelName}_{$timestamp}.xlsx";
 
-        // Create writer and save to output
         $writer = new Xlsx($spreadsheet);
 
-        // Set headers for download
+        // Stream to php://output to avoid writing a temp file to disk
         header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
         header('Content-Disposition: attachment;filename="' . $filename . '"');
         header('Cache-Control: max-age=0');
 
         $writer->save('php://output');
-        exit;
+        exit; // Stop here — any buffered output after this would corrupt the binary stream
     }
 
-    /**
-     * Get level name for filename
-     */
     private function getLevelName(int $level): string
     {
         return match($level) {
-            ExportNonPrintResourceService::LEVEL_SCHOOL => 'School',
+            ExportNonPrintResourceService::LEVEL_SCHOOL   => 'School',
             ExportNonPrintResourceService::LEVEL_DISTRICT => 'District',
             ExportNonPrintResourceService::LEVEL_DIVISION => 'Division',
-            ExportNonPrintResourceService::LEVEL_REGION => 'Region',
+            ExportNonPrintResourceService::LEVEL_REGION   => 'Region',
             default => 'Unknown'
         };
     }

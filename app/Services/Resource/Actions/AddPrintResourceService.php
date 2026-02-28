@@ -15,44 +15,29 @@ use Illuminate\Support\Str;
 
 class AddPrintResourceService
 {
-    // -----------------------------------------------------------------------
-    // PUBLIC API
-    // -----------------------------------------------------------------------
-
-    /**
-     * Create a new print-resource.
-     * - Level 1 (school): status = 0 (pending), approver_station = division UUID
-     * - Level 3 (division): status = 1 (approved), no approver_station needed
-     *
-     * @param  array  $data  Validated form data.
-     * @return string|null   The new PrintResource UUID, or null on failure.
-     */
     public function addPrintResource(array $data): ?string
     {
         $printResourceId = null;
 
         DB::transaction(function () use ($data, &$printResourceId) {
-            // 1. Create or get title
             $title = $this->createOrGetTitle($data['title']);
 
-            // 2. Handle authors
             $authorIds = $this->handleAuthors($data['authors'] ?? null);
             if (!empty($authorIds)) {
+                // syncWithoutDetaching so we don't blow away authors added by other resources
                 $title->authors()->syncWithoutDetaching($authorIds);
             }
 
-            // 3. Handle optional image upload
             $coverPath = null;
             if (isset($data['image'])) {
                 $coverPath = $this->handleImageUpload($data['image'], $data['title']);
             }
 
-            // 4. Create the resource
             $resource        = $this->createPrintResource($data, $title->id, $authorIds, $coverPath);
             $printResourceId = $resource->id;
         });
 
-        // Rebuild search vector outside the transaction so the row is visible
+        // Rebuild outside the transaction so the committed row is visible to the index
         if ($printResourceId) {
             $this->updateSearchVector($printResourceId);
         }
@@ -60,31 +45,25 @@ class AddPrintResourceService
         return $printResourceId;
     }
 
-    /**
-     * Update an existing print-resource.
-     * Only the resource's own fields (title, authors, metadata, cover) change.
-     */
+    // Acquisitions are intentionally NOT changed on edit — only resource metadata
     public function updatePrintResource(PrintResource $resource, array $data): void
     {
         DB::transaction(function () use ($resource, $data) {
-            // 1. Update or replace the title
             $title = $this->createOrGetTitle($data['title']);
 
-            // 2. Sync authors on the (potentially new) title
             $authorIds = $this->handleAuthors($data['authors'] ?? null);
-            $title->authors()->sync($authorIds);   // full sync for an edit
+            // Full sync on edit — the user is explicitly choosing the final author list
+            $title->authors()->sync($authorIds);
 
-            // 3. Handle optional new image
-            $coverPath = $resource->cover; // keep existing cover by default
+            $coverPath = $resource->cover;
             if (isset($data['image'])) {
-                // Delete old file if it exists and differs
+                // Delete old file before replacing — otherwise it's orphaned on disk
                 if ($resource->cover && Storage::disk('public')->exists($resource->cover)) {
                     Storage::disk('public')->delete($resource->cover);
                 }
                 $coverPath = $this->handleImageUpload($data['image'], $data['title']);
             }
 
-            // 4. Rebuild uniqueness hash with new values
             $uniquenessHash = $this->buildUniquenessHash($title->id, $data['type'], $authorIds, $data);
 
             $gradeLevelIds = !empty($data['subject_grade_levels'])
@@ -113,10 +92,6 @@ class AddPrintResourceService
         $this->updateSearchVector($resource->id);
     }
 
-    // -----------------------------------------------------------------------
-    // PRIVATE — core steps
-    // -----------------------------------------------------------------------
-
     private function createOrGetTitle(string $titleName): PrintTitle
     {
         $normalizedTitle = ucwords(strtolower($titleName));
@@ -138,6 +113,7 @@ class AddPrintResourceService
         $authorIds       = [];
         $normalizedNames = array_map(fn($name) => ucwords(strtolower($name)), $authorNames);
 
+        // Batch-load existing authors to avoid N+1 inserts
         $existingAuthors = Author::whereIn('author_name', $normalizedNames)
             ->get()
             ->keyBy('author_name');
@@ -165,6 +141,7 @@ class AddPrintResourceService
         $storagePath  = 'print_cover';
         $fullPath     = $storagePath . '/' . $fileName;
 
+        // Increment the suffix until we find a filename that doesn't exist
         $counter = 1;
         while (Storage::disk('public')->exists($fullPath)) {
             $fileName = $baseFileName . '_' . $counter . '.' . $extension;
@@ -177,17 +154,18 @@ class AddPrintResourceService
         return $fullPath;
     }
 
-    /**
-     * Build a deterministic SHA-256 hash over all fields that define uniqueness.
-     */
+    // SHA-256 over all fields that make a resource unique — same title with different
+    // publisher/edition/isbn is a different resource, not a duplicate
     private function buildUniquenessHash(string $titleId, string $typeId, array $authorIds, array $data): string
     {
         $sglIds = !empty($data['subject_grade_levels']) ? $data['subject_grade_levels'] : [];
         sort($sglIds);
 
+        // Sort author IDs so order of entry doesn't affect the hash
         $sortedAuthorIds = $authorIds;
         sort($sortedAuthorIds);
 
+        // __none__ sentinel keeps hashes distinct when optional fields are absent vs empty string
         $sentinel = '__none__';
 
         $parts = [
@@ -206,35 +184,14 @@ class AddPrintResourceService
         return hash('sha256', json_encode($parts, JSON_UNESCAPED_UNICODE));
     }
 
-    /**
-     * Resolve the division UUID for a school user.
-     * School → District → Division.
-     */
+    // Walk school → district → division to find which division should approve this request
     private function resolveDivisionId(string $stationId): ?string
     {
-        // station_id is the school's UUID; look up district then division
         $school = School::with('district.division')->find($stationId);
 
         return $school?->district?->division?->id ?? null;
     }
 
-    /**
-     * Create (or retrieve an existing) print resource row.
-     *
-     * Level 1 (school):
-     *   status          = 0  (pending)
-     *   station_type    = 'school'
-     *   station_id      = school's station_id
-     *   encoded_by      = Auth user id
-     *   approver_station = division UUID (resolved via school → district → division)
-     *
-     * Level 3 (division):
-     *   status          = 1  (approved — auto-approved)
-     *   station_type    = 'division'
-     *   station_id      = division's station_id
-     *   encoded_by      = Auth user id
-     *   approver_station = null (not needed)
-     */
     private function createPrintResource(array $data, string $titleId, array $authorIds, ?string $coverPath): PrintResource
     {
         $gradeLevelIds = !empty($data['subject_grade_levels'])
@@ -250,14 +207,13 @@ class AddPrintResourceService
         $user  = Auth::user();
         $level = $user->userType?->level ?? 0;
 
-        // Determine status and approver_station based on user level
+        // Division (3): auto-approve and skip the queue
+        // School (1) or anything else: pending, needs division approval
         if ($level === 3) {
-            // Division: auto-approve
             $status          = 1;
             $stationType     = 'division';
             $approverStation = null;
         } else {
-            // School (level 1) or any other: pending, needs division approval
             $status          = 0;
             $stationType     = 'school';
             $approverStation = $this->resolveDivisionId($user->station_id);
@@ -286,13 +242,10 @@ class AddPrintResourceService
                 ]
             );
         } catch (UniqueConstraintViolationException) {
+            // Race condition — another request created the same hash between our check and insert
             return PrintResource::where('uniqueness_hash', $uniquenessHash)->firstOrFail();
         }
     }
-
-    // -----------------------------------------------------------------------
-    // PRIVATE — helpers
-    // -----------------------------------------------------------------------
 
     private function updateSearchVector(string $printResourceId): void
     {

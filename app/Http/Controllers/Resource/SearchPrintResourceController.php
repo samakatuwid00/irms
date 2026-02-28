@@ -28,9 +28,6 @@ class SearchPrintResourceController extends BaseController
         $this->addAcquisitionService = $addAcquisitionService;
     }
 
-    /**
-     * Show the search page for finding existing print resources.
-     */
     public function index()
     {
         $user = Auth::user();
@@ -38,11 +35,6 @@ class SearchPrintResourceController extends BaseController
         return view('pages.add-print-resource', compact('user'));
     }
 
-    /**
-     * AJAX: Search print titles by keyword.
-     * Returns one card per PrintTitle with all its resource editions and a
-     * deduplicated, comma-joined subject/grade-level string.
-     */
     public function search(Request $request)
     {
         $query = trim($request->input('q', ''));
@@ -51,25 +43,26 @@ class SearchPrintResourceController extends BaseController
             return response()->json([]);
         }
 
-        // Search PrintTitles matching the query, get their IDs
+        // Search by title or author so the user can find a book even if they only remember the author
         $titleIds = PrintTitle::with('authors')
             ->where('title', 'ILIKE', '%' . $query . '%')
             ->orWhereHas('authors', fn($q) => $q->where('author_name', 'ILIKE', '%' . $query . '%'))
             ->pluck('id');
 
-        // Get PrintResources grouped by uniqueness_hash
+        // Group by uniqueness_hash so we show one card per variant group,
+        // not one card per title (same title can have many edition/publisher combos)
         $resources = PrintResource::with(['printTitle.authors', 'type'])
             ->whereIn('print_title_id', $titleIds)
             ->where('status', 1)
             ->get()
-            ->groupBy('uniqueness_hash'); // one card per unique hash
+            ->groupBy('uniqueness_hash');
 
         $results = $resources->map(function ($group) {
-            // Use the first resource in the group as the representative
             $resource = $group->first();
             $title    = $resource->printTitle;
 
-            // Aggregate SGL ids across all resources in this hash group
+            // Aggregate SGL IDs across all resources in the group — different editions
+            // may cover different subjects, so the card should show the union of all of them
             $allSglIds = $group
                 ->pluck('subject_grade_level_ids')
                 ->filter()
@@ -92,20 +85,21 @@ class SearchPrintResourceController extends BaseController
                     ->join(', ');
             }
 
+            // Use the first uploaded cover in the group — not all editions may have one
             $cover = $group
                 ->map(fn($r) => $r->cover ? asset('storage/' . $r->cover) : null)
                 ->filter()
                 ->first() ?? asset('assets/images/def.jpg');
 
             return [
-                'id'             => $title->id,
-                'resource_id'    => $resource->id,
-                'uniqueness_hash'=> $resource->uniqueness_hash,
-                'title'          => $title->title,
-                'authors'        => $title->authors->pluck('author_name')->join(', ') ?: 'No Author',
-                'subjects'       => $subjectString ?: 'No subjects assigned',
-                'cover'          => $cover,
-                'editions'       => $group->map(fn($r) => [
+                'id'              => $title->id,
+                'resource_id'     => $resource->id,
+                'uniqueness_hash' => $resource->uniqueness_hash,
+                'title'           => $title->title,
+                'authors'         => $title->authors->pluck('author_name')->join(', ') ?: 'No Author',
+                'subjects'        => $subjectString ?: 'No subjects assigned',
+                'cover'           => $cover,
+                'editions'        => $group->map(fn($r) => [
                     'id'        => $r->id,
                     'type'      => $r->type->type_name ?? '-',
                     'publisher' => $r->publisher ?? '-',
@@ -118,11 +112,6 @@ class SearchPrintResourceController extends BaseController
         return response()->json($results);
     }
 
-    /**
-     * AJAX: Get full details of a PrintTitle (all editions) for the view modal.
-     * Accepts a PrintTitle ID. Subject/grade levels are aggregated and
-     * deduplicated across every resource edition under this title.
-     */
     public function show(Request $request, string $id)
     {
         $title = PrintTitle::with([
@@ -130,13 +119,13 @@ class SearchPrintResourceController extends BaseController
             'printResources.type',
         ])->findOrFail($id);
 
-        // Filter resources by uniqueness_hash so only the clicked group shows
-        $hash      = $request->input('hash');
+        $hash = $request->input('hash');
+
+        // Filter to the clicked hash group so the modal doesn't show unrelated editions
         $resources = $hash
             ? $title->printResources->where('uniqueness_hash', $hash)
             : $title->printResources;
 
-        // Collect all SGL ids across filtered resources
         $allSglIds = $resources
             ->pluck('subject_grade_level_ids')
             ->filter()
@@ -189,11 +178,6 @@ class SearchPrintResourceController extends BaseController
         ]);
     }
 
-    /**
-     * Show the "Add Acquisition" form for an existing print resource.
-     * All resource fields are pre-filled and read-only; only acquisitions are editable.
-     * Library selection has moved inside each acquisition entry.
-     */
     public function addForm(string $id)
     {
         $user     = Auth::user();
@@ -202,7 +186,7 @@ class SearchPrintResourceController extends BaseController
             'type',
         ])->findOrFail($id);
 
-        // Resolve subjects for display
+        // Resolve the SGL objects so the blade can display subject/grade labels
         $subjects = collect();
         if ($resource->subject_grade_level_ids) {
             $ids      = explode(',', $resource->subject_grade_level_ids);
@@ -211,8 +195,8 @@ class SearchPrintResourceController extends BaseController
                 ->get();
         }
 
-        // Resolve library options based on user level (passed to view for
-        // use inside the per-acquisition library selector)
+        // Library options vary by user level — default everything to empty/null
+        // so the blade doesn't need isset() guards everywhere
         $divisionLibraries = collect();
         $regionLibrary     = null;
         $schoolLibrary     = null;
@@ -237,15 +221,13 @@ class SearchPrintResourceController extends BaseController
         ));
     }
 
-    /**
-     * Store new acquisition batches for an existing print resource.
-     * library_id and library_name are now embedded inside each acquisition entry in the JSON.
-     */
     public function store(Request $request, string $id)
     {
         $resource = PrintResource::findOrFail($id);
 
         $validated = $request->validate([
+            // JSON string because the number of acquisition entries is dynamic
+            // and encoded by the JS layer — named array fields wouldn't work here
             'acquisitions' => 'required|string',
         ]);
 
@@ -253,9 +235,11 @@ class SearchPrintResourceController extends BaseController
             $resource,
             $validated['acquisitions']
         );
+
+        // Back to the search tab so they can add acquisitions to another resource right away
         return redirect()
             ->route('print-resource.create')
             ->with('success', 'Acquisition successfully added to "' . ($resource->printTitle->title ?? 'resource') . '".')
             ->with('active_tab', 'tab-search');
-            }
+    }
 }

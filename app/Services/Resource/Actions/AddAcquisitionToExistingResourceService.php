@@ -11,27 +11,18 @@ use Illuminate\Support\Str;
 
 class AddAcquisitionToExistingResourceService
 {
-    /**
-     * Add one or more acquisition batches to an existing PrintResource.
-     * library_id and library_name are now embedded inside each acquisition entry.
-     *
-     * @param  PrintResource  $resource        The existing resource to attach acquisitions to.
-     * @param  string         $acquisitionsJson JSON string of acquisition data from the form.
-     */
+    // library_id/library_name are embedded per-acquisition entry, not top-level fields —
+    // one submission can add acquisitions across multiple libraries at once
     public function addAcquisitions(PrintResource $resource, string $acquisitionsJson): void
     {
         DB::transaction(function () use ($resource, $acquisitionsJson) {
             $this->handleAcquisitions($acquisitionsJson, $resource->id);
         });
 
-        // Refresh search vector
+        // Rebuild outside the transaction so the committed rows are visible to the index
         $this->updateSearchVector($resource->id);
     }
 
-    /**
-     * Parse acquisition JSON and persist acquisition + masterlist records.
-     * Each acquisition entry carries its own library_id and library_name.
-     */
     private function handleAcquisitions(string $acquisitionsJson, string $printResourceId): void
     {
         $acquisitions = json_decode($acquisitionsJson, true);
@@ -62,6 +53,7 @@ class AddAcquisitionToExistingResourceService
                 'library_name'      => $acquisition['library_name'] ?? null,
                 'source'            => $acquisition['source'],
                 'date_acquired'     => $acquisition['date_acquired'],
+                // Coerce empty strings to 0 so the DB column doesn't reject them
                 'cost'              => $acquisition['cost'] !== '' ? $acquisition['cost'] : 0,
                 'iar'               => $acquisition['iar'] !== '' ? $acquisition['iar'] : 'iar',
                 'usable'            => $acquisition['usable'] !== '' ? (int) $acquisition['usable'] : 0,
@@ -75,6 +67,7 @@ class AddAcquisitionToExistingResourceService
                 'date_encoded'      => $now,
             ]);
 
+            // One masterlist row per individual item — qty=3 usable means 3 rows with status=USABLE
             foreach ($statusMap as $field => $statusName) {
                 $qty = (int) ($acquisition[$field] ?? 0);
                 for ($i = 0; $i < $qty; $i++) {
@@ -87,6 +80,7 @@ class AddAcquisitionToExistingResourceService
             }
         }
 
+        // Batch in chunks of 500 to avoid hitting DB parameter limits
         if (!empty($masterlistInserts)) {
             foreach (array_chunk($masterlistInserts, 500) as $chunk) {
                 PrintMasterlist::insert($chunk);
@@ -94,9 +88,6 @@ class AddAcquisitionToExistingResourceService
         }
     }
 
-    /**
-     * Refresh the full-text search vector for this resource.
-     */
     private function updateSearchVector(string $printResourceId): void
     {
         DB::statement('

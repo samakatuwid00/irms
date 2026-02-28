@@ -30,19 +30,10 @@ class AddNonPrintResourceController extends BaseController
         $this->nonPrintResourceService = $nonPrintResourceService;
     }
 
-    // -----------------------------------------------------------------------
-    // index — show the page (Search Existing / Manual Add / My Requests tabs)
-    //         Division users (level 3) do not see the My Requests tab.
-    // -----------------------------------------------------------------------
-
     public function index()
     {
         return view('pages.add-nonprint-resource', $this->buildViewData());
     }
-
-    // -----------------------------------------------------------------------
-    // store — save a new non-print resource
-    // -----------------------------------------------------------------------
 
     public function store(Request $request)
     {
@@ -53,6 +44,7 @@ class AddNonPrintResourceController extends BaseController
         $user  = Auth::user();
         $level = $user->userType?->level ?? 0;
 
+        // Division users skip the approval queue, so just send them back to the add tab
         if ($level === 3) {
             return redirect()
                 ->route('nonprint-resource.create')
@@ -60,16 +52,12 @@ class AddNonPrintResourceController extends BaseController
                 ->with('active_tab', 'tab-add');
         }
 
+        // School users need to track their submission, so open My Requests
         return redirect()
             ->route('nonprint-resource.create')
             ->with('success', 'Your non-print resource request has been submitted and is pending approval.')
             ->with('active_tab', 'tab-requests');
     }
-
-    // -----------------------------------------------------------------------
-    // edit — reuse the same page/form, pre-filled with the resource data.
-    //        Only level 1 (school) users may edit their own pending requests.
-    // -----------------------------------------------------------------------
 
     public function edit(string $id)
     {
@@ -77,6 +65,7 @@ class AddNonPrintResourceController extends BaseController
         $level = $user->userType?->level ?? 0;
 
         if ($level == 1) {
+            // Only let them edit their own pending records — not other users', not approved ones
             $resource = NonprintResource::with(['nonprintTitle', 'type'])
                 ->where('id', $id)
                 ->where('station_type', 'school')
@@ -89,9 +78,9 @@ class AddNonPrintResourceController extends BaseController
         }
 
         $data = $this->buildViewData();
-
         $data['editResource'] = $resource;
 
+        // subject_grade_level_ids is stored as CSV, so explode it for the checkbox loop
         $data['editingSglIds'] = $resource->subject_grade_level_ids
             ? explode(',', $resource->subject_grade_level_ids)
             : [];
@@ -99,13 +88,11 @@ class AddNonPrintResourceController extends BaseController
         return view('pages.add-nonprint-resource', $data);
     }
 
-    // -----------------------------------------------------------------------
-    // update — save edits to a pending resource request (school only)
-    // -----------------------------------------------------------------------
-
     public function update(Request $request, string $id)
     {
-        $user     = Auth::user();
+        $user = Auth::user();
+
+        // Re-check ownership here too — don't rely solely on the edit form guard
         $resource = NonprintResource::where('id', $id)
             ->where('station_type', 'school')
             ->where('station_id', $user->station_id)
@@ -123,14 +110,10 @@ class AddNonPrintResourceController extends BaseController
             ->with('active_tab', 'tab-requests');
     }
 
-    // -----------------------------------------------------------------------
-    // destroy — delete a pending request (school only).
-    //           Title is cleaned up only if nothing else references it.
-    // -----------------------------------------------------------------------
-
     public function destroy(string $id)
     {
-        $user     = Auth::user();
+        $user = Auth::user();
+
         $resource = NonprintResource::with('nonprintTitle')
             ->where('id', $id)
             ->where('station_type', 'school')
@@ -140,11 +123,12 @@ class AddNonPrintResourceController extends BaseController
             ->firstOrFail();
 
         DB::transaction(function () use ($resource) {
+            // Grab this before deleting — the relationship won't be accessible after
             $titleId = $resource->nonprint_title_id;
 
             $resource->delete();
 
-            // Clean up title only if nothing else references it
+            // Clean up the title only if nothing else still points to it
             if (NonprintResource::where('nonprint_title_id', $titleId)->doesntExist()) {
                 NonprintTitle::where('id', $titleId)->delete();
             }
@@ -156,20 +140,14 @@ class AddNonPrintResourceController extends BaseController
             ->with('active_tab', 'tab-requests');
     }
 
-    // -----------------------------------------------------------------------
-    // Private helpers
-    // -----------------------------------------------------------------------
-
-    /**
-     * Shared data needed by both index() and edit().
-     * For division users (level 3), myRequests and pendingCount are omitted.
-     */
+    // Shared between index() and edit() so dropdowns are always built the same way
     private function buildViewData(): array
     {
         $user      = Auth::user();
         $level     = $user->userType?->level ?? 0;
         $stationId = $user->station_id;
 
+        // Single query to get the joined subject+grade data needed for the multi-select
         $subjectGradeLevels = SubjectGradeLevel::query()
             ->select(
                 'subject_grade_levels.id as subject_grade_level_id',
@@ -187,7 +165,7 @@ class AddNonPrintResourceController extends BaseController
 
         $nonprintTypes = NonPrintType::all();
 
-        // Resolve library options based on user level
+        // Library options depend on the user's level
         $divisionLibraries = collect();
         $regionLibrary     = null;
         $schoolLibrary     = null;
@@ -201,12 +179,13 @@ class AddNonPrintResourceController extends BaseController
             $schoolLibrary = SchoolLibrary::where('school_id', $stationId)->first();
         }
 
-        // Division users (level 3) don't have a "My Requests" tab
+        // Division users don't submit requests, so My Requests tab doesn't apply to them
         if ($level === 3) {
             $myRequests   = collect();
             $pendingCount = 0;
             $isDivision   = true;
         } else {
+            // Only show this user's own submissions, not everyone at the school
             $myRequests = NonprintResource::with(['nonprintTitle', 'type'])
                 ->where('station_type', 'school')
                 ->where('station_id', $stationId)
@@ -214,6 +193,7 @@ class AddNonPrintResourceController extends BaseController
                 ->latest()
                 ->paginate(15);
 
+            // Counts only the current page — fine for a badge indicator
             $pendingCount = $myRequests->where('status', 0)->count();
             $isDivision   = false;
         }
@@ -232,9 +212,7 @@ class AddNonPrintResourceController extends BaseController
         );
     }
 
-    /**
-     * Shared validation rules for store() and update().
-     */
+    // Same rules for both store() and update() — keeps them from drifting apart
     private function validateResourceRequest(Request $request): array
     {
         $validated = $request->validate([
@@ -251,6 +229,7 @@ class AddNonPrintResourceController extends BaseController
             'image'                => 'nullable|image|mimes:jpeg,png,jpg|max:5120',
         ]);
 
+        // validate() strips the UploadedFile, so re-attach it manually
         if ($request->hasFile('image')) {
             $validated['image'] = $request->file('image');
         }
