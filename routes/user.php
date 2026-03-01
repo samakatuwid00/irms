@@ -4,12 +4,16 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\User\ManageUserController;
 use App\Http\Controllers\User\ProfileController;
 
-//MANAGE USER
-Route::get('/users', [ManageUserController::class, 'index'])->name('users');
-Route::patch('/users/{user}/status', [ManageUserController::class, 'updateStatus'])->name('users.updateStatus');
+Route::middleware('auth')->group(function () {
 
-//MANAGE PROFILE
-Route::get('/profile', [ProfileController::class, 'index'])->name('profile');
-Route::put('/profile/update', [ProfileController::class, 'updateInfo'])->name('profile.update');
-Route::put('/profile/password', [ProfileController::class, 'updatePassword'])->name('profile.password');
-Route::put('/profile/photo', [ProfileController::class, 'updatePhoto'])->name('profile.photo');
+    //MANAGE USER
+    Route::get('/users', [ManageUserController::class, 'index'])->name('users');
+    Route::patch('/users/{user}/status', [ManageUserController::class, 'updateStatus'])->name('users.updateStatus');
+
+    //MANAGE PROFILE
+    Route::get('/profile', [ProfileController::class, 'index'])->name('profile');
+    Route::put('/profile/update', [ProfileController::class, 'updateInfo'])->name('profile.update');
+    Route::put('/profile/password', [ProfileController::class, 'updatePassword'])->name('profile.password');
+    Route::put('/profile/photo', [ProfileController::class, 'updatePhoto'])->name('profile.photo');
+
+});
