@@ -639,9 +639,8 @@
 <script>
 (function () {
     // ── PAGE-LEVEL TAB MANAGEMENT ───────────────────────────────────────
-    const pageTabBtns     = document.querySelectorAll('.page-tab-btn');
-    const pageTabContents = document.querySelectorAll('.page-tab-content');
-    const isEditing       = {{ $isEditing ? 'true' : 'false' }};
+    const pageTabBtns = document.querySelectorAll('.page-tab-btn');
+    const isEditing   = {{ $isEditing ? 'true' : 'false' }};
 
     function activatePageTab(targetId) {
         if (isEditing && targetId !== 'tab-edit') {
@@ -649,7 +648,8 @@
             return;
         }
 
-        const validIds = Array.from(pageTabContents).map(c => c.id);
+        const liveContents = document.querySelectorAll('.page-tab-content');
+        const validIds = Array.from(liveContents).map(c => c.id);
         if (!validIds.includes(targetId)) targetId = validIds[0] ?? 'tab-masterlist';
 
         pageTabBtns.forEach(btn => {
@@ -659,7 +659,7 @@
             btn.classList.toggle('border-transparent', !isActive);
             btn.classList.toggle('text-gray-500',      !isActive);
         });
-        pageTabContents.forEach(c => c.classList.toggle('hidden', c.id !== targetId));
+        liveContents.forEach(c => c.classList.toggle('hidden', c.id !== targetId));
     }
 
     const initialTab = isEditing ? 'tab-edit' : 'tab-masterlist';
@@ -691,7 +691,6 @@
     // ── IMAGE CROPPER + PREVIEW ──────────────────────────────────────────
     (function () {
 
-        /* ── ImageCropperModal (inline) ─────────────────────────────── */
         class ImageCropperModal {
             constructor() {
                 this._modal = null; this._canvas = null; this._ctx = null;
@@ -967,7 +966,6 @@
             async _cropAndCompress() {
                 const img = this._image;
                 let natX, natY, natW, natH;
-
                 if (this._crop) {
                     const { x, y, w, h } = this._crop;
                     const tl = this._toImage(x, y), br = this._toImage(x + w, y + h);
@@ -977,24 +975,19 @@
                 } else {
                     natX = 0; natY = 0; natW = img.naturalWidth; natH = img.naturalHeight;
                 }
-
                 const off = document.createElement('canvas');
-                off.width = natW;
-                off.height = natH;
+                off.width = natW; off.height = natH;
                 off.getContext('2d').drawImage(img, natX, natY, natW, natH, 0, 0, natW, natH);
-
                 const TARGET = 100 * 1024;
                 const baseName = (this._originalFile?.name || 'image.jpg').replace(/\.[^.]+$/, '');
                 const toBlob = (canvas, type, quality) =>
                     new Promise((res, rej) => canvas.toBlob(b => b ? res(b) : rej(new Error('toBlob failed')), type, quality));
-
                 let quality = 0.92, blob;
                 while (quality >= 0.05) {
                     blob = await toBlob(off, 'image/jpeg', quality);
                     if (blob.size <= TARGET) break;
                     quality = parseFloat((quality - 0.05).toFixed(2));
                 }
-
                 if (blob.size > TARGET) {
                     let scale = 0.9;
                     while (scale >= 0.2) {
@@ -1007,7 +1000,6 @@
                         scale = parseFloat((scale - 0.1).toFixed(2));
                     }
                 }
-
                 return new File([blob], `${baseName}.jpg`, { type: 'image/jpeg' });
             }
             _cancel() { this._hide(); this._resolvePromise(null); }
@@ -1053,14 +1045,12 @@
             }
         }
 
-        /* ── Singleton cropper ──────────────────────────────────────── */
         let _cropperInstance = null;
         function getCropper() {
             if (!_cropperInstance) _cropperInstance = new ImageCropperModal();
             return _cropperInstance;
         }
 
-        /* ── setupImagePreview ──────────────────────────────────────── */
         function setupImagePreview(uploadId, previewId) {
             const imageUpload  = document.getElementById(uploadId);
             const imagePreview = document.getElementById(previewId);
@@ -1087,7 +1077,7 @@
                     const dt = new DataTransfer();
                     dt.items.add(croppedFile);
                     imageUpload.files = dt.files;
-                } catch { /* fallback: original file submits, backend validates */ }
+                } catch { /* fallback */ }
                 const reader = new FileReader();
                 reader.onload = e => { imagePreview.src = e.target.result; };
                 reader.readAsDataURL(croppedFile);
@@ -1104,34 +1094,22 @@
     const closeViewBtn    = document.getElementById('closeNpViewModal');
     const closeViewFooter = document.getElementById('closeNpViewModalFooter');
 
-    const vmCover       = document.getElementById('vm-cover');
-    const vmTitle       = document.getElementById('vm-title');
-    const vmTypeBadge   = document.getElementById('vm-type-badge');
-    const vmStatusBadge = document.getElementById('vm-status-badge');
-    const vmBrand       = document.getElementById('vm-brand');
-    const vmCode        = document.getElementById('vm-code');
-    const vmVersion     = document.getElementById('vm-version');
-    const vmModel       = document.getElementById('vm-model');
-    const vmSize        = document.getElementById('vm-size');
-    const vmUrl         = document.getElementById('vm-url');
-    const vmSubjects    = document.getElementById('vm-subjects');
-
     function openViewModal(btn) {
         const isRequest = btn.dataset.isRequest === 'true';
 
-        vmCover.src            = btn.dataset.cover;
-        vmTitle.textContent    = btn.dataset.title;
-        vmTypeBadge.textContent = btn.dataset.type;
-        vmBrand.textContent    = btn.dataset.brand;
-        vmCode.textContent     = btn.dataset.code;
-        vmVersion.textContent  = btn.dataset.version;
-        vmModel.textContent    = btn.dataset.model;
-        vmSize.textContent     = btn.dataset.size;
-        vmUrl.textContent      = btn.dataset.url !== '-' ? btn.dataset.url : '-';
-        vmSubjects.textContent = btn.dataset.subjects;
+        document.getElementById('vm-cover').src              = btn.dataset.cover;
+        document.getElementById('vm-title').textContent      = btn.dataset.title;
+        document.getElementById('vm-type-badge').textContent = btn.dataset.type;
+        document.getElementById('vm-brand').textContent      = btn.dataset.brand;
+        document.getElementById('vm-code').textContent       = btn.dataset.code;
+        document.getElementById('vm-version').textContent    = btn.dataset.version;
+        document.getElementById('vm-model').textContent      = btn.dataset.model;
+        document.getElementById('vm-size').textContent       = btn.dataset.size;
+        document.getElementById('vm-url').textContent        = btn.dataset.url !== '-' ? btn.dataset.url : '-';
+        document.getElementById('vm-subjects').textContent   = btn.dataset.subjects;
 
-        // Status badge: pending requests show yellow, approved show green
-        if (isRequest) {
+        const vmStatusBadge = document.getElementById('vm-status-badge');
+        if (vmStatusBadge && isRequest) {
             vmStatusBadge.textContent = '⏳ Pending Approval';
             vmStatusBadge.className   = 'inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800';
         }
@@ -1145,9 +1123,15 @@
         document.body.style.overflow = '';
     }
 
-    document.querySelectorAll('.view-resource-btn').forEach(btn => {
-        btn.addEventListener('click', () => openViewModal(btn));
-    });
+    function attachViewBtnListeners() {
+        document.querySelectorAll('.view-resource-btn').forEach(btn => {
+            if (btn.dataset.viewBound) return;
+            btn.dataset.viewBound = '1';
+            btn.addEventListener('click', () => openViewModal(btn));
+        });
+    }
+
+    attachViewBtnListeners();
 
     closeViewBtn    && closeViewBtn.addEventListener('click', closeModal);
     closeViewFooter && closeViewFooter.addEventListener('click', closeModal);
@@ -1169,6 +1153,128 @@
             if (saveLoading) saveLoading.classList.remove('hidden');
         });
     }
+
+    // ── AJAX PARTIAL TABLE RELOAD ────────────────────────────────────────
+    (function () {
+        let currentController = null;
+
+        function setLoading(tabId, loading) {
+            const tab = document.getElementById(tabId);
+            if (!tab) return;
+            const wrap = tab.querySelector('.overflow-x-auto');
+            if (wrap) wrap.style.opacity = loading ? '0.5' : '1';
+        }
+
+        function rehydrateTab(tabId) {
+            attachViewBtnListeners();
+            attachPaginationListeners();
+            attachSearchFormListeners();
+            const tab = document.getElementById(tabId);
+            if (!tab) return;
+            tab.querySelectorAll('a[href*="nonprint-masterlist"]').forEach(link => {
+                if (link.href.includes('/edit')) return; // let edit links navigate normally
+                if (link.dataset.ajaxBound) return;
+                link.dataset.ajaxBound = '1';
+                link.addEventListener('click', function (e) {
+                    e.preventDefault();
+                    ajaxFetch(this.href, tabId);
+                });
+            });
+        }
+
+        function ajaxFetch(url, tabId) {
+            if (currentController) currentController.abort();
+            currentController = new AbortController();
+
+            setLoading(tabId, true);
+            history.pushState({ tabId }, '', url);
+
+            fetch(url, {
+                signal: currentController.signal,
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'Accept': 'text/html',
+                }
+            })
+            .then(r => {
+                if (!r.ok) throw new Error('Network response was not ok');
+                return r.text();
+            })
+            .then(html => {
+                const parser = new DOMParser();
+                const doc    = parser.parseFromString(html, 'text/html');
+                const newTab = doc.getElementById(tabId);
+                const oldTab = document.getElementById(tabId);
+                if (newTab && oldTab) {
+                    newTab.classList.remove('hidden');
+                    oldTab.replaceWith(newTab);
+                    rehydrateTab(tabId);
+                }
+            })
+            .catch(err => {
+                if (err.name === 'AbortError') return;
+                console.error('AJAX fetch failed, falling back:', err);
+                window.location.href = url;
+            })
+            .finally(() => {
+                setLoading(tabId, false);
+                currentController = null;
+            });
+        }
+
+        function attachPaginationListeners() {
+            ['tab-masterlist', 'tab-requests'].forEach(tabId => {
+                const tab = document.getElementById(tabId);
+                if (!tab) return;
+                tab.querySelectorAll('nav[role="navigation"] a, .pagination a').forEach(link => {
+                    if (link.dataset.ajaxBound) return;
+                    link.dataset.ajaxBound = '1';
+                    link.addEventListener('click', function (e) {
+                        e.preventDefault();
+                        const url = new URL(this.href, window.location.origin);
+                        url.searchParams.set('active_tab', tabId);
+                        ajaxFetch(url.toString(), tabId);
+                    });
+                });
+            });
+        }
+
+        function attachSearchFormListeners() {
+            const configs = [
+                { tabId: 'tab-masterlist', searchParam: 'ml_search' },
+                { tabId: 'tab-requests',   searchParam: 'rq_search'  },
+            ];
+            configs.forEach(({ tabId, searchParam }) => {
+                const tab = document.getElementById(tabId);
+                if (!tab) return;
+                const form = tab.querySelector('form');
+                if (!form || form.dataset.ajaxBound) return;
+                form.dataset.ajaxBound = '1';
+                form.addEventListener('submit', function (e) {
+                    e.preventDefault();
+                    const url = new URL(form.action, window.location.origin);
+                    url.searchParams.delete(searchParam);
+                    const val = form.querySelector(`input[name="${searchParam}"]`)?.value?.trim();
+                    if (val) url.searchParams.set(searchParam, val);
+                    url.searchParams.set('active_tab', tabId);
+                    ajaxFetch(url.toString(), tabId);
+                });
+            });
+        }
+
+        window.addEventListener('popstate', function (e) {
+            if (isEditing) return;
+            const params = new URLSearchParams(window.location.search);
+            const tabId  = e.state?.tabId || params.get('active_tab') || 'tab-masterlist';
+            activatePageTab(tabId);
+            ajaxFetch(window.location.href, tabId);
+        });
+
+        attachSearchFormListeners();
+        attachPaginationListeners();
+
+    })();
+
 })();
 </script>
 
