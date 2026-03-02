@@ -110,6 +110,25 @@ function interceptForms() {
         // Don't intercept export links
         if (link.closest('.export-btn-wrapper')) return;
 
+        const href = link.getAttribute('href');
+
+        // Don't intercept links that navigate to a different page (e.g. Edit button).
+        // Only AJAX-load links that stay on the same path (pagination, filters).
+        if (href) {
+            try {
+                const linkPath = new URL(href, window.location.origin).pathname;
+                if (linkPath !== window.location.pathname) {
+                    // Different page — let the browser navigate normally
+                    window.location.href = href;
+                    return;
+                }
+            } catch (_) {
+                // Malformed URL — fall through to normal navigation
+                window.location.href = href;
+                return;
+            }
+        }
+
         e.preventDefault();
 
         let containerId = 'table-results-container';
@@ -117,13 +136,22 @@ function interceptForms() {
         if (link.closest('#school-results-container'))   containerId = 'school-results-container';
 
         // Pagination links are absolute URLs — safe to use directly
-        loadTableAjax(link.getAttribute('href'), containerId);
+        loadTableAjax(href, containerId);
     });
 }
 
-// Handle browser back/forward navigation
+// Handle browser back/forward navigation.
+// Only reload via AJAX if we're still on the same page — if the state URL
+// belongs to a different page (e.g. the user navigated to edit-resource and
+// pressed Back), let the browser handle it as a normal navigation.
 window.addEventListener('popstate', (e) => {
     if (e.state && e.state.url) {
+        const statePath = new URL(e.state.url, window.location.origin).pathname;
+        if (statePath !== window.location.pathname) {
+            // Different page — let the browser do a full load
+            window.location.href = e.state.url;
+            return;
+        }
         loadTableAjax(e.state.url, e.state.containerId || 'table-results-container');
     }
 });

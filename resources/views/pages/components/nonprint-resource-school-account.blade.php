@@ -184,6 +184,10 @@
                                                     class="px-3 py-1 text-xs rounded-lg bg-blue-100 text-blue-600 hover:bg-blue-200">
                                                 View
                                             </button>
+                                            <a href="{{ route('edit-resource', $item->id) }}"
+                                               class="px-3 py-1 text-xs rounded-lg bg-yellow-100 text-yellow-700 hover:bg-yellow-200">
+                                                Edit
+                                            </a>
                                         </div>
                                     </td>
                                 </tr>
@@ -327,6 +331,7 @@
                                                 View
                                             </button>
                                         </div>
+
                                     </td>
                                 </tr>
                             @empty

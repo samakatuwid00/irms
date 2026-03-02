@@ -1,4 +1,10 @@
 
+window.addEventListener('pageshow', (event) => {
+    if (event.persisted) {
+        window.location.reload();
+    }
+});
+
 document.addEventListener('DOMContentLoaded', () => {
     const tabButtons   = document.querySelectorAll('.resource-tab-btn');
     const printForm    = document.getElementById('print-form');

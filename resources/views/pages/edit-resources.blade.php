@@ -12,6 +12,8 @@
     <div class="p-6 space-y-6">
         <!-- ================= HEADER ================= -->
         @include('pages.partials.page-header')
+        <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate">
+        <meta http-equiv="Pragma" content="no-cache">
         <div class="bg-white shadow rounded-xl p-6">
             <h2 class="text-xl font-semibold mb-4">Edit Resource</h2>
 

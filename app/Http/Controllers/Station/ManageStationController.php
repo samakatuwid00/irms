@@ -153,7 +153,7 @@ class ManageStationController extends BaseController
             'email' => 'nullable|email|max:255',
             'date_establish' => 'nullable|date',
             'legislative_school' => 'nullable|string|max:255',
-            'school_type' => 'nullable|in:ELEMENTARY,HIGH SCHOOL,INTEGRATED',
+            'school_type' => 'nullable',
             'district_id' => 'required|exists:districts,id',
         ]);
 
@@ -172,7 +172,7 @@ class ManageStationController extends BaseController
             'email' => 'nullable|email|max:255',
             'date_establish' => 'nullable|date',
             'legislative_school' => 'nullable|string|max:50',
-            'school_type' => 'nullable|in:ELEMENTARY,HIGH SCHOOL,INTEGRATED',
+            'school_type' => 'nullable',
         ]);
 
         $this->stationService->updateSchool($school, $validated);

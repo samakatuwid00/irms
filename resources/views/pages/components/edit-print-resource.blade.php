@@ -307,14 +307,29 @@
     <input type="hidden" name="acquisitions" id="acquisitionsInput">
 
     {{-- ========================= SUBMIT ========================= --}}
-    <div class="flex justify-end">
-        <button type="submit" id="updatePrintBtn"
-                class="px-6 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed">
-            <span id="updatePrintText">Update Acquisitions</span>
-            <span id="updatePrintLoading" class="hidden">
-                <i class="fas fa-spinner fa-spin mr-2"></i>Saving...
-            </span>
-        </button>
+    <div class="flex items-center justify-between gap-3">
+        <a href="{{ route('print-resources') }}"
+           class="inline-flex items-center gap-1.5 px-4 py-2 bg-gray-100 text-gray-700 text-sm rounded hover:bg-gray-200 border border-gray-300">
+            <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24"
+                 stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
+            </svg>
+            Back to Print Resources
+        </a>
+
+        <div class="flex gap-3">
+            <a href="{{ route('print-resources') }}"
+               class="px-5 py-2 bg-white text-gray-600 text-sm rounded border border-gray-300 hover:bg-gray-50">
+                Cancel
+            </a>
+            <button type="submit" id="updatePrintBtn"
+                    class="px-6 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed">
+                <span id="updatePrintText">Update Acquisitions</span>
+                <span id="updatePrintLoading" class="hidden">
+                    <i class="fas fa-spinner fa-spin mr-2"></i>Saving...
+                </span>
+            </button>
+        </div>
     </div>
 
 </form>
