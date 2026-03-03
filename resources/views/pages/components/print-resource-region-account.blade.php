@@ -96,7 +96,7 @@
 
         <div class="bg-white rounded-xl shadow overflow-hidden mt-4">
             <div class="overflow-x-auto max-h-150 overflow-y-auto">
-                <table class="w-full text-sm">
+                <table class="w-full text-sm text-center">
                     <thead class="bg-gray-100 text-gray-600 uppercase text-xs sticky top-0 z-10">
                         <tr>
                             <th class="px-2 py-3">Cover</th>
@@ -133,16 +133,53 @@
                                 <td class="px-2 py-3 text-gray-600">{{ $authors }}</td>
                                 <td class="px-2 py-3 text-gray-600">{{ $item->publisher }}</td>
                                 <td class="px-2 py-3">
-                                    <span class="px-2 py-1 text-xs rounded-full bg-blue-100 text-blue-700">{{ $item->type->type_name }}</span>
+                                    <span class="px-2 py-1 text-xs rounded-full bg-blue-100 text-blue-700">{{ $item->type->shortname }}</span>
                                 </td>
                                 <td class="px-2 py-3 text-xs">
                                     @if($item->subjects()->count())
-                                        <div class="flex flex-wrap gap-1">
-                                            @foreach($item->subjects() as $sub)
-                                                <span class="inline-block bg-blue-100 text-blue-800 font-medium px-2 py-1 rounded-full">
-                                                    {{ $sub->subject->subject_name }} - {{ $sub->gradeLevel->grade }}
-                                                </span>
-                                            @endforeach
+                                        @php
+                                            $first = $item->subjects()->first();
+                                            $count = $item->subjects()->count();
+                                        @endphp
+                                        <div class="relative inline-block max-w-full"
+                                            @if($count > 1)
+                                            x-data
+                                            @mouseenter="
+                                                let trigger = $el;
+                                                let tooltip = $el.querySelector('[data-tooltip]');
+                                                let rect = trigger.getBoundingClientRect();
+                                                tooltip.style.left = (rect.left + window.scrollX) + 'px';
+                                                tooltip.style.top = (rect.bottom + window.scrollY + 8) + 'px';
+                                                tooltip.classList.remove('invisible', 'opacity-0');
+                                                tooltip.classList.add('visible', 'opacity-100');
+                                            "
+                                            @mouseleave="
+                                                let tooltip = $el.querySelector('[data-tooltip]');
+                                                tooltip.classList.add('invisible', 'opacity-0');
+                                                tooltip.classList.remove('visible', 'opacity-100');
+                                            "
+                                            @endif
+                                        >
+                                            <span class="inline-block bg-blue-100 text-blue-800 font-medium px-2 py-1 rounded-full cursor-default">
+                                                {{ $first->subject->subject_name }} - {{ $first->gradeLevel->grade }}
+                                                @if($count > 1)
+                                                    <span class="ml-1 text-green-600">+{{ $count - 1 }}</span>
+                                                @endif
+                                            </span>
+
+                                            @if($count > 1)
+                                                <div data-tooltip
+                                                    class="pointer-events-none fixed z-[100] invisible opacity-0
+                                                            bg-gray-800 text-white text-xs rounded-md py-2 px-3 shadow-xl
+                                                            min-w-[220px] max-w-sm whitespace-normal break-words
+                                                            transition-opacity duration-150 border border-gray-700">
+                                                    @foreach($item->subjects() as $sub)
+                                                        <div class="py-1 border-b border-gray-700 last:border-0">
+                                                            {{ $sub->subject->subject_name }} — {{ $sub->gradeLevel->grade }}
+                                                        </div>
+                                                    @endforeach
+                                                </div>
+                                            @endif
                                         </div>
                                     @else
                                         <span class="text-gray-500 text-xs">No assignment</span>
