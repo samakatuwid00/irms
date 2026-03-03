@@ -84,8 +84,6 @@ function interceptForms() {
 
         const params = new URLSearchParams(new FormData(form));
 
-        // ✅ Always use window.location.pathname — never form.action or window.location.href
-        // This prevents the previous query string from being appended to the new one
         const url = `${window.location.pathname}?${params.toString()}`;
 
         const tabInput = form.querySelector('input[name="tab"]');
