@@ -164,7 +164,7 @@
                                             </svg>
                                             View
                                         </button>
-                                        <a href="{{ route('masterlist.edit', $row->id) }}"
+                                        <a href="{{ route('masterlist.edit', $row->id) }}?ml_page={{ $masterlist->currentPage() }}{{ request('ml_search') ? '&ml_search=' . urlencode(request('ml_search')) : '' }}"
                                            class="inline-flex items-center gap-1 text-xs px-3 py-1.5 bg-blue-50 text-blue-600 border border-blue-200 rounded-lg hover:bg-blue-100 transition-colors whitespace-nowrap font-medium">
                                             <svg class="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16.862 4.487l1.687-1.687a1.875 1.875 0 112.652 2.652L7.5 19.153 3 21l1.847-4.5L16.862 4.487z"/>
@@ -222,7 +222,10 @@
               enctype="multipart/form-data"
               autocomplete="off">
             @csrf
-            @method('PUT')
+            @method('PUT'){{-- Add these hidden inputs --}}
+
+            <input type="hidden" name="ml_page" value="{{ request('ml_page') }}">
+            <input type="hidden" name="ml_search" value="{{ request('ml_search') }}">
 
             {{-- IMAGE + BASIC INFO --}}
             <div class="grid grid-cols-1 md:grid-cols-3 gap-6 items-stretch">

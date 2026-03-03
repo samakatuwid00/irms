@@ -96,9 +96,12 @@ class NonPrintMasterlistController extends BaseController
         $this->nonPrintResourceService->updateNonPrintResource($resource, $validated);
 
         return redirect()
-            ->route('nonprint-masterlist.index')
-            ->with('success', 'Resource updated successfully.')
-            ->with('active_tab', 'tab-masterlist');
+                ->route('nonprint-masterlist.index', [
+                    'ml_page' => $request->input('ml_page'),
+                    'ml_search' => $request->input('ml_search'),
+                    'active_tab' => 'tab-masterlist',
+                ])
+                ->with('success', 'Resource updated successfully.');
     }
 
     public function approve(string $id)

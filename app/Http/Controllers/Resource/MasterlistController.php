@@ -115,9 +115,13 @@ class MasterlistController extends BaseController
         $this->printResourceService->updatePrintResource($resource, $validated);
 
         return redirect()
-            ->route('masterlist.index')
-            ->with('success', 'Resource updated successfully.');
-    }
+                ->route('masterlist.index', [
+                    'ml_page' => $request->input('ml_page'),
+                    'ml_search' => $request->input('ml_search'),
+                    'active_tab' => 'tab-masterlist',
+                ])
+                ->with('success', 'Resource updated successfully.');
+            }
 
     public function approve(string $id)
     {
