@@ -31,6 +31,8 @@ class AddPrintResourceService
             $coverPath = null;
             if (isset($data['image'])) {
                 $coverPath = $this->handleImageUpload($data['image'], $data['title']);
+                // Generate a ≤20 KB thumbnail for fast table rendering
+                $this->generateThumbnail($coverPath);
             }
 
             $resource        = $this->createPrintResource($data, $title->id, $authorIds, $coverPath);
@@ -57,11 +59,17 @@ class AddPrintResourceService
 
             $coverPath = $resource->cover;
             if (isset($data['image'])) {
-                // Delete old file before replacing — otherwise it's orphaned on disk
+                // Delete old cover + its thumbnail before replacing — otherwise orphaned on disk
                 if ($resource->cover && Storage::disk('public')->exists($resource->cover)) {
                     Storage::disk('public')->delete($resource->cover);
                 }
+                $oldThumb = $this->thumbnailPathFromCover($resource->cover);
+                if ($oldThumb && Storage::disk('public')->exists($oldThumb)) {
+                    Storage::disk('public')->delete($oldThumb);
+                }
+
                 $coverPath = $this->handleImageUpload($data['image'], $data['title']);
+                $this->generateThumbnail($coverPath);
             }
 
             $uniquenessHash = $this->buildUniquenessHash($title->id, $data['type'], $authorIds, $data);
@@ -91,6 +99,91 @@ class AddPrintResourceService
 
         $this->updateSearchVector($resource->id);
     }
+
+    // ── THUMBNAIL HELPERS ────────────────────────────────────────────────
+
+    /**
+     * Derive the thumbnail storage path from a cover path.
+     * e.g. "print_cover/my-book.jpg" → "print-thumbnails/my-book.jpg"
+     * Returns null when $coverPath is null/empty.
+     */
+    public function thumbnailPathFromCover(?string $coverPath): ?string
+    {
+        if (!$coverPath) {
+            return null;
+        }
+
+        return preg_replace('#^print_cover/#', 'print-thumbnails/', $coverPath);
+    }
+
+    /**
+     * Generate a JPEG thumbnail kept at or below 20 KB.
+     * Stored in print-thumbnails/ with the same filename as the cover.
+     * Uses GD (always available in PHP); falls back silently on failure
+     * so a missing thumbnail never breaks the upload flow.
+     */
+    private function generateThumbnail(string $coverPath): void
+    {
+        try {
+            $disk       = Storage::disk('public');
+            $thumbPath  = $this->thumbnailPathFromCover($coverPath);
+            $rawContent = $disk->get($coverPath);
+
+            // Load into GD from the raw bytes — avoids needing the real filesystem path
+            $srcImage = @imagecreatefromstring($rawContent);
+            if (!$srcImage) {
+                return;
+            }
+
+            $srcW = imagesx($srcImage);
+            $srcH = imagesy($srcImage);
+
+            // Scale so the longest edge is ≤ 200 px — plenty for a table thumbnail
+            $maxSide = 200;
+            if ($srcW >= $srcH) {
+                $thumbW = $maxSide;
+                $thumbH = (int) round($srcH * ($maxSide / $srcW));
+            } else {
+                $thumbH = $maxSide;
+                $thumbW = (int) round($srcW * ($maxSide / $srcH));
+            }
+
+            $thumbW = max(1, $thumbW);
+            $thumbH = max(1, $thumbH);
+
+            $thumbImage = imagecreatetruecolor($thumbW, $thumbH);
+
+            // Preserve transparency for PNG sources
+            imagealphablending($thumbImage, false);
+            imagesavealpha($thumbImage, true);
+            $transparent = imagecolorallocatealpha($thumbImage, 255, 255, 255, 127);
+            imagefilledrectangle($thumbImage, 0, 0, $thumbW, $thumbH, $transparent);
+            imagealphablending($thumbImage, true);
+
+            imagecopyresampled($thumbImage, $srcImage, 0, 0, 0, 0, $thumbW, $thumbH, $srcW, $srcH);
+            imagedestroy($srcImage);
+
+            // Compress iteratively until ≤ 20 KB, starting at quality 75
+            $targetBytes = 20 * 1024;
+            $quality     = 75;
+
+            do {
+                ob_start();
+                imagejpeg($thumbImage, null, $quality);
+                $jpegData = ob_get_clean();
+                $quality -= 5;
+            } while (strlen($jpegData) > $targetBytes && $quality >= 10);
+
+            imagedestroy($thumbImage);
+
+            $disk->put($thumbPath, $jpegData);
+
+        } catch (\Throwable) {
+            // Thumbnail generation is best-effort; never fail the upload
+        }
+    }
+
+    // ── PRIVATE HELPERS ──────────────────────────────────────────────────
 
     private function createOrGetTitle(string $titleName): PrintTitle
     {

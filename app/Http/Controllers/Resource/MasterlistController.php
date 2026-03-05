@@ -2,10 +2,8 @@
 
 namespace App\Http\Controllers\Resource;
 
-use App\Models\District;
 use App\Models\PrintResource;
 use App\Models\PrintTitle;
-use App\Models\School;
 use App\Models\SubjectGradeLevel;
 use App\Models\PrintType;
 use App\Services\Resource\Actions\AddPrintResourceService;
@@ -16,6 +14,7 @@ use Illuminate\Http\Request;
 use Illuminate\Routing\Controller as BaseController;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 
 class MasterlistController extends BaseController
 {
@@ -34,7 +33,6 @@ class MasterlistController extends BaseController
         $user  = Auth::user();
         $level = $user->userType?->level ?? 0;
 
-        // Only division (3) and region (4) manage the masterlist
         abort_unless(in_array($level, [3, 4]), 403, 'Unauthorized access.');
 
         [$masterlist, $requests] = $this->buildTabData($request, $user, $level);
@@ -54,8 +52,6 @@ class MasterlistController extends BaseController
 
         abort_unless(in_array($level, [3, 4]), 403, 'Unauthorized access.');
 
-        // fresh() re-fetches after find() to avoid working with stale in-memory data,
-        // especially important when the user navigates quickly between edit forms
         $resource = PrintResource::with(['printTitle.authors', 'type'])
             ->where('id', $id)
             ->where('status', 1)
@@ -67,15 +63,17 @@ class MasterlistController extends BaseController
 
         $editingAuthors = $resource->printTitle->authors->pluck('author_name')->toArray();
 
-        // trim() each ID — trailing spaces from the CSV can cause checkbox matching to fail
-        $editingSglIds  = $resource->subject_grade_level_ids
+        $editingSglIds = $resource->subject_grade_level_ids
             ? array_map('trim', explode(',', $resource->subject_grade_level_ids))
             : [];
 
+        // Resolve full cover URL for the edit form image preview — no logic needed in blade
+        $resource->cover_url = $resource->cover
+            ? asset('storage/' . $resource->cover)
+            : asset('assets/images/def.jpg');
+
         [$masterlist, $requests] = $this->buildTabData($request, $user, $level);
 
-        // no-store prevents bfcache from restoring a stale edit form when the user
-        // navigates back — without this, the previous resource's data bleeds through
         return response()
             ->view('pages.print-resource-masterlist', compact(
                 'resource',
@@ -106,8 +104,6 @@ class MasterlistController extends BaseController
 
         $validated = $this->validateResourceRequest($request);
 
-        // Update the title row separately — the service only handles PrintResource fields,
-        // so skipping this would leave the title text out of sync
         if ($resource->printTitle) {
             $resource->printTitle->update(['title' => $validated['title']]);
         }
@@ -115,13 +111,13 @@ class MasterlistController extends BaseController
         $this->printResourceService->updatePrintResource($resource, $validated);
 
         return redirect()
-                ->route('masterlist.index', [
-                    'ml_page' => $request->input('ml_page'),
-                    'ml_search' => $request->input('ml_search'),
-                    'active_tab' => 'tab-masterlist',
-                ])
-                ->with('success', 'Resource updated successfully.');
-            }
+            ->route('masterlist.index', [
+                'ml_page'    => $request->input('ml_page'),
+                'ml_search'  => $request->input('ml_search'),
+                'active_tab' => 'tab-masterlist',
+            ])
+            ->with('success', 'Resource updated successfully.');
+    }
 
     public function approve(string $id)
     {
@@ -130,7 +126,6 @@ class MasterlistController extends BaseController
 
         abort_unless($level === 3, 403, 'Only division accounts can approve requests.');
 
-        // approver_station ensures a division can only approve its own queue
         $resource = PrintResource::where('id', $id)
             ->where('status', 0)
             ->where('approver_station', $user->station_id)
@@ -138,7 +133,6 @@ class MasterlistController extends BaseController
 
         $resource->update(['status' => 1]);
 
-        // Rebuild the search vector immediately so the record is searchable right away
         DB::statement('
             UPDATE print_resources
             SET search_vector = build_print_resource_search_vector(id)
@@ -163,9 +157,16 @@ class MasterlistController extends BaseController
             ->where('approver_station', $user->station_id)
             ->firstOrFail();
 
-        // Delete the cover file before the DB row — otherwise the file is orphaned on disk
-        if ($resource->cover && \Illuminate\Support\Facades\Storage::disk('public')->exists($resource->cover)) {
-            \Illuminate\Support\Facades\Storage::disk('public')->delete($resource->cover);
+        // Delete cover + thumbnail before the DB row to avoid orphaned files on disk
+        if ($resource->cover) {
+            if (Storage::disk('public')->exists($resource->cover)) {
+                Storage::disk('public')->delete($resource->cover);
+            }
+
+            $thumbPath = $this->printResourceService->thumbnailPathFromCover($resource->cover);
+            if ($thumbPath && Storage::disk('public')->exists($thumbPath)) {
+                Storage::disk('public')->delete($thumbPath);
+            }
         }
 
         $resource->delete();
@@ -188,7 +189,6 @@ class MasterlistController extends BaseController
         $query = PrintResource::with(['printTitle.authors', 'type'])
             ->where('status', 1);
 
-        // Skip the FTS filter for short queries — a single char would match almost everything
         if (strlen($q) >= 2) {
             $query->whereRaw(
                 "search_vector @@ plainto_tsquery('english', ?)",
@@ -196,7 +196,6 @@ class MasterlistController extends BaseController
             );
         }
 
-        // Correlated subquery for ordering avoids a JOIN on every search request
         $results = $query
             ->orderBy(
                 PrintTitle::select('title')
@@ -224,7 +223,6 @@ class MasterlistController extends BaseController
 
         $q = trim($request->input('q', ''));
 
-        // Scope to this division's queue only — don't let them see other divisions' requests
         $query = PrintResource::with(['printTitle.authors', 'type'])
             ->where('status', 0)
             ->where('approver_station', $user->station_id);
@@ -254,6 +252,31 @@ class MasterlistController extends BaseController
         ]);
     }
 
+    // ── PRIVATE HELPERS ──────────────────────────────────────────────────
+
+    // Appends two computed URL properties onto every item in a paginator — no extra queries.
+    //   thumb_url → ≤20 KB thumbnail for table row <img> tags
+    //   cover_url → full-size image for the view modal data-cover attribute
+    // Falls back gracefully: thumbnail → full cover → default placeholder
+    private function resolveCoverUrls($paginator): void
+    {
+        $disk = Storage::disk('public');
+
+        $paginator->through(function ($row) use ($disk) {
+            $thumbPath = $this->printResourceService->thumbnailPathFromCover($row->cover);
+
+            $row->thumb_url = ($thumbPath && $disk->exists($thumbPath))
+                ? asset('storage/' . $thumbPath)
+                : ($row->cover ? asset('storage/' . $row->cover) : asset('assets/images/def.jpg'));
+
+            $row->cover_url = $row->cover
+                ? asset('storage/' . $row->cover)
+                : asset('assets/images/def.jpg');
+
+            return $row;
+        });
+    }
+
     // Shared between index() and editForm() to avoid duplicating the tab queries
     private function buildTabData(Request $request, $user, int $level): array
     {
@@ -268,7 +291,6 @@ class MasterlistController extends BaseController
             );
         }
 
-        // Named paginator 'ml_page' avoids colliding with 'rq_page' on the same page
         $masterlist = $masterlistQuery
             ->orderBy(
                 PrintTitle::select('title')
@@ -276,6 +298,9 @@ class MasterlistController extends BaseController
                     ->limit(1)
             )
             ->paginate(15, ['*'], 'ml_page');
+
+        // Append thumb_url + cover_url to every masterlist row
+        $this->resolveCoverUrls($masterlist);
 
         // Region users don't have an approval queue, so $requests stays null
         $requests = null;
@@ -299,6 +324,9 @@ class MasterlistController extends BaseController
                         ->limit(1)
                 )
                 ->paginate(15, ['*'], 'rq_page');
+
+            // Append thumb_url + cover_url to every request row
+            $this->resolveCoverUrls($requests);
         }
 
         return [$masterlist, $requests];
@@ -307,9 +335,15 @@ class MasterlistController extends BaseController
     // Shared JSON shape for both search() and requestSearch()
     private function formatResource(PrintResource $r): array
     {
+        $thumbPath = $this->printResourceService->thumbnailPathFromCover($r->cover);
+        $thumbUrl  = ($thumbPath && Storage::disk('public')->exists($thumbPath))
+            ? asset('storage/' . $thumbPath)
+            : ($r->cover ? asset('storage/' . $r->cover) : asset('assets/images/def.jpg'));
+
         return [
             'id'        => $r->id,
             'cover'     => $r->cover ? asset('storage/' . $r->cover) : asset('assets/images/def.jpg'),
+            'thumb'     => $thumbUrl,
             'title'     => $r->printTitle->title ?? '-',
             'authors'   => $r->printTitle->authors->pluck('author_name')->join(', ') ?: '-',
             'type'      => $r->type->type_name ?? '-',
@@ -356,7 +390,6 @@ class MasterlistController extends BaseController
             ->get();
     }
 
-    // Same rules for both store() and update() — keeps them from drifting apart
     private function validateResourceRequest(Request $request): array
     {
         $validated = $request->validate([
@@ -373,7 +406,6 @@ class MasterlistController extends BaseController
             'image'                => 'nullable|image|mimes:jpeg,png,jpg|max:5120',
         ]);
 
-        // validate() strips the UploadedFile, so re-attach it manually
         if ($request->hasFile('image')) {
             $validated['image'] = $request->file('image');
         }

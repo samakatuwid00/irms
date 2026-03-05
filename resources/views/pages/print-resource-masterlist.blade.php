@@ -7,6 +7,7 @@
 @section('breadcrumb', 'Masterlist')
 
 @section('content')
+
 <div class="p-6 space-y-6">
     @include('pages.partials.page-header')
 
@@ -33,7 +34,7 @@
     @endif
 
     @php
-        $isEditing   = isset($resource);
+        $isEditing    = isset($resource);
         $pendingCount = ($level === 3 && $requests) ? $requests->total() : 0;
     @endphp
 
@@ -113,10 +114,18 @@
                     </thead>
                     <tbody class="divide-y divide-gray-100">
                         @forelse($masterlist as $row)
+                            @php
+                                $sglIds  = $row->subject_grade_level_ids ? explode(',', $row->subject_grade_level_ids) : [];
+                                $sglText = '-';
+                                if (!empty($sglIds)) {
+                                    $sgls    = \App\Models\SubjectGradeLevel::with(['subject', 'gradeLevel'])->whereIn('id', $sglIds)->get();
+                                    $sglText = $sgls->map(fn($s) => ($s->subject->subject_name ?? '') . ' - ' . ($s->gradeLevel->grade ?? ''))->join('; ');
+                                }
+                            @endphp
                             <tr class="hover:bg-gray-50 transition-colors">
                                 <td class="px-2 py-2">
-                                    <img src="{{ $row->cover ? asset('storage/' . $row->cover) : asset('assets/images/def.jpg') }}"
-                                         alt="cover" class="w-14 h-18 object-cover rounded border border-gray-200 shadow-sm">
+                                    <img src="{{ $row->thumb_url }}" alt="cover"
+                                         class="w-14 h-18 object-cover rounded border border-gray-200 shadow-sm" loading="lazy">
                                 </td>
                                 <td class="px-2 py-2 font-medium text-gray-900 max-w-75">
                                     <span title="{{ $row->printTitle->title ?? '' }}">{{ Str::limit($row->printTitle->title ?? '-', 40) }}</span>
@@ -130,23 +139,13 @@
                                 <td class="px-2 py-2 text-gray-600">{{ $row->copyright ?? '-' }}</td>
                                 <td class="px-2 py-2 text-gray-600">{{ $row->isbn ?? '-' }}</td>
                                 <td class="px-2 py-2 text-gray-600 max-w-55 text-xs">
-                                    @php
-                                        $sglIds = $row->subject_grade_level_ids ? explode(',', $row->subject_grade_level_ids) : [];
-                                        if (!empty($sglIds)) {
-                                            $sgls = \App\Models\SubjectGradeLevel::with(['subject', 'gradeLevel'])
-                                                ->whereIn('id', $sglIds)->get();
-                                            $sglText = $sgls->map(fn($s) => ($s->subject->subject_name ?? '') . ' - ' . ($s->gradeLevel->grade ?? ''))->join('; ');
-                                        } else {
-                                            $sglText = '-';
-                                        }
-                                    @endphp
                                     <span title="{{ $sglText }}">{{ Str::limit($sglText, 60) }}</span>
                                 </td>
                                 <td class="px-2 py-2 text-center">
                                     <div class="flex justify-center gap-2">
                                         <button type="button"
                                                 data-view-id="{{ $row->id }}"
-                                                data-cover="{{ $row->cover ? asset('storage/' . $row->cover) : asset('assets/images/def.jpg') }}"
+                                                data-cover="{{ $row->cover_url }}"
                                                 data-title="{{ $row->printTitle->title ?? '-' }}"
                                                 data-authors="{{ $row->printTitle->authors->pluck('author_name')->join(', ') ?: '-' }}"
                                                 data-type="{{ $row->type->type_name ?? '-' }}"
@@ -156,7 +155,7 @@
                                                 data-copyright="{{ $row->copyright ?? '-' }}"
                                                 data-isbn="{{ $row->isbn ?? '-' }}"
                                                 data-pages="{{ $row->pages ?? '-' }}"
-                                                data-subjects="{{ $sglText ?? '-' }}"
+                                                data-subjects="{{ $sglText }}"
                                                 class="view-resource-btn inline-flex items-center gap-1 text-xs px-3 py-1.5 bg-indigo-50 text-indigo-600 border border-indigo-200 rounded-lg hover:bg-indigo-100 transition-colors whitespace-nowrap font-medium">
                                             <svg class="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
@@ -222,7 +221,7 @@
               enctype="multipart/form-data"
               autocomplete="off">
             @csrf
-            @method('PUT'){{-- Add these hidden inputs --}}
+            @method('PUT')
 
             <input type="hidden" name="ml_page" value="{{ request('ml_page') }}">
             <input type="hidden" name="ml_search" value="{{ request('ml_search') }}">
@@ -231,11 +230,10 @@
             <div class="grid grid-cols-1 md:grid-cols-3 gap-6 items-stretch">
                 <div class="h-full">
                     <div class="h-full flex flex-col items-center justify-between border-2 border-dashed border-blue-500 rounded-lg p-4 text-center">
-
                         <div class="w-full" style="aspect-ratio: 3/3.5;">
                             <img id="imagePreview"
-                                 src="{{ $resource->cover ? asset('storage/' . $resource->cover) : asset('assets/images/def.jpg') }}"
-                                 data-default-src="{{ $resource->cover ? asset('storage/' . $resource->cover) : asset('assets/images/def.jpg') }}"
+                                 src="{{ $resource->cover_url }}"
+                                 data-default-src="{{ $resource->cover_url }}"
                                  alt="Image preview"
                                  class="w-full h-full object-cover rounded mb-4">
                         </div>
@@ -447,10 +445,18 @@
                     </thead>
                     <tbody class="divide-y divide-gray-100">
                         @forelse($requests as $req)
+                            @php
+                                $reqSglIds  = $req->subject_grade_level_ids ? explode(',', $req->subject_grade_level_ids) : [];
+                                $reqSglText = '-';
+                                if (!empty($reqSglIds)) {
+                                    $reqSgls    = \App\Models\SubjectGradeLevel::with(['subject', 'gradeLevel'])->whereIn('id', $reqSglIds)->get();
+                                    $reqSglText = $reqSgls->map(fn($s) => ($s->subject->subject_name ?? '') . ' - ' . ($s->gradeLevel->grade ?? ''))->join('; ');
+                                }
+                            @endphp
                             <tr class="hover:bg-gray-50 transition-colors">
                                 <td class="px-3 py-2">
-                                    <img src="{{ $req->cover ? asset('storage/' . $req->cover) : asset('assets/images/def.jpg') }}"
-                                         alt="cover" class="w-9 h-12 object-cover rounded border border-gray-200 shadow-sm">
+                                    <img src="{{ $req->thumb_url }}" alt="cover"
+                                         class="w-9 h-12 object-cover rounded border border-gray-200 shadow-sm" loading="lazy">
                                 </td>
                                 <td class="px-3 py-2 font-medium text-gray-900 max-w-40">
                                     <span title="{{ $req->printTitle->title ?? '' }}">{{ Str::limit($req->printTitle->title ?? '-', 38) }}</span>
@@ -463,16 +469,6 @@
                                 <td class="px-3 py-2 text-gray-600">{{ $req->edition ?? '-' }}</td>
                                 <td class="px-3 py-2 text-gray-600">{{ $req->copyright ?? '-' }}</td>
                                 <td class="px-3 py-2 text-gray-600 text-xs max-w-50">
-                                    @php
-                                        $sglIds = $req->subject_grade_level_ids ? explode(',', $req->subject_grade_level_ids) : [];
-                                        if (!empty($sglIds)) {
-                                            $reqSgls = \App\Models\SubjectGradeLevel::with(['subject', 'gradeLevel'])
-                                                ->whereIn('id', $sglIds)->get();
-                                            $reqSglText = $reqSgls->map(fn($s) => ($s->subject->subject_name ?? '') . ' - ' . ($s->gradeLevel->grade ?? ''))->join('; ');
-                                        } else {
-                                            $reqSglText = '-';
-                                        }
-                                    @endphp
                                     <span title="{{ $reqSglText }}">{{ Str::limit($reqSglText, 55) }}</span>
                                 </td>
                                 <td class="px-3 py-2 text-center text-gray-500 text-xs whitespace-nowrap">{{ $req->created_at?->format('M d, Y') ?? '-' }}</td>
@@ -549,8 +545,7 @@
                     <button id="closeViewModal"
                             class="text-gray-400 hover:text-gray-600 transition-colors rounded-full p-1 hover:bg-gray-100">
                         <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                d="M6 18L18 6M6 6l12 12"/>
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
                         </svg>
                     </button>
                 </div>
@@ -559,72 +554,63 @@
                 <div class="p-6">
                     <div class="flex gap-8 items-start">
 
-                    {{-- LEFT SIDE (Image) --}}
-                    <div class="shrink-0 flex justify-center" style="width:290px;">
-                        <img id="vm-cover" src="" alt="Cover"
-                            class="w-full max-h-[460px] object-contain rounded-lg border border-gray-300 shadow-md bg-gray-100">
-                    </div>
-
-                    {{-- RIGHT SIDE (Details) --}}
-                    <div class="flex-1 min-w-0 flex flex-col gap-3">
-
-                        {{-- Title & Authors --}}
-                        <div class="rounded-lg border border-dashed border-gray-300 bg-gray-50/50 px-4 py-3">
-                            <h4 id="vm-title" class="text-base font-bold text-gray-900 leading-snug"></h4>
-                            <p id="vm-authors" class="text-xs text-gray-400 mt-0.5 italic"></p>
+                        {{-- LEFT SIDE (Image) --}}
+                        <div class="shrink-0 flex justify-center" style="width:290px;">
+                            <img id="vm-cover" src="" alt="Cover"
+                                class="w-full max-h-[460px] object-contain rounded-lg border border-gray-300 shadow-md bg-gray-100">
                         </div>
 
-                        {{-- Type Badge --}}
-                        <div class="rounded-lg border border-dashed border-gray-300 bg-gray-50/50 px-4 py-2.5 flex items-center gap-2">
-                            <span class="text-[10px] font-semibold uppercase tracking-widest text-gray-400">Type</span>
-                            <span id="vm-type-badge"
-                                class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-blue-50 text-blue-700 border border-blue-100">
-                            </span>
+                        {{-- RIGHT SIDE (Details) --}}
+                        <div class="flex-1 min-w-0 flex flex-col gap-3">
+
+                            {{-- Title & Authors --}}
+                            <div class="rounded-lg border border-dashed border-gray-300 bg-gray-50/50 px-4 py-3">
+                                <h4 id="vm-title" class="text-base font-bold text-gray-900 leading-snug"></h4>
+                                <p id="vm-authors" class="text-xs text-gray-400 mt-0.5 italic"></p>
+                            </div>
+
+                            {{-- Type Badge --}}
+                            <div class="rounded-lg border border-dashed border-gray-300 bg-gray-50/50 px-4 py-2.5 flex items-center gap-2">
+                                <span class="text-[10px] font-semibold uppercase tracking-widest text-gray-400">Type</span>
+                                <span id="vm-type-badge"
+                                    class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-blue-50 text-blue-700 border border-blue-100">
+                                </span>
+                            </div>
+
+                            {{-- Metadata Grid --}}
+                            <div class="grid grid-cols-2 gap-3">
+                                <div class="rounded-lg border border-dashed border-gray-300 bg-gray-50/50 px-4 py-2.5">
+                                    <p class="text-[10px] font-semibold uppercase tracking-widest text-gray-400 mb-0.5">Publisher</p>
+                                    <p id="vm-publisher" class="text-sm font-medium text-gray-700"></p>
+                                </div>
+                                <div class="rounded-lg border border-dashed border-gray-300 bg-gray-50/50 px-4 py-2.5">
+                                    <p class="text-[10px] font-semibold uppercase tracking-widest text-gray-400 mb-0.5">Copyright</p>
+                                    <p id="vm-copyright" class="text-sm font-medium text-gray-700"></p>
+                                </div>
+                                <div class="rounded-lg border border-dashed border-gray-300 bg-gray-50/50 px-4 py-2.5">
+                                    <p class="text-[10px] font-semibold uppercase tracking-widest text-gray-400 mb-0.5">Edition</p>
+                                    <p id="vm-edition" class="text-sm font-medium text-gray-700"></p>
+                                </div>
+                                <div class="rounded-lg border border-dashed border-gray-300 bg-gray-50/50 px-4 py-2.5">
+                                    <p class="text-[10px] font-semibold uppercase tracking-widest text-gray-400 mb-0.5">Volume</p>
+                                    <p id="vm-volume" class="text-sm font-medium text-gray-700"></p>
+                                </div>
+                                <div class="rounded-lg border border-dashed border-gray-300 bg-gray-50/50 px-4 py-2.5">
+                                    <p class="text-[10px] font-semibold uppercase tracking-widest text-gray-400 mb-0.5">ISBN</p>
+                                    <p id="vm-isbn" class="text-sm font-medium text-gray-700 font-mono tracking-wider"></p>
+                                </div>
+                                <div class="rounded-lg border border-dashed border-gray-300 bg-gray-50/50 px-4 py-2.5">
+                                    <p class="text-[10px] font-semibold uppercase tracking-widest text-gray-400 mb-0.5">Pages</p>
+                                    <p id="vm-pages" class="text-sm font-medium text-gray-700"></p>
+                                </div>
+                            </div>
+
+                            {{-- Subjects --}}
+                            <div class="rounded-lg border border-dashed border-gray-300 bg-gray-50/50 px-4 py-3">
+                                <p class="text-[10px] font-semibold uppercase tracking-widest text-gray-400 mb-1">Subjects / Grade Levels</p>
+                                <p id="vm-subjects" class="text-sm text-gray-600 leading-relaxed"></p>
+                            </div>
                         </div>
-
-                        {{-- Metadata Grid --}}
-                        <div class="grid grid-cols-2 gap-3">
-
-                            <div class="rounded-lg border border-dashed border-gray-300 bg-gray-50/50 px-4 py-2.5">
-                                <p class="text-[10px] font-semibold uppercase tracking-widest text-gray-400 mb-0.5">Publisher</p>
-                                <p id="vm-publisher" class="text-sm font-medium text-gray-700"></p>
-                            </div>
-
-                            <div class="rounded-lg border border-dashed border-gray-300 bg-gray-50/50 px-4 py-2.5">
-                                <p class="text-[10px] font-semibold uppercase tracking-widest text-gray-400 mb-0.5">Copyright</p>
-                                <p id="vm-copyright" class="text-sm font-medium text-gray-700"></p>
-                            </div>
-
-                            <div class="rounded-lg border border-dashed border-gray-300 bg-gray-50/50 px-4 py-2.5">
-                                <p class="text-[10px] font-semibold uppercase tracking-widest text-gray-400 mb-0.5">Edition</p>
-                                <p id="vm-edition" class="text-sm font-medium text-gray-700"></p>
-                            </div>
-
-                            <div class="rounded-lg border border-dashed border-gray-300 bg-gray-50/50 px-4 py-2.5">
-                                <p class="text-[10px] font-semibold uppercase tracking-widest text-gray-400 mb-0.5">Volume</p>
-                                <p id="vm-volume" class="text-sm font-medium text-gray-700"></p>
-                            </div>
-
-                            <div class="rounded-lg border border-dashed border-gray-300 bg-gray-50/50 px-4 py-2.5">
-                                <p class="text-[10px] font-semibold uppercase tracking-widest text-gray-400 mb-0.5">ISBN</p>
-                                <p id="vm-isbn" class="text-sm font-medium text-gray-700 font-mono tracking-wider"></p>
-                            </div>
-
-                            <div class="rounded-lg border border-dashed border-gray-300 bg-gray-50/50 px-4 py-2.5">
-                                <p class="text-[10px] font-semibold uppercase tracking-widest text-gray-400 mb-0.5">Pages</p>
-                                <p id="vm-pages" class="text-sm font-medium text-gray-700"></p>
-                            </div>
-
-                        </div>
-
-                        {{-- Subjects --}}
-                        <div class="rounded-lg border border-dashed border-gray-300 bg-gray-50/50 px-4 py-3">
-                            <p class="text-[10px] font-semibold uppercase tracking-widest text-gray-400 mb-1">Subjects / Grade Levels</p>
-                            <p id="vm-subjects" class="text-sm text-gray-600 leading-relaxed"></p>
-                        </div>
-
-                    </div>
-
                     </div>
                 </div>
 
@@ -635,7 +621,6 @@
                         Close
                     </button>
                 </div>
-
             </div>
         </div>
     </div>
@@ -1220,7 +1205,7 @@
             const tab = document.getElementById(tabId);
             if (!tab) return;
             tab.querySelectorAll('a[href*="masterlist"]').forEach(link => {
-                if (link.href.includes('/edit')) return; // let edit links navigate normally
+                if (link.href.includes('/edit')) return;
                 if (link.dataset.ajaxBound) return;
                 link.dataset.ajaxBound = '1';
                 link.addEventListener('click', function (e) {
@@ -1324,7 +1309,7 @@
     })();
 
 })();
-</script>>
+</script>
 
 @vite(['resources/js/add-print-resource.js'])
 
