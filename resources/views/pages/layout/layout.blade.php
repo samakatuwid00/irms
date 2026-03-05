@@ -17,6 +17,9 @@
     @vite(['resources/js/charts/bosy.js'])
     @vite(['resources/css/bosy/bosy.css'])
 
+    <!-- htmx -->
+    @vite(['resources/js/htmx.js'])
+
     <!-- CSRF Token for forms -->
     <meta name="csrf-token" content="{{ csrf_token() }}">
 

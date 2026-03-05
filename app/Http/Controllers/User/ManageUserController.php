@@ -20,32 +20,58 @@ class ManageUserController extends BaseController
         $this->middleware('auth');
     }
 
-    public function index(Request $request)
-    {
-        $authUser = Auth::user();
+public function index(Request $request)
+{
+    $authUser = Auth::user();
+    $filters  = $this->extractFilters($request);
+    $users    = $this->userManagementService->getHierarchicalUsers($authUser, $filters);
 
-        $filters = $this->extractFilters($request);
+    // HTMX partial request — return only the table fragment
+    if ($request->header('HX-Request')) {
+        $activeTab = $request->input('active_tab', 'division');
 
-        $users = $this->userManagementService->getHierarchicalUsers($authUser, $filters);
+        $tableUsers = match($activeTab) {
+            'district' => $users['subUsers'],
+            'school'   => $users['subSubUsers'],
+            default    => $users['mainUsers'],
+        };
 
-        return view('pages.users', [
-            'user' => $authUser,
-            'mainUsers' => $users['mainUsers'],
-            'subUsers' => $users['subUsers'],
-            'subSubUsers' => $users['subSubUsers'],
+        $emptyMessages = [
+            'division' => 'No division users found.',
+            'district' => 'No district users found under this division.',
+            'school'   => 'No school users found.',
+        ];
+
+        return view('pages.partials.users-table', [
+            'users'        => $tableUsers,
+            'emptyMessage' => $emptyMessages[$activeTab] ?? 'No users found.',
         ]);
     }
 
-    public function updateStatus(Request $request, User $user)
-    {
-        $validated = $request->validate([
-            'status' => 'required|in:active,pending,deactivated'
-        ]);
+    // Full page load
+    return view('pages.users', [
+        'user'        => $authUser,
+        'mainUsers'   => $users['mainUsers'],
+        'subUsers'    => $users['subUsers'],
+        'subSubUsers' => $users['subSubUsers'],
+    ]);
+}
 
-        $this->userManagementService->updateUserStatus($user, $validated['status']);
+public function updateStatus(Request $request, User $user)
+{
+    $validated = $request->validate([
+        'status' => 'required|in:active,pending,deactivated'
+    ]);
 
-        return redirect()->back()->with('success', "User status updated to {$validated['status']}.");
+    $this->userManagementService->updateUserStatus($user, $validated['status']);
+
+    // HTMX — return updated row HTML
+    if ($request->header('HX-Request')) {
+        return view('pages.partials.user-row', ['user' => $user->fresh()]);
     }
+
+    return redirect()->back()->with('success', "User status updated to {$validated['status']}.");
+}
 
     private function extractFilters(Request $request): array
     {
