@@ -438,6 +438,7 @@
                             <th class="px-3 py-3 text-left">Publisher</th>
                             <th class="px-3 py-3 text-left">Edition</th>
                             <th class="px-3 py-3 text-left">Copyright</th>
+                            <th class="px-3 py-3 text-left">ISBN</th>
                             <th class="px-3 py-3 text-left">Subjects / Grade Levels</th>
                             <th class="px-3 py-3 text-center">Date Submitted</th>
                             <th class="px-3 py-3 text-center">Actions</th>
@@ -468,6 +469,7 @@
                                 <td class="px-3 py-2 text-gray-600">{{ $req->publisher ?? '-' }}</td>
                                 <td class="px-3 py-2 text-gray-600">{{ $req->edition ?? '-' }}</td>
                                 <td class="px-3 py-2 text-gray-600">{{ $req->copyright ?? '-' }}</td>
+                                <td class="px-3 py-2 text-gray-600">{{ $req->isbn ?? '-' }}</td>
                                 <td class="px-3 py-2 text-gray-600 text-xs max-w-50">
                                     <span title="{{ $reqSglText }}">{{ Str::limit($reqSglText, 55) }}</span>
                                 </td>
