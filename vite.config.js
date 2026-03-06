@@ -24,6 +24,7 @@ export default defineConfig({
                 'resources/js/view-nonprint-modal.js',
                 'resources/js/register.js',
                 'resources/js/login.js',
+                'resources/js/htmx.js',
             ],
             refresh: true,
         }),
