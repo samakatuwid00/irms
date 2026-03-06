@@ -26,29 +26,21 @@ public function index(Request $request)
     $filters  = $this->extractFilters($request);
     $users    = $this->userManagementService->getHierarchicalUsers($authUser, $filters);
 
-    // HTMX partial request — return only the table fragment
     if ($request->header('HX-Request')) {
-        $activeTab = $request->input('active_tab', 'division');
+        $activeTab = $request->input('active_tab', 'main');
 
-        $tableUsers = match($activeTab) {
-            'district' => $users['subUsers'],
-            'school'   => $users['subSubUsers'],
-            default    => $users['mainUsers'],
+        [$tableUsers, $emptyMessage] = match($activeTab) {
+            'sub'    => [$users['subUsers'],    'No users found.'],
+            'subsub' => [$users['subSubUsers'], 'No users found.'],
+            default  => [$users['mainUsers'],   'No users found.'],
         };
-
-        $emptyMessages = [
-            'division' => 'No division users found.',
-            'district' => 'No district users found under this division.',
-            'school'   => 'No school users found.',
-        ];
 
         return view('pages.partials.users-table', [
             'users'        => $tableUsers,
-            'emptyMessage' => $emptyMessages[$activeTab] ?? 'No users found.',
+            'emptyMessage' => $emptyMessage,
         ]);
     }
 
-    // Full page load
     return view('pages.users', [
         'user'        => $authUser,
         'mainUsers'   => $users['mainUsers'],
@@ -56,7 +48,6 @@ public function index(Request $request)
         'subSubUsers' => $users['subSubUsers'],
     ]);
 }
-
 public function updateStatus(Request $request, User $user)
 {
     $validated = $request->validate([

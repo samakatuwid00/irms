@@ -3,50 +3,43 @@
         <h1 class="text-2xl font-bold text-gray-800">Manage Users</h1>
     </div>
 
-    <!-- Tab Navigation -->
     <div class="border-b border-gray-200">
         <nav class="-mb-px flex space-x-8">
-            <button
-                onclick="switchTab('division')"
-                id="tab-division"
+            <button onclick="switchTab('main')" id="tab-main"
                 class="tab-button border-b-2 border-blue-600 text-blue-600 py-4 px-1 text-sm font-medium">
                 Division Users
             </button>
-            <button
-                onclick="switchTab('district')"
-                id="tab-district"
+            <button onclick="switchTab('sub')" id="tab-sub"
                 class="tab-button border-b-2 border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 py-4 px-1 text-sm font-medium">
                 District Users
             </button>
-            <button
-                onclick="switchTab('school')"
-                id="tab-school"
+            <button onclick="switchTab('subsub')" id="tab-subsub"
                 class="tab-button border-b-2 border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 py-4 px-1 text-sm font-medium">
                 School Users
             </button>
         </nav>
     </div>
 
-    <!-- DIVISION TAB -->
-    <div id="content-division" class="tab-content">
+    <!-- MAIN TAB: Division Users -->
+    <div id="content-main" class="tab-content">
         <div class="bg-white rounded-xl shadow p-4">
             <h2 class="text-lg font-semibold mb-4">Division Users</h2>
             <form
                 hx-get="{{ route('users') }}"
-                hx-target="#division-table-container"
+                hx-target="#main-table-container"
                 hx-swap="innerHTML"
                 hx-push-url="true"
-                hx-indicator="#division-spinner"
+                hx-indicator="#main-spinner"
                 class="grid grid-cols-1 md:grid-cols-4 gap-4 items-end mb-4"
             >
-                <input type="hidden" name="active_tab" value="division">
+                <input type="hidden" name="active_tab" value="main">
                 <div class="md:col-span-2">
                     <label class="text-xs text-gray-500">Search Division Users</label>
                     <input type="text" name="search_main" value="{{ request('search_main') }}"
                         placeholder="Search by name, username, or email..."
                         class="w-full pl-3 pr-3 py-2 border rounded-lg text-sm"
                         hx-get="{{ route('users') }}"
-                        hx-target="#division-table-container"
+                        hx-target="#main-table-container"
                         hx-swap="innerHTML"
                         hx-trigger="keyup changed delay:400ms"
                         hx-include="closest form"
@@ -57,7 +50,7 @@
                     <select name="usertype_main"
                         class="w-full mt-1 px-3 py-2 border rounded-lg text-sm"
                         hx-get="{{ route('users') }}"
-                        hx-target="#division-table-container"
+                        hx-target="#main-table-container"
                         hx-swap="innerHTML"
                         hx-trigger="change"
                         hx-include="closest form"
@@ -75,7 +68,7 @@
                     <select name="status_main"
                         class="w-full mt-1 px-3 py-2 border rounded-lg text-sm"
                         hx-get="{{ route('users') }}"
-                        hx-target="#division-table-container"
+                        hx-target="#main-table-container"
                         hx-swap="innerHTML"
                         hx-trigger="change"
                         hx-include="closest form"
@@ -87,9 +80,9 @@
                     </select>
                 </div>
                 <div class="md:col-span-4 flex justify-end gap-2">
-                    <a href="{{ route('users') }}?active_tab=division"
-                        hx-get="{{ route('users') }}?active_tab=division"
-                        hx-target="#division-table-container"
+                    <a href="{{ route('users') }}?active_tab=main"
+                        hx-get="{{ route('users') }}?active_tab=main"
+                        hx-target="#main-table-container"
                         hx-swap="innerHTML"
                         hx-push-url="true"
                         class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 text-sm">Reset</a>
@@ -97,41 +90,44 @@
                 </div>
             </form>
 
-            <!-- Loading spinner -->
-            <div id="division-spinner" class="htmx-indicator flex justify-center py-4">
+            <div id="main-spinner" class="htmx-indicator flex justify-center py-4">
                 <svg class="animate-spin h-5 w-5 text-blue-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                     <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
                     <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"></path>
                 </svg>
             </div>
 
-            <!-- Table target -->
-            <div id="division-table-container">
-                @include('pages.partials.users-table', ['users' => $mainUsers, 'pageName' => 'main_page', 'emptyMessage' => 'No division users found.'])
+            <div id="main-table-container">
+                @include('pages.partials.users-table', [
+                    'users' => $mainUsers,
+                    'pageName' => 'main_page',
+                    'emptyMessage' => 'No division users found.',
+                    'activeTab' => 'main'
+                ])
             </div>
         </div>
     </div>
 
-    <!-- DISTRICT TAB -->
-    <div id="content-district" class="tab-content hidden">
+    <!-- SUB TAB: District Users -->
+    <div id="content-sub" class="tab-content hidden">
         <div class="bg-white rounded-xl shadow p-4">
             <h2 class="text-lg font-semibold mb-4">District Users</h2>
             <form
                 hx-get="{{ route('users') }}"
-                hx-target="#district-table-container"
+                hx-target="#sub-table-container"
                 hx-swap="innerHTML"
                 hx-push-url="true"
-                hx-indicator="#district-spinner"
+                hx-indicator="#sub-spinner"
                 class="grid grid-cols-1 md:grid-cols-4 gap-4 items-end mb-4"
             >
-                <input type="hidden" name="active_tab" value="district">
+                <input type="hidden" name="active_tab" value="sub">
                 <div class="md:col-span-2">
                     <label class="text-xs text-gray-500">Search District Users</label>
                     <input type="text" name="search_sub" value="{{ request('search_sub') }}"
                         placeholder="Search by name, username, or email..."
                         class="w-full pl-3 pr-3 py-2 border rounded-lg text-sm"
                         hx-get="{{ route('users') }}"
-                        hx-target="#district-table-container"
+                        hx-target="#sub-table-container"
                         hx-swap="innerHTML"
                         hx-trigger="keyup changed delay:400ms"
                         hx-include="closest form"
@@ -142,7 +138,7 @@
                     <select name="usertype_sub"
                         class="w-full mt-1 px-3 py-2 border rounded-lg text-sm"
                         hx-get="{{ route('users') }}"
-                        hx-target="#district-table-container"
+                        hx-target="#sub-table-container"
                         hx-swap="innerHTML"
                         hx-trigger="change"
                         hx-include="closest form"
@@ -160,7 +156,7 @@
                     <select name="status_sub"
                         class="w-full mt-1 px-3 py-2 border rounded-lg text-sm"
                         hx-get="{{ route('users') }}"
-                        hx-target="#district-table-container"
+                        hx-target="#sub-table-container"
                         hx-swap="innerHTML"
                         hx-trigger="change"
                         hx-include="closest form"
@@ -172,9 +168,9 @@
                     </select>
                 </div>
                 <div class="md:col-span-4 flex justify-end gap-2">
-                    <a href="{{ route('users') }}?active_tab=district"
-                        hx-get="{{ route('users') }}?active_tab=district"
-                        hx-target="#district-table-container"
+                    <a href="{{ route('users') }}?active_tab=sub"
+                        hx-get="{{ route('users') }}?active_tab=sub"
+                        hx-target="#sub-table-container"
                         hx-swap="innerHTML"
                         hx-push-url="true"
                         class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 text-sm">Reset</a>
@@ -182,39 +178,44 @@
                 </div>
             </form>
 
-            <div id="district-spinner" class="htmx-indicator flex justify-center py-4">
+            <div id="sub-spinner" class="htmx-indicator flex justify-center py-4">
                 <svg class="animate-spin h-5 w-5 text-blue-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                     <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
                     <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"></path>
                 </svg>
             </div>
 
-            <div id="district-table-container">
-                @include('pages.partials.users-table', ['users' => $subUsers, 'pageName' => 'sub_page', 'emptyMessage' => 'No district users found under this division.'])
+            <div id="sub-table-container">
+                @include('pages.partials.users-table', [
+                    'users' => $subUsers,
+                    'pageName' => 'sub_page',
+                    'emptyMessage' => 'No district users found under this division.',
+                    'activeTab' => 'sub'
+                ])
             </div>
         </div>
     </div>
 
-    <!-- SCHOOL TAB -->
-    <div id="content-school" class="tab-content hidden">
+    <!-- SUBSUB TAB: School Users -->
+    <div id="content-subsub" class="tab-content hidden">
         <div class="bg-white rounded-xl shadow p-4">
             <h2 class="text-lg font-semibold mb-4">School Users</h2>
             <form
                 hx-get="{{ route('users') }}"
-                hx-target="#school-table-container"
+                hx-target="#subsub-table-container"
                 hx-swap="innerHTML"
                 hx-push-url="true"
-                hx-indicator="#school-spinner"
+                hx-indicator="#subsub-spinner"
                 class="grid grid-cols-1 md:grid-cols-4 gap-4 items-end mb-4"
             >
-                <input type="hidden" name="active_tab" value="school">
+                <input type="hidden" name="active_tab" value="subsub">
                 <div class="md:col-span-2">
                     <label class="text-xs text-gray-500">Search School Users</label>
                     <input type="text" name="search_subsub" value="{{ request('search_subsub') }}"
                         placeholder="Search by name, username, or email..."
                         class="w-full pl-3 pr-3 py-2 border rounded-lg text-sm"
                         hx-get="{{ route('users') }}"
-                        hx-target="#school-table-container"
+                        hx-target="#subsub-table-container"
                         hx-swap="innerHTML"
                         hx-trigger="keyup changed delay:400ms"
                         hx-include="closest form"
@@ -225,7 +226,7 @@
                     <select name="usertype_subsub"
                         class="w-full mt-1 px-3 py-2 border rounded-lg text-sm"
                         hx-get="{{ route('users') }}"
-                        hx-target="#school-table-container"
+                        hx-target="#subsub-table-container"
                         hx-swap="innerHTML"
                         hx-trigger="change"
                         hx-include="closest form"
@@ -243,7 +244,7 @@
                     <select name="status_subsub"
                         class="w-full mt-1 px-3 py-2 border rounded-lg text-sm"
                         hx-get="{{ route('users') }}"
-                        hx-target="#school-table-container"
+                        hx-target="#subsub-table-container"
                         hx-swap="innerHTML"
                         hx-trigger="change"
                         hx-include="closest form"
@@ -255,9 +256,9 @@
                     </select>
                 </div>
                 <div class="md:col-span-4 flex justify-end gap-2">
-                    <a href="{{ route('users') }}?active_tab=school"
-                        hx-get="{{ route('users') }}?active_tab=school"
-                        hx-target="#school-table-container"
+                    <a href="{{ route('users') }}?active_tab=subsub"
+                        hx-get="{{ route('users') }}?active_tab=subsub"
+                        hx-target="#subsub-table-container"
                         hx-swap="innerHTML"
                         hx-push-url="true"
                         class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 text-sm">Reset</a>
@@ -265,15 +266,20 @@
                 </div>
             </form>
 
-            <div id="school-spinner" class="htmx-indicator flex justify-center py-4">
+            <div id="subsub-spinner" class="htmx-indicator flex justify-center py-4">
                 <svg class="animate-spin h-5 w-5 text-blue-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                     <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
                     <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"></path>
                 </svg>
             </div>
 
-            <div id="school-table-container">
-                @include('pages.partials.users-table', ['users' => $subSubUsers, 'pageName' => 'subsub_page', 'emptyMessage' => 'No school users found.'])
+            <div id="subsub-table-container">
+                @include('pages.partials.users-table', [
+                    'users' => $subSubUsers,
+                    'pageName' => 'subsub_page',
+                    'emptyMessage' => 'No school users found.',
+                    'activeTab' => 'subsub'
+                ])
             </div>
         </div>
     </div>
@@ -282,41 +288,33 @@
 
 <script>
     function switchTab(tab) {
-        // Hide all tab contents
         document.querySelectorAll('.tab-content').forEach(content => {
             content.classList.add('hidden');
         });
-
-        // Remove active styles from all tabs
         document.querySelectorAll('.tab-button').forEach(button => {
             button.classList.remove('border-blue-600', 'text-blue-600');
             button.classList.add('border-transparent', 'text-gray-500');
         });
 
-        // Show selected tab content
         document.getElementById('content-' + tab).classList.remove('hidden');
 
-        // Add active styles to selected tab
         const activeTab = document.getElementById('tab-' + tab);
         activeTab.classList.add('border-blue-600', 'text-blue-600');
         activeTab.classList.remove('border-transparent', 'text-gray-500');
 
-        // Update URL with active tab parameter without page reload
         const url = new URL(window.location);
         url.searchParams.set('active_tab', tab);
         window.history.pushState({}, '', url);
     }
 
-    // On page load, check if there's an active tab parameter
     document.addEventListener('DOMContentLoaded', function() {
         const urlParams = new URLSearchParams(window.location.search);
         const activeTab = urlParams.get('active_tab');
 
-        if (activeTab && ['division', 'district', 'school'].includes(activeTab)) {
+        if (activeTab && ['main', 'sub', 'subsub'].includes(activeTab)) {
             switchTab(activeTab);
         } else {
-            // Default to division tab if no parameter
-            switchTab('division');
+            switchTab('main');
         }
     });
 </script>

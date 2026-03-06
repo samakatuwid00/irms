@@ -1,5 +1,5 @@
 {{-- resources/views/pages/partials/users-table.blade.php --}}
-{{-- Variables: $users (paginator), $emptyMessage (string) --}}
+{{-- Variables: $users (paginator), $emptyMessage (string), $activeTab (string) --}}
 
 <div class="overflow-x-auto bg-white rounded-xl shadow">
     <table class="w-full text-sm text-left">
@@ -43,21 +43,43 @@
     </table>
 </div>
 
-{{-- Pagination — intercept links with HTMX via JS --}}
-<div class="flex justify-end mt-4 htmx-pagination">
+{{-- Pagination --}}
+<div class="flex justify-end mt-4 htmx-pagination" data-active-tab="{{ $activeTab ?? request('active_tab', 'main') }}">
     {{ $users->links() }}
 </div>
 
 <script>
-    // Intercept Laravel pagination links and fire them via HTMX
-    document.querySelectorAll('.htmx-pagination a').forEach(link => {
-        link.addEventListener('click', function (e) {
-            e.preventDefault();
-            const url = this.href;
-            const container = this.closest('[id$="-table-container"]');
-            if (container) {
-                htmx.ajax('GET', url, { target: '#' + container.id, swap: 'innerHTML', pushURL: true });
-            }
+    (function () {
+        const paginationDivs = document.querySelectorAll('.htmx-pagination');
+        const paginationDiv = paginationDivs[paginationDivs.length - 1];
+        const activeTab = paginationDiv.dataset.activeTab;
+
+        // Map tab name to its table container ID
+        const containerMap = {
+            'main':     'main-table-container',
+            'sub':      'sub-table-container',
+            'subsub':   'subsub-table-container',
+            'region':   'region-table-container',
+            'division': 'division-table-container',
+        };
+
+        const containerId = containerMap[activeTab];
+
+        paginationDiv.querySelectorAll('a').forEach(link => {
+            link.addEventListener('click', function (e) {
+                e.preventDefault();
+
+                const url = new URL(this.href);
+                url.searchParams.set('active_tab', activeTab);
+
+                if (containerId) {
+                    htmx.ajax('GET', url.toString(), {
+                        target: '#' + containerId,
+                        swap: 'innerHTML',
+                        pushURL: true
+                    });
+                }
+            });
         });
-    });
+    })();
 </script>
