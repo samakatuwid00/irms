@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Facades\Storage;
 
 class NonprintResource extends Model
 {
@@ -71,6 +72,25 @@ class NonprintResource extends Model
         return SubjectGradeLevel::with(['subject', 'gradeLevel'])
             ->whereIn('id', $ids)
             ->get();
+    }
+
+    /**
+     * Thumbnail URL for table row <img> tags.
+     * Falls back: thumbnail → full cover → default placeholder.
+     */
+    public function getThumbUrlAttribute(): string
+    {
+        if ($this->cover) {
+            $thumbPath = preg_replace('#^nonprint_cover/#', 'nonprint-thumbnails/', $this->cover);
+
+            if ($thumbPath !== $this->cover && Storage::disk('public')->exists($thumbPath)) {
+                return asset('storage/' . $thumbPath);
+            }
+
+            return asset('storage/' . $this->cover);
+        }
+
+        return asset('assets/images/def.jpg');
     }
 
     public function showDetails(): array

@@ -5,16 +5,14 @@
     <!--  SEARCH  -->
     <div class="flex gap-2">
         <div class="relative flex-1">
-            <input type="text"
-                name="search"
+            <input type="text" name="search"
                 placeholder="Search School Library... Search by Title, Author, ISBN, Publisher, Grade, Subject..."
-                value="{{ request('search') }}"
-                class="w-full pl-10 py-2 border rounded-lg text-sm">
+                value="{{ request('search') }}" class="w-full pl-10 py-2 border rounded-lg text-sm">
             <svg class="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-gray-400"
-                xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor"
-                stroke-width="2" viewBox="0 0 24 24">
-                <circle cx="11" cy="11" r="8"/>
-                <path d="m21 21-4.3-4.3"/>
+                xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-width="2"
+                viewBox="0 0 24 24">
+                <circle cx="11" cy="11" r="8" />
+                <path d="m21 21-4.3-4.3" />
             </svg>
         </div>
 
@@ -30,9 +28,8 @@
             <option value="all" {{ request('division') === 'all' ? 'selected' : '' }}>
                 All Divisions
             </option>
-            @foreach($divisions as $div)
-                <option value="{{ $div->id }}"
-                        {{ request('division') == $div->id ? 'selected' : '' }}>
+            @foreach ($divisions as $div)
+                <option value="{{ $div->id }}" {{ request('division') == $div->id ? 'selected' : '' }}>
                     {{ $div->division_name }}
                 </option>
             @endforeach
@@ -42,10 +39,9 @@
             <option value="all" {{ request('district') === 'all' ? 'selected' : '' }}>
                 All Districts
             </option>
-            @if(request('division') && request('division') !== 'all')
-                @foreach($districts as $d)
-                    <option value="{{ $d->id }}"
-                            {{ request('district') == $d->id ? 'selected' : '' }}>
+            @if (request('division') && request('division') !== 'all')
+                @foreach ($districts as $d)
+                    <option value="{{ $d->id }}" {{ request('district') == $d->id ? 'selected' : '' }}>
                         {{ $d->district_name }}
                     </option>
                 @endforeach
@@ -56,10 +52,9 @@
             <option value="all" {{ request('school') === 'all' ? 'selected' : '' }}>
                 All Schools
             </option>
-            @if(request('district') && request('district') !== 'all')
-                @foreach($schools as $s)
-                    <option value="{{ $s->id }}"
-                            {{ request('school') == $s->id ? 'selected' : '' }}>
+            @if (request('district') && request('district') !== 'all')
+                @foreach ($schools as $s)
+                    <option value="{{ $s->id }}" {{ request('school') == $s->id ? 'selected' : '' }}>
                         {{ $s->school_name }}
                     </option>
                 @endforeach
@@ -72,9 +67,8 @@
                 Load Data
             </button>
 
-            <button type="button"
-                    id="resetFilters"
-                    class="h-10 w-32 bg-gray-200 hover:bg-gray-300 text-sm text-gray-800 rounded-lg">
+            <button type="button" id="resetFilters"
+                class="h-10 w-32 bg-gray-200 hover:bg-gray-300 text-sm text-gray-800 rounded-lg">
                 Reset
             </button>
         </div>
@@ -82,13 +76,14 @@
 </form>
 
 <div id="table-results-container">
-    @if(request()->has('division') || request()->has('district') || request()->has('school'))
+    @if (request()->has('division') || request()->has('district') || request()->has('school'))
         <!-- Export Button -->
         <div class="export-btn-wrapper flex justify-end mt-4">
             <a href="{{ route('print-resources.export', request()->query()) }}"
-               class="inline-flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors">
+                class="inline-flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                 </svg>
                 Export to Excel
             </a>
@@ -121,29 +116,25 @@
                             @endphp
                             <tr class="hover:bg-gray-50 border border-gray-300">
                                 <td class="px-2 py-3">
-                                    @if($item->cover)
-                                        <img src="{{ asset('storage/' . $item->cover) }}"
-                                             alt="{{ $item->printTitle->title }}"
-                                             class="w-12 h-16 object-cover rounded shadow">
-                                    @else
-                                        <div class="w-12 h-16 bg-gray-200 rounded flex items-center justify-center text-gray-400 text-xs">No Cover</div>
-                                    @endif
+                                    <img src="{{ $item->thumb_url }}" alt="{{ $item->printTitle->title }}"
+                                        class="w-12 h-16 object-cover rounded shadow" loading="lazy">
                                 </td>
-                                <td class="px-2 py-3 font-medium text-gray-800 max-w-xs">{{ $item->printTitle->title }}</td>
+                                <td class="px-2 py-3 font-medium text-gray-800 max-w-xs">{{ $item->printTitle->title }}
+                                </td>
                                 <td class="px-2 py-3 text-gray-600">{{ $authors }}</td>
                                 <td class="px-2 py-3 text-gray-600">{{ $item->publisher }}</td>
                                 <td class="px-2 py-3">
-                                    <span class="px-2 py-1 text-xs rounded-full bg-blue-100 text-blue-700">{{ $item->type->shortname }}</span>
+                                    <span
+                                        class="px-2 py-1 text-xs rounded-full bg-blue-100 text-blue-700">{{ $item->type->shortname }}</span>
                                 </td>
                                 <td class="px-2 py-3 text-xs">
-                                    @if($item->subjects()->count())
+                                    @if ($item->subjects()->count())
                                         @php
                                             $first = $item->subjects()->first();
                                             $count = $item->subjects()->count();
                                         @endphp
                                         <div class="relative inline-block max-w-full"
-                                            @if($count > 1)
-                                            x-data
+                                            @if ($count > 1) x-data
                                             @mouseenter="
                                                 let trigger = $el;
                                                 let tooltip = $el.querySelector('[data-tooltip]');
@@ -157,25 +148,25 @@
                                                 let tooltip = $el.querySelector('[data-tooltip]');
                                                 tooltip.classList.add('invisible', 'opacity-0');
                                                 tooltip.classList.remove('visible', 'opacity-100');
-                                            "
-                                            @endif
-                                        >
-                                            <span class="inline-block bg-blue-100 text-blue-800 font-medium px-2 py-1 rounded-full cursor-default">
+                                            " @endif>
+                                            <span
+                                                class="inline-block bg-blue-100 text-blue-800 font-medium px-2 py-1 rounded-full cursor-default">
                                                 {{ $first->subject->subject_name }} - {{ $first->gradeLevel->grade }}
-                                                @if($count > 1)
+                                                @if ($count > 1)
                                                     <span class="ml-1 text-green-600">+{{ $count - 1 }}</span>
                                                 @endif
                                             </span>
 
-                                            @if($count > 1)
+                                            @if ($count > 1)
                                                 <div data-tooltip
                                                     class="pointer-events-none fixed z-[100] invisible opacity-0
                                                             bg-gray-800 text-white text-xs rounded-md py-2 px-3 shadow-xl
                                                             min-w-[220px] max-w-sm whitespace-normal break-words
                                                             transition-opacity duration-150 border border-gray-700">
-                                                    @foreach($item->subjects() as $sub)
+                                                    @foreach ($item->subjects() as $sub)
                                                         <div class="py-1 border-b border-gray-700 last:border-0">
-                                                            {{ $sub->subject->subject_name }} — {{ $sub->gradeLevel->grade }}
+                                                            {{ $sub->subject->subject_name }} —
+                                                            {{ $sub->gradeLevel->grade }}
                                                         </div>
                                                     @endforeach
                                                 </div>
@@ -188,26 +179,35 @@
                                 <td class="px-2 py-3 text-gray-600 font-mono text-xs">{{ $item->isbn }}</td>
                                 <td class="px-2 py-3 text-center">{{ $item->copyright }}</td>
                                 <td class="px-2 py-3 text-gray-700">
-                                    <span class="text-xs font-medium text-blue-600">{{ $item->library_name ?? 'N/A' }}</span>
+                                    <span
+                                        class="text-xs font-medium text-blue-600">{{ $item->library_name ?? 'N/A' }}</span>
                                 </td>
                                 <td class="px-2 py-3 text-center text-xs">
                                     <div class="space-y-1">
                                         <div class="flex justify-center gap-3 text-gray-700">
-                                            <span title="Usable"><strong class="text-green-600">{{ $qty['usable'] }}</strong> Usable</span>
-                                            <span title="Partially Damaged"><strong class="text-yellow-600">{{ $qty['partially_damaged'] }}</strong> PD</span>
+                                            <span title="Usable"><strong
+                                                    class="text-green-600">{{ $qty['usable'] }}</strong> Usable</span>
+                                            <span title="Partially Damaged"><strong
+                                                    class="text-yellow-600">{{ $qty['partially_damaged'] }}</strong>
+                                                PD</span>
                                         </div>
                                         <div class="flex justify-center gap-3 text-gray-600">
-                                            <span title="Damaged"><strong class="text-red-600">{{ $qty['damaged'] }}</strong> Damaged</span>
-                                            <span title="Lost"><strong class="text-purple-600">{{ $qty['lost'] }}</strong> Lost</span>
-                                            <span title="Condemnable"><strong class="text-gray-800">{{ $qty['condemnable'] }}</strong> Cond.</span>
+                                            <span title="Damaged"><strong
+                                                    class="text-red-600">{{ $qty['damaged'] }}</strong> Damaged</span>
+                                            <span title="Lost"><strong
+                                                    class="text-purple-600">{{ $qty['lost'] }}</strong> Lost</span>
+                                            <span title="Condemnable"><strong
+                                                    class="text-gray-800">{{ $qty['condemnable'] }}</strong>
+                                                Cond.</span>
                                         </div>
-                                        <div class="font-semibold text-gray-800 border-t pt-1">Total: {{ $total }}</div>
+                                        <div class="font-semibold text-gray-800 border-t pt-1">Total:
+                                            {{ $total }}</div>
                                     </div>
                                 </td>
                                 <td class="px-4 py-3">
                                     <div class="flex justify-center gap-2">
                                         <button onclick='openPrintModal(@json($item->showDetails()))'
-                                                class="px-3 py-1 text-xs rounded-lg bg-blue-100 text-blue-600 hover:bg-blue-200">
+                                            class="px-3 py-1 text-xs rounded-lg bg-blue-100 text-blue-600 hover:bg-blue-200">
                                             View
                                         </button>
                                     </div>
@@ -222,7 +222,7 @@
                 </table>
             </div>
 
-            @if($filteredResources instanceof \Illuminate\Pagination\LengthAwarePaginator)
+            @if ($filteredResources instanceof \Illuminate\Pagination\LengthAwarePaginator)
                 <div class="p-4">
                     {{ $filteredResources->appends(request()->query())->links() }}
                 </div>

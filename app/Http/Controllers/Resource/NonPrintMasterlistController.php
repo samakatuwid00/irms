@@ -144,9 +144,16 @@ class NonPrintMasterlistController extends BaseController
             ->where('approver_station', $user->station_id)
             ->firstOrFail();
 
-        // Delete the cover file before the DB row — otherwise it's orphaned on disk
-        if ($resource->cover && Storage::disk('public')->exists($resource->cover)) {
-            Storage::disk('public')->delete($resource->cover);
+        // Delete the cover file + thumbnail before the DB row — otherwise they're orphaned on disk
+        if ($resource->cover) {
+            if (Storage::disk('public')->exists($resource->cover)) {
+                Storage::disk('public')->delete($resource->cover);
+            }
+
+            $thumbPath = $this->nonPrintResourceService->thumbnailPathFromCover($resource->cover);
+            if ($thumbPath && Storage::disk('public')->exists($thumbPath)) {
+                Storage::disk('public')->delete($thumbPath);
+            }
         }
 
         // Only delete the resource — intentionally leaving the title intact because
@@ -241,6 +248,9 @@ class NonPrintMasterlistController extends BaseController
         // Named paginator 'ml_page' avoids colliding with 'rq_page' on the same page
         $masterlist = $masterlistQuery->orderByDesc('created_at')->paginate(15, ['*'], 'ml_page');
 
+        // Append thumb_url + cover_url to every masterlist row
+        $this->resolveCoverUrls($masterlist);
+
         // Region users don't have a pending queue, so $requests stays null
         $requests = null;
         if ($level === 3) {
@@ -257,17 +267,49 @@ class NonPrintMasterlistController extends BaseController
             }
 
             $requests = $requestsQuery->orderByDesc('created_at')->paginate(15, ['*'], 'rq_page');
+
+            // Append thumb_url + cover_url to every request row
+            $this->resolveCoverUrls($requests);
         }
 
         return [$masterlist, $requests];
     }
 
+    // Appends two computed URL properties onto every item in a paginator — no extra queries.
+    //   thumb_url → ≤20 KB thumbnail for table row <img> tags
+    //   cover_url → full-size image for the view modal data-cover attribute
+    // Falls back gracefully: thumbnail → full cover → default placeholder
+    private function resolveCoverUrls($paginator): void
+    {
+        $disk = Storage::disk('public');
+
+        $paginator->through(function ($row) use ($disk) {
+            $thumbPath = $this->nonPrintResourceService->thumbnailPathFromCover($row->cover);
+
+            $row->thumb_url = ($thumbPath && $disk->exists($thumbPath))
+                ? asset('storage/' . $thumbPath)
+                : ($row->cover ? asset('storage/' . $row->cover) : asset('assets/images/def.jpg'));
+
+            $row->cover_url = $row->cover
+                ? asset('storage/' . $row->cover)
+                : asset('assets/images/def.jpg');
+
+            return $row;
+        });
+    }
+
     // Shared JSON shape for both search() and requestSearch()
     private function formatResource(NonprintResource $r): array
     {
+        $thumbPath = $this->nonPrintResourceService->thumbnailPathFromCover($r->cover);
+        $thumbUrl  = ($thumbPath && Storage::disk('public')->exists($thumbPath))
+            ? asset('storage/' . $thumbPath)
+            : ($r->cover ? asset('storage/' . $r->cover) : asset('assets/images/def.jpg'));
+
         return [
             'id'        => $r->id,
             'cover'     => $r->cover ? asset('storage/' . $r->cover) : asset('assets/images/def.jpg'),
+            'thumb'     => $thumbUrl,
             'title'     => $r->nonprintTitle->title ?? '-',
             'type'      => $r->type->type_name ?? '-',
             'brand'     => $r->brand ?? '-',

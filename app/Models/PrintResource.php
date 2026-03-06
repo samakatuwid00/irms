@@ -5,10 +5,12 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Facades\Storage;
 
 class PrintResource extends Model
 {
     public $incrementing = false;
+
     protected $keyType = 'string';
 
     protected $casts = [
@@ -36,9 +38,8 @@ class PrintResource extends Model
         'station_type',
         'station_id',
         'encoded_by',
-        'approver_station'
+        'approver_station',
     ];
-
 
     // Relationship to PrintTitle
     public function printTitle(): BelongsTo
@@ -62,6 +63,7 @@ class PrintResource extends Model
     public function getQuantitiesAttribute()
     {
         $acqs = $this->printAcquisitions;
+
         return [
             'usable' => $acqs->sum('usable'),
             'partially_damaged' => $acqs->sum('partially_damaged'),
@@ -71,17 +73,37 @@ class PrintResource extends Model
         ];
     }
 
+    /**
+     * Thumbnail URL for table row <img> tags.
+     * Falls back: thumbnail → full cover → default placeholder.
+     */
+    public function getThumbUrlAttribute(): string
+    {
+        if ($this->cover) {
+            $thumbPath = preg_replace('#^print_cover/#', 'print-thumbnails/', $this->cover);
+
+            if ($thumbPath !== $this->cover && Storage::disk('public')->exists($thumbPath)) {
+                return asset('storage/'.$thumbPath);
+            }
+
+            return asset('storage/'.$this->cover);
+        }
+
+        return asset('assets/images/def.jpg');
+    }
+
     // Fetch subject-grade levels
     public function subjects()
     {
-        if(!$this->subject_grade_level_ids) return collect();
+        if (! $this->subject_grade_level_ids) {
+            return collect();
+        }
         $ids = explode(',', $this->subject_grade_level_ids);
 
         return SubjectGradeLevel::with(['subject', 'gradeLevel'])
             ->whereIn('id', $ids)
             ->get();
     }
-
 
     public function showDetails(): array
     {
@@ -91,7 +113,7 @@ class PrintResource extends Model
             'partially_damaged' => 0,
             'damaged' => 0,
             'lost' => 0,
-            'condemnable' => 0
+            'condemnable' => 0,
         ];
 
         // Format subjects
@@ -100,7 +122,7 @@ class PrintResource extends Model
             foreach ($this->subjects() as $subjectGradeLevel) {
                 $subjects[] = [
                     'subject' => $subjectGradeLevel->subject->subject_name ?? 'N/A',
-                    'grade' => $subjectGradeLevel->gradeLevel->grade ?? 'N/A'
+                    'grade' => $subjectGradeLevel->gradeLevel->grade ?? 'N/A',
                 ];
             }
         }
@@ -126,7 +148,7 @@ class PrintResource extends Model
                                       ($acquisition->partially_damaged ?? 0) +
                                       ($acquisition->damaged ?? 0) +
                                       ($acquisition->lost ?? 0) +
-                                      ($acquisition->condemnable ?? 0)
+                                      ($acquisition->condemnable ?? 0),
                 ];
             }
         }
@@ -134,7 +156,7 @@ class PrintResource extends Model
         return [
             'id' => $this->id,
             'image' => $this->cover
-                ? asset('storage/' . $this->cover)
+                ? asset('storage/'.$this->cover)
                 : asset('assets/images/default.jpg'),
             'title' => $this->printTitle->title ?? 'N/A',
             'author' => $this->printTitle->authors->pluck('author_name')->join(', ') ?: '-',
@@ -147,7 +169,7 @@ class PrintResource extends Model
             'acquisitions' => $acquisitions,
             'quantities' => $quantities,
             'library_name' => $this->library_name ?? 'No Library Assigned',
-            'edit_url' => route('update-print-resource', $this->id)
+            'edit_url' => route('update-print-resource', $this->id),
         ];
     }
 }

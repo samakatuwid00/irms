@@ -7,716 +7,803 @@
 @section('breadcrumb', 'Masterlist')
 
 @section('content')
-<div class="p-6 space-y-6">
-    @include('pages.partials.page-header')
+    <div class="p-6 space-y-6">
+        @include('pages.partials.page-header')
 
-    {{-- ===== FLASH MESSAGES ===== --}}
-    @if(session('success'))
-        <div class="mb-4 p-4 text-green-800 bg-green-100 border border-green-200 rounded flex justify-between items-center" id="flash-success">
-            <span>{{ session('success') }}</span>
-            <button type="button" class="text-green-800 font-bold hover:text-green-900" onclick="document.getElementById('flash-success').remove()">&times;</button>
-        </div>
-    @endif
-    @if(session('error'))
-        <div class="mb-4 p-4 text-red-800 bg-red-100 border border-red-200 rounded flex justify-between items-center" id="flash-error">
-            <span>{{ session('error') }}</span>
-            <button type="button" class="text-red-800 font-bold hover:text-red-900" onclick="document.getElementById('flash-error').remove()">&times;</button>
-        </div>
-    @endif
-    @if ($errors->any())
-        <div class="mb-4 p-4 bg-red-100 border border-red-200 rounded text-red-800 flex justify-between items-start" id="flash-validation">
-            <ul class="list-disc pl-5 flex-1">
-                @foreach ($errors->all() as $error)<li>{{ $error }}</li>@endforeach
-            </ul>
-            <button type="button" class="ml-4 text-red-800 font-bold hover:text-red-900" onclick="document.getElementById('flash-validation').remove()">&times;</button>
-        </div>
-    @endif
+        {{-- ===== FLASH MESSAGES ===== --}}
+        @if (session('success'))
+            <div class="mb-4 p-4 text-green-800 bg-green-100 border border-green-200 rounded flex justify-between items-center"
+                id="flash-success">
+                <span>{{ session('success') }}</span>
+                <button type="button" class="text-green-800 font-bold hover:text-green-900"
+                    onclick="document.getElementById('flash-success').remove()">&times;</button>
+            </div>
+        @endif
+        @if (session('error'))
+            <div class="mb-4 p-4 text-red-800 bg-red-100 border border-red-200 rounded flex justify-between items-center"
+                id="flash-error">
+                <span>{{ session('error') }}</span>
+                <button type="button" class="text-red-800 font-bold hover:text-red-900"
+                    onclick="document.getElementById('flash-error').remove()">&times;</button>
+            </div>
+        @endif
+        @if ($errors->any())
+            <div class="mb-4 p-4 bg-red-100 border border-red-200 rounded text-red-800 flex justify-between items-start"
+                id="flash-validation">
+                <ul class="list-disc pl-5 flex-1">
+                    @foreach ($errors->all() as $error)
+                        <li>{{ $error }}</li>
+                    @endforeach
+                </ul>
+                <button type="button" class="ml-4 text-red-800 font-bold hover:text-red-900"
+                    onclick="document.getElementById('flash-validation').remove()">&times;</button>
+            </div>
+        @endif
 
-    @php
-        $isEditing    = isset($resource);
-        $pendingCount = ($level === 3 && $requests) ? $requests->total() : 0;
-    @endphp
+        @php
+            $isEditing = isset($resource);
+            $pendingCount = $level === 3 && $requests ? $requests->total() : 0;
+        @endphp
 
-    {{-- ===== PAGE-LEVEL TABS ===== --}}
-    <div class="mb-6 border-b border-gray-200">
-        <nav class="-mb-px flex gap-6" id="pageTabs">
-            <button type="button" data-page-tab="tab-masterlist"
+        {{-- ===== PAGE-LEVEL TABS ===== --}}
+        <div class="mb-6 border-b border-gray-200">
+            <nav class="-mb-px flex gap-6" id="pageTabs">
+                <button type="button" data-page-tab="tab-masterlist"
                     class="page-tab-btn whitespace-nowrap pb-3 px-1 text-sm font-medium border-b-2 border-transparent text-gray-500 hover:text-gray-700">
-                Masterlist
-            </button>
+                    Masterlist
+                </button>
 
-            @if($isEditing)
-            <button type="button" data-page-tab="tab-edit"
-                    class="page-tab-btn whitespace-nowrap pb-3 px-1 text-sm font-medium border-b-2 border-transparent text-gray-500 hover:text-gray-700">
-                Edit Resource
-            </button>
-            @endif
-
-            @if($level === 3)
-            <button type="button" data-page-tab="tab-requests"
-                    class="page-tab-btn whitespace-nowrap pb-3 px-1 text-sm font-medium border-b-2 border-transparent text-gray-500 hover:text-gray-700">
-                School Requests
-                @if($pendingCount > 0)
-                    <span class="ml-1 inline-flex items-center justify-center px-1.5 py-0.5 text-xs font-bold leading-none text-white bg-blue-500 rounded-full">{{ $pendingCount }}</span>
+                @if ($isEditing)
+                    <button type="button" data-page-tab="tab-edit"
+                        class="page-tab-btn whitespace-nowrap pb-3 px-1 text-sm font-medium border-b-2 border-transparent text-gray-500 hover:text-gray-700">
+                        Edit Resource
+                    </button>
                 @endif
-            </button>
-            @endif
-        </nav>
-    </div>
 
-    {{-- =================================================================
+                @if ($level === 3)
+                    <button type="button" data-page-tab="tab-requests"
+                        class="page-tab-btn whitespace-nowrap pb-3 px-1 text-sm font-medium border-b-2 border-transparent text-gray-500 hover:text-gray-700">
+                        School Requests
+                        @if ($pendingCount > 0)
+                            <span
+                                class="ml-1 inline-flex items-center justify-center px-1.5 py-0.5 text-xs font-bold leading-none text-white bg-blue-500 rounded-full">{{ $pendingCount }}</span>
+                        @endif
+                    </button>
+                @endif
+            </nav>
+        </div>
+
+        {{-- =================================================================
         TAB 1 — MASTERLIST
     ================================================================== --}}
-    <div id="tab-masterlist" class="page-tab-content hidden">
-        <div class="space-y-4">
-            <div class="flex items-center justify-between flex-wrap gap-3">
-                <div>
-                    <h3 class="text-base font-semibold text-gray-700">Approved Non-Print Resources</h3>
-                    <p class="text-xs text-gray-400 mt-0.5">All non-print resources with approved status across the masterlist.</p>
-                </div>
-                <div class="flex gap-2">
-                    <form method="GET" action="{{ route('nonprint-masterlist.index') }}" class="flex gap-2">
-                        <input type="hidden" name="active_tab" value="tab-masterlist">
-                        <input type="text" name="ml_search" value="{{ request('ml_search') }}"
-                               placeholder="Search title, type, brand..."
-                               class="border border-gray-300 rounded-lg px-3 py-2 text-sm w-56 focus:outline-none focus:ring-2 focus:ring-blue-500">
-                        <button type="submit"
+        <div id="tab-masterlist" class="page-tab-content hidden">
+            <div class="space-y-4">
+                <div class="flex items-center justify-between flex-wrap gap-3">
+                    <div>
+                        <h3 class="text-base font-semibold text-gray-700">Approved Non-Print Resources</h3>
+                        <p class="text-xs text-gray-400 mt-0.5">All non-print resources with approved status across the
+                            masterlist.</p>
+                    </div>
+                    <div class="flex gap-2">
+                        <form method="GET" action="{{ route('nonprint-masterlist.index') }}" class="flex gap-2">
+                            <input type="hidden" name="active_tab" value="tab-masterlist">
+                            <input type="text" name="ml_search" value="{{ request('ml_search') }}"
+                                placeholder="Search title, type, brand..."
+                                class="border border-gray-300 rounded-lg px-3 py-2 text-sm w-56 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            <button type="submit"
                                 class="px-4 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 transition-colors">
-                            Search
-                        </button>
-                        @if(request('ml_search'))
-                            <a href="{{ route('nonprint-masterlist.index') }}"
-                               class="px-4 py-2 border border-gray-300 text-gray-600 text-sm rounded-lg hover:bg-gray-50 transition-colors">
-                                Clear
-                            </a>
-                        @endif
-                    </form>
+                                Search
+                            </button>
+                            @if (request('ml_search'))
+                                <a href="{{ route('nonprint-masterlist.index') }}"
+                                    class="px-4 py-2 border border-gray-300 text-gray-600 text-sm rounded-lg hover:bg-gray-50 transition-colors">
+                                    Clear
+                                </a>
+                            @endif
+                        </form>
+                    </div>
                 </div>
-            </div>
 
-            <div class="overflow-x-auto rounded-lg border border-gray-200">
-                <table class="w-full text-sm">
-                    <thead class="bg-gray-50 text-xs text-gray-500 uppercase tracking-wide">
-                        <tr>
-                            <th class="px-2 py-3 text-left w-18">Cover</th>
-                            <th class="px-2 py-3 text-left">Title</th>
-                            <th class="px-2 py-3 text-left">Type</th>
-                            <th class="px-2 py-3 text-left">Brand</th>
-                            <th class="px-2 py-3 text-left">Model</th>
-                            <th class="px-2 py-3 text-left">Version</th>
-                            <th class="px-2 py-3 text-left">Subjects / Grade Levels</th>
-                            <th class="px-2 py-3 text-center">Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody class="divide-y divide-gray-100">
-                        @forelse($masterlist as $item)
-                            @php
-                                $sglIds  = $item->subject_grade_level_ids ? explode(',', $item->subject_grade_level_ids) : [];
-                                $sgls    = !empty($sglIds)
-                                    ? \App\Models\SubjectGradeLevel::with(['subject','gradeLevel'])->whereIn('id', $sglIds)->get()
-                                    : collect();
-                                $sglText = $sgls->map(fn($s) => ($s->subject->subject_name ?? '') . ' - ' . ($s->gradeLevel->grade ?? ''))->join('; ') ?: '-';
-                            @endphp
-                            <tr class="hover:bg-gray-50 transition-colors">
-                                <td class="px-2 py-2">
-                                    <img src="{{ $item->cover ? asset('storage/' . $item->cover) : asset('assets/images/def.jpg') }}"
-                                         alt="cover" class="w-14 h-18 object-cover rounded border border-gray-200 shadow-sm">
-                                </td>
-                                <td class="px-2 py-2 font-medium text-gray-900 max-w-75">
-                                    <span title="{{ $item->nonprintTitle->title ?? '' }}">{{ Str::limit($item->nonprintTitle->title ?? '-', 40) }}</span>
-                                </td>
-                                <td class="px-2 py-2 text-gray-600 whitespace-nowrap">{{ $item->type->type_name ?? '-' }}</td>
-                                <td class="px-2 py-2 text-gray-600">{{ $item->brand ?? '-' }}</td>
-                                <td class="px-2 py-2 text-gray-600">{{ $item->model ?? '-' }}</td>
-                                <td class="px-2 py-2 text-gray-600">{{ $item->version ?? '-' }}</td>
-                                <td class="px-2 py-2 text-gray-600 max-w-55 text-xs">
-                                    <span title="{{ $sglText }}">{{ Str::limit($sglText, 60) }}</span>
-                                </td>
-                                <td class="px-2 py-2 text-center">
-                                    <div class="flex justify-center gap-2">
-                                        {{-- View --}}
-                                        <button type="button"
+                <div class="overflow-x-auto rounded-lg border border-gray-200">
+                    <table class="w-full text-sm">
+                        <thead class="bg-gray-50 text-xs text-gray-500 uppercase tracking-wide">
+                            <tr>
+                                <th class="px-2 py-3 text-left w-18">Cover</th>
+                                <th class="px-2 py-3 text-left">Title</th>
+                                <th class="px-2 py-3 text-left">Type</th>
+                                <th class="px-2 py-3 text-left">Brand</th>
+                                <th class="px-2 py-3 text-left">Model</th>
+                                <th class="px-2 py-3 text-left">Version</th>
+                                <th class="px-2 py-3 text-left">Subjects / Grade Levels</th>
+                                <th class="px-2 py-3 text-center">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-gray-100">
+                            @forelse($masterlist as $item)
+                                @php
+                                    $sglIds = $item->subject_grade_level_ids
+                                        ? explode(',', $item->subject_grade_level_ids)
+                                        : [];
+                                    $sgls = !empty($sglIds)
+                                        ? \App\Models\SubjectGradeLevel::with(['subject', 'gradeLevel'])
+                                            ->whereIn('id', $sglIds)
+                                            ->get()
+                                        : collect();
+                                    $sglText =
+                                        $sgls
+                                            ->map(
+                                                fn($s) => ($s->subject->subject_name ?? '') .
+                                                    ' - ' .
+                                                    ($s->gradeLevel->grade ?? ''),
+                                            )
+                                            ->join('; ') ?:
+                                        '-';
+                                @endphp
+                                <tr class="hover:bg-gray-50 transition-colors">
+                                    <td class="px-2 py-2">
+                                        <img src="{{ $item->thumb_url }}" alt="cover"
+                                            class="w-14 h-18 object-cover rounded border border-gray-200 shadow-sm"
+                                            loading="lazy">
+                                    </td>
+                                    <td class="px-2 py-2 font-medium text-gray-900 max-w-75">
+                                        <span
+                                            title="{{ $item->nonprintTitle->title ?? '' }}">{{ Str::limit($item->nonprintTitle->title ?? '-', 40) }}</span>
+                                    </td>
+                                    <td class="px-2 py-2 text-gray-600 whitespace-nowrap">
+                                        {{ $item->type->type_name ?? '-' }}</td>
+                                    <td class="px-2 py-2 text-gray-600">{{ $item->brand ?? '-' }}</td>
+                                    <td class="px-2 py-2 text-gray-600">{{ $item->model ?? '-' }}</td>
+                                    <td class="px-2 py-2 text-gray-600">{{ $item->version ?? '-' }}</td>
+                                    <td class="px-2 py-2 text-gray-600 max-w-55 text-xs">
+                                        <span title="{{ $sglText }}">{{ Str::limit($sglText, 60) }}</span>
+                                    </td>
+                                    <td class="px-2 py-2 text-center">
+                                        <div class="flex justify-center gap-2">
+                                            {{-- View --}}
+                                            <button type="button"
                                                 class="view-resource-btn inline-flex items-center gap-1 text-xs px-3 py-1.5 bg-indigo-50 text-indigo-600 border border-indigo-200 rounded-lg hover:bg-indigo-100 transition-colors whitespace-nowrap font-medium"
-                                                data-view-id="{{ $item->id }}"
-                                                data-cover="{{ $item->cover ? asset('storage/' . $item->cover) : asset('assets/images/def.jpg') }}"
+                                                data-view-id="{{ $item->id }}" data-cover="{{ $item->cover_url }}"
                                                 data-title="{{ $item->nonprintTitle->title ?? '-' }}"
                                                 data-type="{{ $item->type->type_name ?? '-' }}"
                                                 data-brand="{{ $item->brand ?? '-' }}"
                                                 data-code="{{ $item->code ?? '-' }}"
                                                 data-version="{{ $item->version ?? '-' }}"
-                                                data-model="{{ $item->model ?? '-' }}"
-                                                data-url="{{ $item->url ?? '-' }}"
-                                                data-size="{{ $item->size ?? '-' }}"
-                                                data-subjects="{{ $sglText }}">
-                                            <svg class="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
-                                            </svg>
-                                            View
-                                        </button>
-                                        {{-- Edit --}}
-                                        <a href="{{ route('nonprint-masterlist.edit', $item->id) }}?ml_page={{ $masterlist->currentPage() }}{{ request('ml_search') ? '&ml_search=' . urlencode(request('ml_search')) : '' }}"
-                                           class="inline-flex items-center gap-1 text-xs px-3 py-1.5 bg-blue-50 text-blue-600 border border-blue-200 rounded-lg hover:bg-blue-100 transition-colors whitespace-nowrap font-medium">
-                                            <svg class="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16.862 4.487l1.687-1.687a1.875 1.875 0 112.652 2.652L7.5 19.153 3 21l1.847-4.5L16.862 4.487z"/>
-                                            </svg>
-                                            Edit
-                                        </a>
-                                    </div>
-                                </td>
-                            </tr>
-                        @empty
-                            <tr>
-                                <td colspan="8" class="text-center text-gray-400 py-10">
-                                    <svg class="mx-auto mb-3 h-10 w-10 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
-                                    </svg>
-                                    <p class="text-sm font-medium">No approved non-print resources found.</p>
-                                    @if(request('ml_search'))
-                                        <p class="text-xs mt-1">Try a different search term.</p>
-                                    @endif
-                                </td>
-                            </tr>
-                        @endforelse
-                    </tbody>
-                </table>
-            </div>
-
-            @if($masterlist->hasPages())
-                <div class="mt-4">
-                    {{ $masterlist->appends(array_filter(['ml_search' => request('ml_search'), 'active_tab' => 'tab-masterlist']))->links() }}
+                                                data-model="{{ $item->model ?? '-' }}" data-url="{{ $item->url ?? '-' }}"
+                                                data-size="{{ $item->size ?? '-' }}" data-subjects="{{ $sglText }}">
+                                                <svg class="h-3 w-3" fill="none" stroke="currentColor"
+                                                    viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                        d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                        d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                                                </svg>
+                                                View
+                                            </button>
+                                            {{-- Edit --}}
+                                            <a href="{{ route('nonprint-masterlist.edit', $item->id) }}?ml_page={{ $masterlist->currentPage() }}{{ request('ml_search') ? '&ml_search=' . urlencode(request('ml_search')) : '' }}"
+                                                class="inline-flex items-center gap-1 text-xs px-3 py-1.5 bg-blue-50 text-blue-600 border border-blue-200 rounded-lg hover:bg-blue-100 transition-colors whitespace-nowrap font-medium">
+                                                <svg class="h-3 w-3" fill="none" stroke="currentColor"
+                                                    viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                        d="M16.862 4.487l1.687-1.687a1.875 1.875 0 112.652 2.652L7.5 19.153 3 21l1.847-4.5L16.862 4.487z" />
+                                                </svg>
+                                                Edit
+                                            </a>
+                                        </div>
+                                    </td>
+                                </tr>
+                            @empty
+                                <tr>
+                                    <td colspan="8" class="text-center text-gray-400 py-10">
+                                        <svg class="mx-auto mb-3 h-10 w-10 text-gray-300" fill="none"
+                                            stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                                                d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                                        </svg>
+                                        <p class="text-sm font-medium">No approved non-print resources found.</p>
+                                        @if (request('ml_search'))
+                                            <p class="text-xs mt-1">Try a different search term.</p>
+                                        @endif
+                                    </td>
+                                </tr>
+                            @endforelse
+                        </tbody>
+                    </table>
                 </div>
-            @endif
-        </div>
-    </div>
 
-    {{-- =================================================================
+                @if ($masterlist->hasPages())
+                    <div class="mt-4">
+                        {{ $masterlist->appends(array_filter(['ml_search' => request('ml_search'), 'active_tab' => 'tab-masterlist']))->links() }}
+                    </div>
+                @endif
+            </div>
+        </div>
+
+        {{-- =================================================================
         TAB 2 — EDIT RESOURCE (only present when editing)
     ================================================================== --}}
-    @if($isEditing)
-    <div id="tab-edit" class="page-tab-content hidden">
-        <div class="mb-5 flex items-start justify-between">
-            <div>
-                <h2 class="text-base font-semibold text-gray-800">Edit Resource</h2>
-                <p class="text-sm text-gray-500 mt-1">Update the details of this approved non-print resource.</p>
-            </div>
-            <a href="{{ route('nonprint-masterlist.index') }}"
-               class="text-sm text-blue-600 hover:underline flex items-center gap-1 mt-1">
-                &larr; Back to Masterlist
-            </a>
-        </div>
-
-        <form id="editNpForm"
-              action="{{ route('nonprint-masterlist.update', $resource->id) }}"
-              class="space-y-8"
-              method="POST"
-              enctype="multipart/form-data"
-              autocomplete="off">
-            @csrf
-            @method('PUT')
-
-            <input type="hidden" name="ml_page" value="{{ request('ml_page') }}">
-            <input type="hidden" name="ml_search" value="{{ request('ml_search') }}">
-
-            {{-- IMAGE + BASIC INFO --}}
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 items-stretch">
-                {{-- Cover image --}}
-                <div class="h-full">
-                    <div class="h-full flex flex-col items-center justify-between border-2 border-dashed border-blue-500 rounded-lg p-4 text-center">
-                        <div class="w-full" style="aspect-ratio: 3/3.5;">
-                            <img id="npImagePreview"
-                                src="{{ $resource->cover ? asset('storage/' . $resource->cover) : asset('assets/images/def.jpg') }}"
-                                data-default-src="{{ $resource->cover ? asset('storage/' . $resource->cover) : asset('assets/images/def.jpg') }}"
-                                alt="Image preview"
-                                class="w-full h-full object-cover rounded mb-4">
-                        </div>
-                        <input type="file" name="image" id="npImageUpload" class="hidden" accept="image/*">
-                        <label for="npImageUpload" class="cursor-pointer mt-2 px-4 py-2 bg-blue-600 text-white text-sm rounded-md hover:bg-blue-700">
-                            Change Image
-                        </label>
-                        <p class="text-xs text-gray-500 mt-2">JPG, PNG &bull; Max 5MB. Leave blank to keep current.</p>
-                    </div>
-                </div>
-
-                {{-- Fields --}}
-                <div class="md:col-span-2 space-y-4">
+        @if ($isEditing)
+            <div id="tab-edit" class="page-tab-content hidden">
+                <div class="mb-5 flex items-start justify-between">
                     <div>
-                        <label class="block text-sm font-medium mb-1">Title <span class="text-red-500">*</span></label>
-                        <input type="text" name="title" id="np-edit-title-input" required
-                               value="{{ $resource->nonprintTitle->title ?? '' }}"
-                               data-server-value="{{ $resource->nonprintTitle->title ?? '' }}"
-                               autocomplete="off"
-                               class="w-full border border-gray-300 rounded px-3 py-2">
+                        <h2 class="text-base font-semibold text-gray-800">Edit Resource</h2>
+                        <p class="text-sm text-gray-500 mt-1">Update the details of this approved non-print resource.</p>
                     </div>
-
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                            <label class="block text-sm font-medium mb-1">Type <span class="text-red-500">*</span></label>
-                            <select name="type" required class="w-full border border-gray-300 rounded px-3 py-2">
-                                <option disabled>Select type</option>
-                                @foreach ($nonprintTypes as $type)
-                                    <option value="{{ $type->id }}"
-                                        {{ $resource->nonprint_type_id == $type->id ? 'selected' : '' }}>
-                                        {{ $type->type_name }}
-                                    </option>
-                                @endforeach
-                            </select>
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium mb-1">Brand</label>
-                            <input type="text" name="brand"
-                                   value="{{ $resource->brand ?? '' }}"
-                                   autocomplete="off"
-                                   class="w-full border border-gray-300 rounded px-3 py-2">
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium mb-1">Code</label>
-                            <input type="text" name="code"
-                                   value="{{ $resource->code ?? '' }}"
-                                   autocomplete="off"
-                                   class="w-full border border-gray-300 rounded px-3 py-2">
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium mb-1">Version</label>
-                            <input type="text" name="version"
-                                   value="{{ $resource->version ?? '' }}"
-                                   autocomplete="off"
-                                   class="w-full border border-gray-300 rounded px-3 py-2">
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium mb-1">Model</label>
-                            <input type="text" name="model"
-                                   value="{{ $resource->model ?? '' }}"
-                                   autocomplete="off"
-                                   class="w-full border border-gray-300 rounded px-3 py-2">
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium mb-1">Size</label>
-                            <input type="text" name="size"
-                                   value="{{ $resource->size ?? '' }}"
-                                   autocomplete="off"
-                                   class="w-full border border-gray-300 rounded px-3 py-2">
-                        </div>
-                        <div class="md:col-span-2">
-                            <label class="block text-sm font-medium mb-1">URL / Link</label>
-                            <input type="text" name="url"
-                                   value="{{ $resource->url ?? '' }}"
-                                   autocomplete="off"
-                                   class="w-full border border-gray-300 rounded px-3 py-2">
-                        </div>
-                    </div>
+                    <a href="{{ route('nonprint-masterlist.index') }}"
+                        class="text-sm text-blue-600 hover:underline flex items-center gap-1 mt-1">
+                        &larr; Back to Masterlist
+                    </a>
                 </div>
-            </div>
 
-            {{-- SUBJECT-GRADE LEVEL --}}
-            @php
-                $stages = [
-                    'S1'  => ['tab' => 'np-stage1', 'label' => 'Key Stage 1', 'grades' => [0=>'K',1=>'1',2=>'2',3=>'3']],
-                    'ES'  => ['tab' => 'np-stage2', 'label' => 'Key Stage 2', 'grades' => [4=>'4',5=>'5',6=>'6']],
-                    'JHS' => ['tab' => 'np-jhs',    'label' => 'Junior High',  'grades' => [7=>'7',8=>'8',9=>'9',10=>'10']],
-                    'SHS' => ['tab' => 'np-shs',    'label' => 'Senior High',  'grades' => [11=>'11',12=>'12']],
-                ];
-                $grouped    = $subjectGradeLevels->groupBy(['key_stage', 'subject_name']);
-                // FIX: Never use old() for checkboxes — always use server-rendered $editingSglIds
-                $checkedIds = $editingSglIds ?? [];
-            @endphp
+                <form id="editNpForm" action="{{ route('nonprint-masterlist.update', $resource->id) }}"
+                    class="space-y-8" method="POST" enctype="multipart/form-data" autocomplete="off">
+                    @csrf
+                    @method('PUT')
 
-            <div class="space-y-4">
-                <div class="flex gap-6 border-b border-gray-300">
-                    @foreach ($stages as $stage)
-                        <button type="button"
-                                class="np-sgl-tab-btn {{ $loop->first ? 'active border-blue-600 text-blue-600' : 'border-transparent text-gray-600' }} whitespace-nowrap pb-2 px-1 text-sm font-medium border-b-2"
-                                data-sgl-tab="{{ $stage['tab'] }}">
-                            {{ $stage['label'] }}
+                    <input type="hidden" name="ml_page" value="{{ request('ml_page') }}">
+                    <input type="hidden" name="ml_search" value="{{ request('ml_search') }}">
+
+                    {{-- IMAGE + BASIC INFO --}}
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 items-stretch">
+                        {{-- Cover image --}}
+                        <div class="h-full">
+                            <div
+                                class="h-full flex flex-col items-center justify-between border-2 border-dashed border-blue-500 rounded-lg p-4 text-center">
+                                <div class="w-full" style="aspect-ratio: 3/3.5;">
+                                    <img id="npImagePreview"
+                                        src="{{ $resource->cover ? asset('storage/' . $resource->cover) : asset('assets/images/def.jpg') }}"
+                                        data-default-src="{{ $resource->cover ? asset('storage/' . $resource->cover) : asset('assets/images/def.jpg') }}"
+                                        alt="Image preview" class="w-full h-full object-cover rounded mb-4">
+                                </div>
+                                <input type="file" name="image" id="npImageUpload" class="hidden"
+                                    accept="image/*">
+                                <label for="npImageUpload"
+                                    class="cursor-pointer mt-2 px-4 py-2 bg-blue-600 text-white text-sm rounded-md hover:bg-blue-700">
+                                    Change Image
+                                </label>
+                                <p class="text-xs text-gray-500 mt-2">JPG, PNG &bull; Max 5MB. Leave blank to keep current.
+                                </p>
+                            </div>
+                        </div>
+
+                        {{-- Fields --}}
+                        <div class="md:col-span-2 space-y-4">
+                            <div>
+                                <label class="block text-sm font-medium mb-1">Title <span
+                                        class="text-red-500">*</span></label>
+                                <input type="text" name="title" id="np-edit-title-input" required
+                                    value="{{ $resource->nonprintTitle->title ?? '' }}"
+                                    data-server-value="{{ $resource->nonprintTitle->title ?? '' }}" autocomplete="off"
+                                    class="w-full border border-gray-300 rounded px-3 py-2">
+                            </div>
+
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-sm font-medium mb-1">Type <span
+                                            class="text-red-500">*</span></label>
+                                    <select name="type" required
+                                        class="w-full border border-gray-300 rounded px-3 py-2">
+                                        <option disabled>Select type</option>
+                                        @foreach ($nonprintTypes as $type)
+                                            <option value="{{ $type->id }}"
+                                                {{ $resource->nonprint_type_id == $type->id ? 'selected' : '' }}>
+                                                {{ $type->type_name }}
+                                            </option>
+                                        @endforeach
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium mb-1">Brand</label>
+                                    <input type="text" name="brand" value="{{ $resource->brand ?? '' }}"
+                                        autocomplete="off" class="w-full border border-gray-300 rounded px-3 py-2">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium mb-1">Code</label>
+                                    <input type="text" name="code" value="{{ $resource->code ?? '' }}"
+                                        autocomplete="off" class="w-full border border-gray-300 rounded px-3 py-2">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium mb-1">Version</label>
+                                    <input type="text" name="version" value="{{ $resource->version ?? '' }}"
+                                        autocomplete="off" class="w-full border border-gray-300 rounded px-3 py-2">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium mb-1">Model</label>
+                                    <input type="text" name="model" value="{{ $resource->model ?? '' }}"
+                                        autocomplete="off" class="w-full border border-gray-300 rounded px-3 py-2">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium mb-1">Size</label>
+                                    <input type="text" name="size" value="{{ $resource->size ?? '' }}"
+                                        autocomplete="off" class="w-full border border-gray-300 rounded px-3 py-2">
+                                </div>
+                                <div class="md:col-span-2">
+                                    <label class="block text-sm font-medium mb-1">URL / Link</label>
+                                    <input type="text" name="url" value="{{ $resource->url ?? '' }}"
+                                        autocomplete="off" class="w-full border border-gray-300 rounded px-3 py-2">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    {{-- SUBJECT-GRADE LEVEL --}}
+                    @php
+                        $stages = [
+                            'S1' => [
+                                'tab' => 'np-stage1',
+                                'label' => 'Key Stage 1',
+                                'grades' => [0 => 'K', 1 => '1', 2 => '2', 3 => '3'],
+                            ],
+                            'ES' => [
+                                'tab' => 'np-stage2',
+                                'label' => 'Key Stage 2',
+                                'grades' => [4 => '4', 5 => '5', 6 => '6'],
+                            ],
+                            'JHS' => [
+                                'tab' => 'np-jhs',
+                                'label' => 'Junior High',
+                                'grades' => [7 => '7', 8 => '8', 9 => '9', 10 => '10'],
+                            ],
+                            'SHS' => [
+                                'tab' => 'np-shs',
+                                'label' => 'Senior High',
+                                'grades' => [11 => '11', 12 => '12'],
+                            ],
+                        ];
+                        $grouped = $subjectGradeLevels->groupBy(['key_stage', 'subject_name']);
+                        // FIX: Never use old() for checkboxes — always use server-rendered $editingSglIds
+                        $checkedIds = $editingSglIds ?? [];
+                    @endphp
+
+                    <div class="space-y-4">
+                        <div class="flex gap-6 border-b border-gray-300">
+                            @foreach ($stages as $stage)
+                                <button type="button"
+                                    class="np-sgl-tab-btn {{ $loop->first ? 'active border-blue-600 text-blue-600' : 'border-transparent text-gray-600' }} whitespace-nowrap pb-2 px-1 text-sm font-medium border-b-2"
+                                    data-sgl-tab="{{ $stage['tab'] }}">
+                                    {{ $stage['label'] }}
+                                </button>
+                            @endforeach
+                        </div>
+
+                        @foreach ($stages as $stageKey => $stage)
+                            <div id="{{ $stage['tab'] }}"
+                                class="np-sgl-tab-content {{ !$loop->first ? 'hidden' : '' }}">
+                                <table class="w-full border border-gray-300 text-sm">
+                                    <thead class="bg-gray-100">
+                                        <tr>
+                                            <th class="border border-gray-300 px-3 py-2 text-left w-72">Subject</th>
+                                            @foreach ($stage['grades'] as $gradeLabel)
+                                                <th class="border border-gray-300">{{ $gradeLabel }}</th>
+                                            @endforeach
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @foreach ($grouped[$stageKey] ?? [] as $subject => $rows)
+                                            @php $gradeMap = collect($rows)->keyBy('sort_order'); @endphp
+                                            <tr>
+                                                <td class="border border-gray-300 px-3 py-2">{{ $subject }}</td>
+                                                @foreach ($stage['grades'] as $sortOrder => $label)
+                                                    <td class="border border-gray-300 text-center">
+                                                        @if ($gradeMap->has($sortOrder))
+                                                            <input type="checkbox" name="subject_grade_levels[]"
+                                                                value="{{ $gradeMap[$sortOrder]->subject_grade_level_id }}"
+                                                                {{ in_array($gradeMap[$sortOrder]->subject_grade_level_id, $checkedIds) ? 'checked' : '' }}>
+                                                        @endif
+                                                    </td>
+                                                @endforeach
+                                            </tr>
+                                        @endforeach
+                                    </tbody>
+                                </table>
+                            </div>
+                        @endforeach
+                    </div>
+
+                    <div class="flex justify-end gap-3">
+                        <a href="{{ route('nonprint-masterlist.index') }}"
+                            class="px-5 py-2 border border-gray-300 text-gray-700 rounded hover:bg-gray-50 text-sm">
+                            Cancel
+                        </a>
+                        <button type="submit" id="saveNpBtn"
+                            class="px-6 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed">
+                            <span id="saveNpText">Save Changes</span>
+                            <span id="saveNpLoading" class="hidden"><i
+                                    class="fas fa-spinner fa-spin mr-2"></i>Saving...</span>
                         </button>
-                    @endforeach
-                </div>
+                    </div>
+                </form>
+            </div>
+        @endif
 
-                @foreach ($stages as $stageKey => $stage)
-                    <div id="{{ $stage['tab'] }}" class="np-sgl-tab-content {{ !$loop->first ? 'hidden' : '' }}">
-                        <table class="w-full border border-gray-300 text-sm">
-                            <thead class="bg-gray-100">
+        {{-- =================================================================
+        TAB 3 — SCHOOL REQUESTS (division only, level 3)
+    ================================================================== --}}
+        @if ($level === 3)
+            <div id="tab-requests" class="page-tab-content hidden">
+                <div class="space-y-4">
+                    <div class="flex items-center justify-between flex-wrap gap-3">
+                        <div>
+                            <h3 class="text-base font-semibold text-gray-700">School Resource Requests</h3>
+                            <p class="text-xs text-gray-400 mt-0.5">Pending non-print requests from schools in your
+                                division. Approve to add to masterlist or reject to remove.</p>
+                        </div>
+                        <div class="flex gap-2">
+                            <form method="GET" action="{{ route('nonprint-masterlist.index') }}" class="flex gap-2">
+                                <input type="hidden" name="active_tab" value="tab-requests">
+                                <input type="text" name="rq_search" value="{{ request('rq_search') }}"
+                                    placeholder="Search requests..."
+                                    class="border border-gray-300 rounded-lg px-3 py-2 text-sm w-56 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                <button type="submit"
+                                    class="px-4 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 transition-colors">
+                                    Search
+                                </button>
+                                @if (request('rq_search'))
+                                    <a href="{{ route('nonprint-masterlist.index', ['active_tab' => 'tab-requests']) }}"
+                                        class="px-4 py-2 border border-gray-300 text-gray-600 text-sm rounded-lg hover:bg-gray-50 transition-colors">
+                                        Clear
+                                    </a>
+                                @endif
+                            </form>
+                        </div>
+                    </div>
+
+                    <div class="overflow-x-auto rounded-lg border border-gray-200">
+                        <table class="w-full text-sm">
+                            <thead class="bg-gray-50 text-xs text-gray-500 uppercase tracking-wide">
                                 <tr>
-                                    <th class="border border-gray-300 px-3 py-2 text-left w-72">Subject</th>
-                                    @foreach ($stage['grades'] as $gradeLabel)
-                                        <th class="border border-gray-300">{{ $gradeLabel }}</th>
-                                    @endforeach
+                                    <th class="px-3 py-3 text-left w-10">Cover</th>
+                                    <th class="px-3 py-3 text-left">Title</th>
+                                    <th class="px-3 py-3 text-left">Type</th>
+                                    <th class="px-3 py-3 text-left">Brand</th>
+                                    <th class="px-3 py-3 text-left">Model</th>
+                                    <th class="px-3 py-3 text-left">Version</th>
+                                    <th class="px-3 py-3 text-left">Subjects / Grade Levels</th>
+                                    <th class="px-3 py-3 text-center">Date Submitted</th>
+                                    <th class="px-3 py-3 text-center">Actions</th>
                                 </tr>
                             </thead>
-                            <tbody>
-                                @foreach ($grouped[$stageKey] ?? [] as $subject => $rows)
-                                    @php $gradeMap = collect($rows)->keyBy('sort_order'); @endphp
-                                    <tr>
-                                        <td class="border border-gray-300 px-3 py-2">{{ $subject }}</td>
-                                        @foreach ($stage['grades'] as $sortOrder => $label)
-                                            <td class="border border-gray-300 text-center">
-                                                @if ($gradeMap->has($sortOrder))
-                                                    <input type="checkbox"
-                                                           name="subject_grade_levels[]"
-                                                           value="{{ $gradeMap[$sortOrder]->subject_grade_level_id }}"
-                                                           {{ in_array($gradeMap[$sortOrder]->subject_grade_level_id, $checkedIds) ? 'checked' : '' }}>
-                                                @endif
-                                            </td>
-                                        @endforeach
+                            <tbody class="divide-y divide-gray-100">
+                                @forelse($requests as $req)
+                                    @php
+                                        $reqSglIds = $req->subject_grade_level_ids
+                                            ? explode(',', $req->subject_grade_level_ids)
+                                            : [];
+                                        $reqSgls = !empty($reqSglIds)
+                                            ? \App\Models\SubjectGradeLevel::with(['subject', 'gradeLevel'])
+                                                ->whereIn('id', $reqSglIds)
+                                                ->get()
+                                            : collect();
+                                        $reqSglText =
+                                            $reqSgls
+                                                ->map(
+                                                    fn($s) => ($s->subject->subject_name ?? '') .
+                                                        ' - ' .
+                                                        ($s->gradeLevel->grade ?? ''),
+                                                )
+                                                ->join('; ') ?:
+                                            '-';
+                                    @endphp
+                                    <tr class="hover:bg-gray-50 transition-colors">
+                                        <td class="px-3 py-2">
+                                            <img src="{{ $req->thumb_url }}" alt="cover"
+                                                class="w-9 h-12 object-cover rounded border border-gray-200 shadow-sm"
+                                                loading="lazy">
+                                        </td>
+                                        <td class="px-3 py-2 font-medium text-gray-900 max-w-40">
+                                            <span
+                                                title="{{ $req->nonprintTitle->title ?? '' }}">{{ Str::limit($req->nonprintTitle->title ?? '-', 38) }}</span>
+                                        </td>
+                                        <td class="px-3 py-2 text-gray-600 whitespace-nowrap">
+                                            {{ $req->type->type_name ?? '-' }}</td>
+                                        <td class="px-3 py-2 text-gray-600">{{ $req->brand ?? '-' }}</td>
+                                        <td class="px-3 py-2 text-gray-600">{{ $req->model ?? '-' }}</td>
+                                        <td class="px-3 py-2 text-gray-600">{{ $req->version ?? '-' }}</td>
+                                        <td class="px-3 py-2 text-gray-600 text-xs max-w-50">
+                                            <span title="{{ $reqSglText }}">{{ Str::limit($reqSglText, 55) }}</span>
+                                        </td>
+                                        <td class="px-3 py-2 text-center text-gray-500 text-xs whitespace-nowrap">
+                                            {{ $req->created_at?->format('M d, Y') ?? '-' }}
+                                        </td>
+                                        <td class="px-3 py-2 text-center">
+                                            <div class="flex justify-center gap-2">
+                                                {{-- View --}}
+                                                <button type="button"
+                                                    class="view-resource-btn inline-flex items-center gap-1 text-xs px-2.5 py-1.5 bg-indigo-50 text-indigo-600 border border-indigo-200 rounded-lg hover:bg-indigo-100 transition-colors font-medium whitespace-nowrap"
+                                                    data-view-id="{{ $req->id }}"
+                                                    data-cover="{{ $req->cover_url }}"
+                                                    data-title="{{ $req->nonprintTitle->title ?? '-' }}"
+                                                    data-type="{{ $req->type->type_name ?? '-' }}"
+                                                    data-brand="{{ $req->brand ?? '-' }}"
+                                                    data-code="{{ $req->code ?? '-' }}"
+                                                    data-version="{{ $req->version ?? '-' }}"
+                                                    data-model="{{ $req->model ?? '-' }}"
+                                                    data-url="{{ $req->url ?? '-' }}"
+                                                    data-size="{{ $req->size ?? '-' }}"
+                                                    data-subjects="{{ $reqSglText }}" data-is-request="true">
+                                                    <svg class="h-3 w-3" fill="none" stroke="currentColor"
+                                                        viewBox="0 0 24 24">
+                                                        <path stroke-linecap="round" stroke-linejoin="round"
+                                                            stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                                        <path stroke-linecap="round" stroke-linejoin="round"
+                                                            stroke-width="2"
+                                                            d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                                                    </svg>
+                                                    View
+                                                </button>
+
+                                                {{-- Approve --}}
+                                                <form action="{{ route('nonprint-masterlist.approve', $req->id) }}"
+                                                    method="POST"
+                                                    onsubmit="return confirm('Approve this resource request? It will be added to the masterlist.')">
+                                                    @csrf
+                                                    @method('PATCH')
+                                                    <button type="submit"
+                                                        class="inline-flex items-center gap-1 text-xs px-2.5 py-1.5 bg-green-50 text-green-700 border border-green-200 rounded-lg hover:bg-green-100 transition-colors font-medium whitespace-nowrap">
+                                                        <svg class="h-3 w-3" fill="none" stroke="currentColor"
+                                                            viewBox="0 0 24 24">
+                                                            <path stroke-linecap="round" stroke-linejoin="round"
+                                                                stroke-width="2" d="M5 13l4 4L19 7" />
+                                                        </svg>
+                                                        Approve
+                                                    </button>
+                                                </form>
+
+                                                {{-- Reject --}}
+                                                <form action="{{ route('nonprint-masterlist.reject', $req->id) }}"
+                                                    method="POST"
+                                                    onsubmit="return confirm('Reject and delete this request? The title will not be removed as it may be used by other resources.')">
+                                                    @csrf
+                                                    @method('DELETE')
+                                                    <button type="submit"
+                                                        class="inline-flex items-center gap-1 text-xs px-2.5 py-1.5 bg-red-50 text-red-700 border border-red-200 rounded-lg hover:bg-red-100 transition-colors font-medium whitespace-nowrap">
+                                                        <svg class="h-3 w-3" fill="none" stroke="currentColor"
+                                                            viewBox="0 0 24 24">
+                                                            <path stroke-linecap="round" stroke-linejoin="round"
+                                                                stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                                                        </svg>
+                                                        Reject
+                                                    </button>
+                                                </form>
+                                            </div>
+                                        </td>
                                     </tr>
-                                @endforeach
+                                @empty
+                                    <tr>
+                                        <td colspan="9" class="text-center text-gray-400 py-10">
+                                            <svg class="mx-auto mb-3 h-10 w-10 text-gray-300" fill="none"
+                                                stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                                                    d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                            </svg>
+                                            <p class="text-sm font-medium">No pending requests.</p>
+                                            @if (request('rq_search'))
+                                                <p class="text-xs mt-1">Try a different search term.</p>
+                                            @endif
+                                        </td>
+                                    </tr>
+                                @endforelse
                             </tbody>
                         </table>
                     </div>
-                @endforeach
-            </div>
 
-            <div class="flex justify-end gap-3">
-                <a href="{{ route('nonprint-masterlist.index') }}"
-                   class="px-5 py-2 border border-gray-300 text-gray-700 rounded hover:bg-gray-50 text-sm">
-                    Cancel
-                </a>
-                <button type="submit" id="saveNpBtn"
-                        class="px-6 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed">
-                    <span id="saveNpText">Save Changes</span>
-                    <span id="saveNpLoading" class="hidden"><i class="fas fa-spinner fa-spin mr-2"></i>Saving...</span>
-                </button>
-            </div>
-        </form>
-    </div>
-    @endif
-
-    {{-- =================================================================
-        TAB 3 — SCHOOL REQUESTS (division only, level 3)
-    ================================================================== --}}
-    @if($level === 3)
-    <div id="tab-requests" class="page-tab-content hidden">
-        <div class="space-y-4">
-            <div class="flex items-center justify-between flex-wrap gap-3">
-                <div>
-                    <h3 class="text-base font-semibold text-gray-700">School Resource Requests</h3>
-                    <p class="text-xs text-gray-400 mt-0.5">Pending non-print requests from schools in your division. Approve to add to masterlist or reject to remove.</p>
-                </div>
-                <div class="flex gap-2">
-                    <form method="GET" action="{{ route('nonprint-masterlist.index') }}" class="flex gap-2">
-                        <input type="hidden" name="active_tab" value="tab-requests">
-                        <input type="text" name="rq_search" value="{{ request('rq_search') }}"
-                               placeholder="Search requests..."
-                               class="border border-gray-300 rounded-lg px-3 py-2 text-sm w-56 focus:outline-none focus:ring-2 focus:ring-blue-500">
-                        <button type="submit"
-                                class="px-4 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 transition-colors">
-                            Search
-                        </button>
-                        @if(request('rq_search'))
-                            <a href="{{ route('nonprint-masterlist.index', ['active_tab' => 'tab-requests']) }}"
-                               class="px-4 py-2 border border-gray-300 text-gray-600 text-sm rounded-lg hover:bg-gray-50 transition-colors">
-                                Clear
-                            </a>
-                        @endif
-                    </form>
+                    @if ($requests && $requests->hasPages())
+                        <div class="mt-4">
+                            {{ $requests->appends(array_filter(['rq_search' => request('rq_search'), 'active_tab' => 'tab-requests']))->links() }}
+                        </div>
+                    @endif
                 </div>
             </div>
+        @endif
 
-            <div class="overflow-x-auto rounded-lg border border-gray-200">
-                <table class="w-full text-sm">
-                    <thead class="bg-gray-50 text-xs text-gray-500 uppercase tracking-wide">
-                        <tr>
-                            <th class="px-3 py-3 text-left w-10">Cover</th>
-                            <th class="px-3 py-3 text-left">Title</th>
-                            <th class="px-3 py-3 text-left">Type</th>
-                            <th class="px-3 py-3 text-left">Brand</th>
-                            <th class="px-3 py-3 text-left">Model</th>
-                            <th class="px-3 py-3 text-left">Version</th>
-                            <th class="px-3 py-3 text-left">Subjects / Grade Levels</th>
-                            <th class="px-3 py-3 text-center">Date Submitted</th>
-                            <th class="px-3 py-3 text-center">Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody class="divide-y divide-gray-100">
-                        @forelse($requests as $req)
-                            @php
-                                $reqSglIds  = $req->subject_grade_level_ids ? explode(',', $req->subject_grade_level_ids) : [];
-                                $reqSgls    = !empty($reqSglIds)
-                                    ? \App\Models\SubjectGradeLevel::with(['subject','gradeLevel'])->whereIn('id', $reqSglIds)->get()
-                                    : collect();
-                                $reqSglText = $reqSgls->map(fn($s) => ($s->subject->subject_name ?? '') . ' - ' . ($s->gradeLevel->grade ?? ''))->join('; ') ?: '-';
-                            @endphp
-                            <tr class="hover:bg-gray-50 transition-colors">
-                                <td class="px-3 py-2">
-                                    <img src="{{ $req->cover ? asset('storage/' . $req->cover) : asset('assets/images/def.jpg') }}"
-                                         alt="cover" class="w-9 h-12 object-cover rounded border border-gray-200 shadow-sm">
-                                </td>
-                                <td class="px-3 py-2 font-medium text-gray-900 max-w-40">
-                                    <span title="{{ $req->nonprintTitle->title ?? '' }}">{{ Str::limit($req->nonprintTitle->title ?? '-', 38) }}</span>
-                                </td>
-                                <td class="px-3 py-2 text-gray-600 whitespace-nowrap">{{ $req->type->type_name ?? '-' }}</td>
-                                <td class="px-3 py-2 text-gray-600">{{ $req->brand ?? '-' }}</td>
-                                <td class="px-3 py-2 text-gray-600">{{ $req->model ?? '-' }}</td>
-                                <td class="px-3 py-2 text-gray-600">{{ $req->version ?? '-' }}</td>
-                                <td class="px-3 py-2 text-gray-600 text-xs max-w-50">
-                                    <span title="{{ $reqSglText }}">{{ Str::limit($reqSglText, 55) }}</span>
-                                </td>
-                                <td class="px-3 py-2 text-center text-gray-500 text-xs whitespace-nowrap">
-                                    {{ $req->created_at?->format('M d, Y') ?? '-' }}
-                                </td>
-                                <td class="px-3 py-2 text-center">
-                                    <div class="flex justify-center gap-2">
-                                        {{-- View --}}
-                                        <button type="button"
-                                                class="view-resource-btn inline-flex items-center gap-1 text-xs px-2.5 py-1.5 bg-indigo-50 text-indigo-600 border border-indigo-200 rounded-lg hover:bg-indigo-100 transition-colors font-medium whitespace-nowrap"
-                                                data-view-id="{{ $req->id }}"
-                                                data-cover="{{ $req->cover ? asset('storage/' . $req->cover) : asset('assets/images/def.jpg') }}"
-                                                data-title="{{ $req->nonprintTitle->title ?? '-' }}"
-                                                data-type="{{ $req->type->type_name ?? '-' }}"
-                                                data-brand="{{ $req->brand ?? '-' }}"
-                                                data-code="{{ $req->code ?? '-' }}"
-                                                data-version="{{ $req->version ?? '-' }}"
-                                                data-model="{{ $req->model ?? '-' }}"
-                                                data-url="{{ $req->url ?? '-' }}"
-                                                data-size="{{ $req->size ?? '-' }}"
-                                                data-subjects="{{ $reqSglText }}"
-                                                data-is-request="true">
-                                            <svg class="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
-                                            </svg>
-                                            View
-                                        </button>
+        {{-- ===== VIEW RESOURCE MODAL ===== --}}
+        <div id="viewNpModal" class="fixed inset-0 z-50 hidden overflow-y-auto" role="dialog" aria-modal="true">
+            <div id="viewNpModalBackdrop" class="fixed inset-0 bg-black/50 transition-opacity"></div>
 
-                                        {{-- Approve --}}
-                                        <form action="{{ route('nonprint-masterlist.approve', $req->id) }}" method="POST"
-                                              onsubmit="return confirm('Approve this resource request? It will be added to the masterlist.')">
-                                            @csrf
-                                            @method('PATCH')
-                                            <button type="submit"
-                                                    class="inline-flex items-center gap-1 text-xs px-2.5 py-1.5 bg-green-50 text-green-700 border border-green-200 rounded-lg hover:bg-green-100 transition-colors font-medium whitespace-nowrap">
-                                                <svg class="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
-                                                </svg>
-                                                Approve
-                                            </button>
-                                        </form>
+            <div class="relative min-h-screen flex items-start justify-center p-4 pt-10">
+                <div class="relative bg-white rounded-xl shadow-2xl w-full max-w-4xl z-10 mb-10">
 
-                                        {{-- Reject --}}
-                                        <form action="{{ route('nonprint-masterlist.reject', $req->id) }}" method="POST"
-                                              onsubmit="return confirm('Reject and delete this request? The title will not be removed as it may be used by other resources.')">
-                                            @csrf
-                                            @method('DELETE')
-                                            <button type="submit"
-                                                    class="inline-flex items-center gap-1 text-xs px-2.5 py-1.5 bg-red-50 text-red-700 border border-red-200 rounded-lg hover:bg-red-100 transition-colors font-medium whitespace-nowrap">
-                                                <svg class="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
-                                                </svg>
-                                                Reject
-                                            </button>
-                                        </form>
-                                    </div>
-                                </td>
-                            </tr>
-                        @empty
-                            <tr>
-                                <td colspan="9" class="text-center text-gray-400 py-10">
-                                    <svg class="mx-auto mb-3 h-10 w-10 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
-                                    </svg>
-                                    <p class="text-sm font-medium">No pending requests.</p>
-                                    @if(request('rq_search'))
-                                        <p class="text-xs mt-1">Try a different search term.</p>
-                                    @endif
-                                </td>
-                            </tr>
-                        @endforelse
-                    </tbody>
-                </table>
-            </div>
-
-            @if($requests && $requests->hasPages())
-                <div class="mt-4">
-                    {{ $requests->appends(array_filter(['rq_search' => request('rq_search'), 'active_tab' => 'tab-requests']))->links() }}
-                </div>
-            @endif
-        </div>
-    </div>
-    @endif
-
-    {{-- ===== VIEW RESOURCE MODAL ===== --}}
-    <div id="viewNpModal" class="fixed inset-0 z-50 hidden overflow-y-auto" role="dialog" aria-modal="true">
-        <div id="viewNpModalBackdrop" class="fixed inset-0 bg-black/50 transition-opacity"></div>
-
-        <div class="relative min-h-screen flex items-start justify-center p-4 pt-10">
-            <div class="relative bg-white rounded-xl shadow-2xl w-full max-w-4xl z-10 mb-10">
-
-                {{-- Header --}}
-                <div class="flex items-center justify-between px-6 py-4 border-b border-gray-200">
-                    <h3 class="text-base font-semibold text-gray-800">Resource Details</h3>
-                    <button id="closeNpViewModal"
+                    {{-- Header --}}
+                    <div class="flex items-center justify-between px-6 py-4 border-b border-gray-200">
+                        <h3 class="text-base font-semibold text-gray-800">Resource Details</h3>
+                        <button id="closeNpViewModal"
                             class="text-gray-400 hover:text-gray-600 transition-colors rounded-full p-1 hover:bg-gray-100">
-                        <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                d="M6 18L18 6M6 6l12 12"/>
-                        </svg>
-                    </button>
-                </div>
-
-                {{-- Body --}}
-                <div class="p-6">
-                    <div class="flex gap-8 items-start">
-
-                    {{-- LEFT SIDE (Image) --}}
-                    <div class="shrink-0 flex justify-center" style="width:290px;">
-                        <img id="vm-cover" src="" alt="Cover"
-                            class="w-full max-h-[460px] object-contain rounded-lg border border-gray-300 shadow-md bg-gray-100">
+                            <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                        </button>
                     </div>
 
-                    {{-- RIGHT SIDE (Details) --}}
-                    <div class="flex-1 min-w-0 flex flex-col gap-3">
+                    {{-- Body --}}
+                    <div class="p-6">
+                        <div class="flex gap-8 items-start">
 
-                        {{-- Title --}}
-                        <div class="rounded-lg border border-dashed border-gray-300 bg-gray-50/50 px-4 py-3">
-                            <h4 id="vm-title" class="text-base font-bold text-gray-900 leading-snug"></h4>
+                            {{-- LEFT SIDE (Image) --}}
+                            <div class="shrink-0 flex justify-center" style="width:290px;">
+                                <img id="vm-cover" src="" alt="Cover"
+                                    class="w-full max-h-[460px] object-contain rounded-lg border border-gray-300 shadow-md bg-gray-100">
+                            </div>
+
+                            {{-- RIGHT SIDE (Details) --}}
+                            <div class="flex-1 min-w-0 flex flex-col gap-3">
+
+                                {{-- Title --}}
+                                <div class="rounded-lg border border-dashed border-gray-300 bg-gray-50/50 px-4 py-3">
+                                    <h4 id="vm-title" class="text-base font-bold text-gray-900 leading-snug"></h4>
+                                </div>
+
+                                {{-- Type Badge --}}
+                                <div
+                                    class="rounded-lg border border-dashed border-gray-300 bg-gray-50/50 px-4 py-2.5 flex items-center gap-2">
+                                    <span
+                                        class="text-[10px] font-semibold uppercase tracking-widest text-gray-400">Type</span>
+                                    <span id="vm-type-badge"
+                                        class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-blue-50 text-blue-700 border border-blue-100">
+                                    </span>
+                                </div>
+
+                                {{-- Metadata Grid --}}
+                                <div class="grid grid-cols-2 gap-3">
+
+                                    <div class="rounded-lg border border-dashed border-gray-300 bg-gray-50/50 px-4 py-2.5">
+                                        <p
+                                            class="text-[10px] font-semibold uppercase tracking-widest text-gray-400 mb-0.5">
+                                            Brand</p>
+                                        <p id="vm-brand" class="text-sm font-medium text-gray-700"></p>
+                                    </div>
+
+                                    <div class="rounded-lg border border-dashed border-gray-300 bg-gray-50/50 px-4 py-2.5">
+                                        <p
+                                            class="text-[10px] font-semibold uppercase tracking-widest text-gray-400 mb-0.5">
+                                            Code</p>
+                                        <p id="vm-code" class="text-sm font-medium text-gray-700"></p>
+                                    </div>
+
+                                    <div class="rounded-lg border border-dashed border-gray-300 bg-gray-50/50 px-4 py-2.5">
+                                        <p
+                                            class="text-[10px] font-semibold uppercase tracking-widest text-gray-400 mb-0.5">
+                                            Version</p>
+                                        <p id="vm-version" class="text-sm font-medium text-gray-700"></p>
+                                    </div>
+
+                                    <div class="rounded-lg border border-dashed border-gray-300 bg-gray-50/50 px-4 py-2.5">
+                                        <p
+                                            class="text-[10px] font-semibold uppercase tracking-widest text-gray-400 mb-0.5">
+                                            Model</p>
+                                        <p id="vm-model" class="text-sm font-medium text-gray-700"></p>
+                                    </div>
+
+                                    <div class="rounded-lg border border-dashed border-gray-300 bg-gray-50/50 px-4 py-2.5">
+                                        <p
+                                            class="text-[10px] font-semibold uppercase tracking-widest text-gray-400 mb-0.5">
+                                            Size</p>
+                                        <p id="vm-size" class="text-sm font-medium text-gray-700"></p>
+                                    </div>
+
+                                    <div class="rounded-lg border border-dashed border-gray-300 bg-gray-50/50 px-4 py-2.5">
+                                        <p
+                                            class="text-[10px] font-semibold uppercase tracking-widest text-gray-400 mb-0.5">
+                                            URL / Link</p>
+                                        <p id="vm-url" class="text-sm font-medium text-gray-700 text-xs break-all"></p>
+                                    </div>
+
+                                </div>
+
+                                {{-- Subjects --}}
+                                <div class="rounded-lg border border-dashed border-gray-300 bg-gray-50/50 px-4 py-3">
+                                    <p class="text-[10px] font-semibold uppercase tracking-widest text-gray-400 mb-1">
+                                        Subjects / Grade Levels</p>
+                                    <p id="vm-subjects" class="text-sm text-gray-600 leading-relaxed"></p>
+                                </div>
+
+                            </div>
+
                         </div>
-
-                        {{-- Type Badge --}}
-                        <div class="rounded-lg border border-dashed border-gray-300 bg-gray-50/50 px-4 py-2.5 flex items-center gap-2">
-                            <span class="text-[10px] font-semibold uppercase tracking-widest text-gray-400">Type</span>
-                            <span id="vm-type-badge"
-                                class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-blue-50 text-blue-700 border border-blue-100">
-                            </span>
-                        </div>
-
-                        {{-- Metadata Grid --}}
-                        <div class="grid grid-cols-2 gap-3">
-
-                            <div class="rounded-lg border border-dashed border-gray-300 bg-gray-50/50 px-4 py-2.5">
-                                <p class="text-[10px] font-semibold uppercase tracking-widest text-gray-400 mb-0.5">Brand</p>
-                                <p id="vm-brand" class="text-sm font-medium text-gray-700"></p>
-                            </div>
-
-                            <div class="rounded-lg border border-dashed border-gray-300 bg-gray-50/50 px-4 py-2.5">
-                                <p class="text-[10px] font-semibold uppercase tracking-widest text-gray-400 mb-0.5">Code</p>
-                                <p id="vm-code" class="text-sm font-medium text-gray-700"></p>
-                            </div>
-
-                            <div class="rounded-lg border border-dashed border-gray-300 bg-gray-50/50 px-4 py-2.5">
-                                <p class="text-[10px] font-semibold uppercase tracking-widest text-gray-400 mb-0.5">Version</p>
-                                <p id="vm-version" class="text-sm font-medium text-gray-700"></p>
-                            </div>
-
-                            <div class="rounded-lg border border-dashed border-gray-300 bg-gray-50/50 px-4 py-2.5">
-                                <p class="text-[10px] font-semibold uppercase tracking-widest text-gray-400 mb-0.5">Model</p>
-                                <p id="vm-model" class="text-sm font-medium text-gray-700"></p>
-                            </div>
-
-                            <div class="rounded-lg border border-dashed border-gray-300 bg-gray-50/50 px-4 py-2.5">
-                                <p class="text-[10px] font-semibold uppercase tracking-widest text-gray-400 mb-0.5">Size</p>
-                                <p id="vm-size" class="text-sm font-medium text-gray-700"></p>
-                            </div>
-
-                            <div class="rounded-lg border border-dashed border-gray-300 bg-gray-50/50 px-4 py-2.5">
-                                <p class="text-[10px] font-semibold uppercase tracking-widest text-gray-400 mb-0.5">URL / Link</p>
-                                <p id="vm-url" class="text-sm font-medium text-gray-700 text-xs break-all"></p>
-                            </div>
-
-                        </div>
-
-                        {{-- Subjects --}}
-                        <div class="rounded-lg border border-dashed border-gray-300 bg-gray-50/50 px-4 py-3">
-                            <p class="text-[10px] font-semibold uppercase tracking-widest text-gray-400 mb-1">Subjects / Grade Levels</p>
-                            <p id="vm-subjects" class="text-sm text-gray-600 leading-relaxed"></p>
-                        </div>
-
                     </div>
 
-                    </div>
-                </div>
-
-                {{-- Footer --}}
-                <div class="flex justify-end gap-3 px-6 py-4 border-t border-gray-100 bg-gray-50 rounded-b-xl">
-                    <button id="closeNpViewModalFooter"
+                    {{-- Footer --}}
+                    <div class="flex justify-end gap-3 px-6 py-4 border-t border-gray-100 bg-gray-50 rounded-b-xl">
+                        <button id="closeNpViewModalFooter"
                             class="px-4 py-2 text-sm border border-gray-300 text-gray-600 rounded-lg hover:bg-gray-100 transition-colors">
-                        Close
-                    </button>
-                </div>
+                            Close
+                        </button>
+                    </div>
 
+                </div>
             </div>
         </div>
+
     </div>
 
-</div>
+    <script>
+        (function() {
+            // ── PAGE-LEVEL TAB MANAGEMENT ───────────────────────────────────────
+            const pageTabBtns = document.querySelectorAll('.page-tab-btn');
+            const isEditing = {{ $isEditing ? 'true' : 'false' }};
 
-<script>
-(function () {
-    // ── PAGE-LEVEL TAB MANAGEMENT ───────────────────────────────────────
-    const pageTabBtns = document.querySelectorAll('.page-tab-btn');
-    const isEditing   = {{ $isEditing ? 'true' : 'false' }};
+            function activatePageTab(targetId) {
+                if (isEditing && targetId !== 'tab-edit') {
+                    window.location.href = '{{ route('nonprint-masterlist.index') }}';
+                    return;
+                }
 
-    function activatePageTab(targetId) {
-        if (isEditing && targetId !== 'tab-edit') {
-            window.location.href = '{{ route('nonprint-masterlist.index') }}';
-            return;
-        }
+                const liveContents = document.querySelectorAll('.page-tab-content');
+                const validIds = Array.from(liveContents).map(c => c.id);
+                if (!validIds.includes(targetId)) targetId = validIds[0] ?? 'tab-masterlist';
 
-        const liveContents = document.querySelectorAll('.page-tab-content');
-        const validIds = Array.from(liveContents).map(c => c.id);
-        if (!validIds.includes(targetId)) targetId = validIds[0] ?? 'tab-masterlist';
-
-        pageTabBtns.forEach(btn => {
-            const isActive = btn.dataset.pageTab === targetId;
-            btn.classList.toggle('border-blue-600',    isActive);
-            btn.classList.toggle('text-blue-600',      isActive);
-            btn.classList.toggle('border-transparent', !isActive);
-            btn.classList.toggle('text-gray-500',      !isActive);
-        });
-        liveContents.forEach(c => c.classList.toggle('hidden', c.id !== targetId));
-    }
-
-    const initialTab = isEditing ? 'tab-edit' : 'tab-masterlist';
-    activatePageTab(initialTab);
-
-    pageTabBtns.forEach(btn => {
-        btn.addEventListener('click', () => activatePageTab(btn.dataset.pageTab));
-    });
-
-    // ── SGL TABS (inside edit form) ─────────────────────────────────────
-    const sglTabBtns     = document.querySelectorAll('.np-sgl-tab-btn');
-    const sglTabContents = document.querySelectorAll('.np-sgl-tab-content');
-
-    function activateSglTab(id) {
-        sglTabBtns.forEach(btn => {
-            const a = btn.dataset.sglTab === id;
-            btn.classList.toggle('border-blue-600',    a);
-            btn.classList.toggle('text-blue-600',      a);
-            btn.classList.toggle('active',             a);
-            btn.classList.toggle('border-transparent', !a);
-            btn.classList.toggle('text-gray-600',      !a);
-        });
-        sglTabContents.forEach(c => c.classList.toggle('hidden', c.id !== id));
-    }
-
-    sglTabBtns.forEach(btn => btn.addEventListener('click', () => activateSglTab(btn.dataset.sglTab)));
-    if (sglTabBtns.length) activateSglTab(sglTabBtns[0].dataset.sglTab);
-
-    // ── IMAGE CROPPER + PREVIEW ──────────────────────────────────────────
-    (function () {
-
-        class ImageCropperModal {
-            constructor() {
-                this._modal = null; this._canvas = null; this._ctx = null;
-                this._image = null; this._originalFile = null; this._resolvePromise = null;
-                this._zoom = 1; this._panX = 0; this._panY = 0;
-                this._crop = null;
-                this._mode = 'idle'; this._resizeHandle = null;
-                this._saved = {}; this._drawStart = null;
-                this._canvasW = 0; this._canvasH = 0;
-                this._injectStyles();
-                this._buildModal();
-            }
-            open(file) {
-                return new Promise(resolve => {
-                    this._resolvePromise = resolve;
-                    this._originalFile  = file;
-                    this._loadFile(file);
+                pageTabBtns.forEach(btn => {
+                    const isActive = btn.dataset.pageTab === targetId;
+                    btn.classList.toggle('border-blue-600', isActive);
+                    btn.classList.toggle('text-blue-600', isActive);
+                    btn.classList.toggle('border-transparent', !isActive);
+                    btn.classList.toggle('text-gray-500', !isActive);
                 });
+                liveContents.forEach(c => c.classList.toggle('hidden', c.id !== targetId));
             }
-            _buildModal() {
-                const el = document.createElement('div');
-                el.id = 'icpModal'; el.className = 'icp-overlay hidden';
-                el.innerHTML = `
+
+            const initialTab = isEditing ? 'tab-edit' : 'tab-masterlist';
+            activatePageTab(initialTab);
+
+            pageTabBtns.forEach(btn => {
+                btn.addEventListener('click', () => activatePageTab(btn.dataset.pageTab));
+            });
+
+            // ── SGL TABS (inside edit form) ─────────────────────────────────────
+            const sglTabBtns = document.querySelectorAll('.np-sgl-tab-btn');
+            const sglTabContents = document.querySelectorAll('.np-sgl-tab-content');
+
+            function activateSglTab(id) {
+                sglTabBtns.forEach(btn => {
+                    const a = btn.dataset.sglTab === id;
+                    btn.classList.toggle('border-blue-600', a);
+                    btn.classList.toggle('text-blue-600', a);
+                    btn.classList.toggle('active', a);
+                    btn.classList.toggle('border-transparent', !a);
+                    btn.classList.toggle('text-gray-600', !a);
+                });
+                sglTabContents.forEach(c => c.classList.toggle('hidden', c.id !== id));
+            }
+
+            sglTabBtns.forEach(btn => btn.addEventListener('click', () => activateSglTab(btn.dataset.sglTab)));
+            if (sglTabBtns.length) activateSglTab(sglTabBtns[0].dataset.sglTab);
+
+            // ── IMAGE CROPPER + PREVIEW ──────────────────────────────────────────
+            (function() {
+
+                class ImageCropperModal {
+                    constructor() {
+                        this._modal = null;
+                        this._canvas = null;
+                        this._ctx = null;
+                        this._image = null;
+                        this._originalFile = null;
+                        this._resolvePromise = null;
+                        this._zoom = 1;
+                        this._panX = 0;
+                        this._panY = 0;
+                        this._crop = null;
+                        this._mode = 'idle';
+                        this._resizeHandle = null;
+                        this._saved = {};
+                        this._drawStart = null;
+                        this._canvasW = 0;
+                        this._canvasH = 0;
+                        this._injectStyles();
+                        this._buildModal();
+                    }
+                    open(file) {
+                        return new Promise(resolve => {
+                            this._resolvePromise = resolve;
+                            this._originalFile = file;
+                            this._loadFile(file);
+                        });
+                    }
+                    _buildModal() {
+                        const el = document.createElement('div');
+                        el.id = 'icpModal';
+                        el.className = 'icp-overlay hidden';
+                        el.innerHTML = `
                     <div class="icp-dialog">
                         <div class="icp-header">
                             <div class="icp-header-title">
@@ -750,273 +837,507 @@
                             </div>
                         </div>
                     </div>`;
-                document.body.appendChild(el);
-                this._modal  = el;
-                this._canvas = document.getElementById('icpCanvas');
-                this._ctx    = this._canvas.getContext('2d');
-                document.getElementById('icpCloseBtn').addEventListener('click',  () => this._cancel());
-                document.getElementById('icpCancelBtn').addEventListener('click', () => this._cancel());
-                document.getElementById('icpResetBtn').addEventListener('click',  () => { this._crop = null; this._draw(); this._updateInfo(); });
-                document.getElementById('icpApplyBtn').addEventListener('click',  () => this._apply());
-                document.getElementById('icpZoomIn').addEventListener('click',    () => this._zoomBy(0.15));
-                document.getElementById('icpZoomOut').addEventListener('click',   () => this._zoomBy(-0.15));
-                document.getElementById('icpZoomFit').addEventListener('click',   () => this._fitImage());
-                this._canvas.addEventListener('mousedown',  e => this._onDown(e));
-                this._canvas.addEventListener('mousemove',  e => this._onMove(e));
-                this._canvas.addEventListener('mouseup',    () => this._onUp());
-                this._canvas.addEventListener('mouseleave', () => this._onUp());
-                this._canvas.addEventListener('wheel',      e => this._onWheel(e), { passive: false });
-                this._canvas.addEventListener('touchstart', e => this._onDown(e), { passive: false });
-                this._canvas.addEventListener('touchmove',  e => this._onMove(e), { passive: false });
-                this._canvas.addEventListener('touchend',   () => this._onUp());
-            }
-            _loadFile(file) {
-                const reader = new FileReader();
-                reader.onload = e => {
-                    const img = new Image();
-                    img.onload = () => { this._image = img; this._crop = null; this._setupCanvas(); this._fitImage(); this._show(); };
-                    img.src = e.target.result;
-                };
-                reader.readAsDataURL(file);
-            }
-            _setupCanvas() {
-                const maxW = Math.min(780, window.innerWidth - 48);
-                const maxH = Math.min(500, window.innerHeight - 230);
-                this._canvasW = this._canvas.width  = maxW;
-                this._canvasH = this._canvas.height = maxH;
-            }
-            _fitImage() {
-                const img = this._image;
-                const scaleW = this._canvasW / img.naturalWidth;
-                const scaleH = this._canvasH / img.naturalHeight;
-                this._zoom = Math.min(scaleW, scaleH, 1);
-                this._panX = (this._canvasW - img.naturalWidth  * this._zoom) / 2;
-                this._panY = (this._canvasH - img.naturalHeight * this._zoom) / 2;
-                this._clampPan(); this._draw(); this._updateZoomLabel();
-            }
-            _zoomBy(delta, pivotX, pivotY) {
-                const oldZoom = this._zoom;
-                const newZoom = Math.min(10, Math.max(0.05, oldZoom + delta));
-                if (newZoom === oldZoom) return;
-                const px = pivotX ?? this._canvasW / 2;
-                const py = pivotY ?? this._canvasH / 2;
-                this._panX = px - (px - this._panX) * (newZoom / oldZoom);
-                this._panY = py - (py - this._panY) * (newZoom / oldZoom);
-                this._zoom = newZoom;
-                this._clampPan(); this._draw(); this._updateZoomLabel();
-            }
-            _clampPan() {
-                const imgW = this._image.naturalWidth  * this._zoom;
-                const imgH = this._image.naturalHeight * this._zoom;
-                const m = 50;
-                this._panX = Math.max(m - imgW, Math.min(this._canvasW - m, this._panX));
-                this._panY = Math.max(m - imgH, Math.min(this._canvasH - m, this._panY));
-            }
-            _updateZoomLabel() {
-                const el = document.getElementById('icpZoomLabel');
-                if (el) el.textContent = Math.round(this._zoom * 100) + '%';
-            }
-            _toImage(cx, cy) { return { x: (cx - this._panX) / this._zoom, y: (cy - this._panY) / this._zoom }; }
-            _draw() {
-                const ctx = this._ctx, cw = this._canvasW, ch = this._canvasH;
-                ctx.clearRect(0, 0, cw, ch);
-                this._drawCheckerboard();
-                ctx.save(); ctx.translate(this._panX, this._panY); ctx.scale(this._zoom, this._zoom);
-                ctx.drawImage(this._image, 0, 0); ctx.restore();
-                if (!this._crop) return;
-                const { x, y, w, h } = this._crop;
-                ctx.fillStyle = 'rgba(0,0,0,0.55)'; ctx.fillRect(0, 0, cw, ch);
-                ctx.save(); ctx.beginPath(); ctx.rect(x, y, w, h); ctx.clip();
-                ctx.translate(this._panX, this._panY); ctx.scale(this._zoom, this._zoom);
-                ctx.drawImage(this._image, 0, 0); ctx.restore();
-                ctx.strokeStyle = '#3B82F6'; ctx.lineWidth = 1.5; ctx.strokeRect(x + 0.5, y + 0.5, w, h);
-                ctx.strokeStyle = 'rgba(255,255,255,0.28)'; ctx.lineWidth = 1;
-                for (let i = 1; i <= 2; i++) {
-                    ctx.beginPath(); ctx.moveTo(x + w/3*i, y);   ctx.lineTo(x + w/3*i, y+h); ctx.stroke();
-                    ctx.beginPath(); ctx.moveTo(x, y + h/3*i);   ctx.lineTo(x+w, y + h/3*i); ctx.stroke();
-                }
-                const HS = 7;
-                this._handles(x, y, w, h).forEach(({ hx, hy }) => {
-                    ctx.fillStyle = '#fff'; ctx.strokeStyle = '#3B82F6'; ctx.lineWidth = 1.5;
-                    ctx.fillRect(hx - HS/2, hy - HS/2, HS, HS); ctx.strokeRect(hx - HS/2, hy - HS/2, HS, HS);
-                });
-            }
-            _drawCheckerboard() {
-                const ctx = this._ctx, s = 14;
-                for (let r = 0; r * s < this._canvasH; r++)
-                    for (let c = 0; c * s < this._canvasW; c++) {
-                        ctx.fillStyle = (r + c) % 2 === 0 ? '#c8cdd4' : '#e2e5ea';
-                        ctx.fillRect(c*s, r*s, s, s);
+                        document.body.appendChild(el);
+                        this._modal = el;
+                        this._canvas = document.getElementById('icpCanvas');
+                        this._ctx = this._canvas.getContext('2d');
+                        document.getElementById('icpCloseBtn').addEventListener('click', () => this._cancel());
+                        document.getElementById('icpCancelBtn').addEventListener('click', () => this._cancel());
+                        document.getElementById('icpResetBtn').addEventListener('click', () => {
+                            this._crop = null;
+                            this._draw();
+                            this._updateInfo();
+                        });
+                        document.getElementById('icpApplyBtn').addEventListener('click', () => this._apply());
+                        document.getElementById('icpZoomIn').addEventListener('click', () => this._zoomBy(
+                        0.15));
+                        document.getElementById('icpZoomOut').addEventListener('click', () => this._zoomBy(-
+                            0.15));
+                        document.getElementById('icpZoomFit').addEventListener('click', () => this._fitImage());
+                        this._canvas.addEventListener('mousedown', e => this._onDown(e));
+                        this._canvas.addEventListener('mousemove', e => this._onMove(e));
+                        this._canvas.addEventListener('mouseup', () => this._onUp());
+                        this._canvas.addEventListener('mouseleave', () => this._onUp());
+                        this._canvas.addEventListener('wheel', e => this._onWheel(e), {
+                            passive: false
+                        });
+                        this._canvas.addEventListener('touchstart', e => this._onDown(e), {
+                            passive: false
+                        });
+                        this._canvas.addEventListener('touchmove', e => this._onMove(e), {
+                            passive: false
+                        });
+                        this._canvas.addEventListener('touchend', () => this._onUp());
                     }
-            }
-            _handles(x, y, w, h) {
-                return [
-                    {id:'nw',hx:x,    hy:y    },{id:'n', hx:x+w/2,hy:y    },{id:'ne',hx:x+w,hy:y    },
-                    {id:'e', hx:x+w,  hy:y+h/2},{id:'se',hx:x+w,  hy:y+h  },{id:'s', hx:x+w/2,hy:y+h},
-                    {id:'sw',hx:x,    hy:y+h  },{id:'w', hx:x,    hy:y+h/2},
-                ];
-            }
-            _hitHandle(mx, my) {
-                if (!this._crop) return null;
-                const { x, y, w, h } = this._crop, tol = 10;
-                for (const { id, hx, hy } of this._handles(x, y, w, h))
-                    if (Math.abs(mx - hx) <= tol && Math.abs(my - hy) <= tol) return id;
-                return null;
-            }
-            _insideCrop(mx, my) {
-                if (!this._crop) return false;
-                const { x, y, w, h } = this._crop;
-                return mx > x+8 && mx < x+w-8 && my > y+8 && my < y+h-8;
-            }
-            _insideImage(mx, my) {
-                return mx >= this._panX && mx <= this._panX + this._image.naturalWidth  * this._zoom &&
-                       my >= this._panY && my <= this._panY + this._image.naturalHeight * this._zoom;
-            }
-            _getPos(e) {
-                const rect = this._canvas.getBoundingClientRect();
-                const src  = e.touches ? e.touches[0] : e;
-                return { x: src.clientX - rect.left, y: src.clientY - rect.top };
-            }
-            _onDown(e) {
-                if (e.type === 'touchstart') e.preventDefault();
-                const pos = this._getPos(e);
-                const handle = this._hitHandle(pos.x, pos.y);
-                if (handle) { this._mode = 'resizing'; this._resizeHandle = handle; this._saved = { ...pos, crop: { ...this._crop } }; return; }
-                if (this._insideCrop(pos.x, pos.y)) { this._mode = 'moving'; this._saved = { ...pos, crop: { ...this._crop } }; return; }
-                if (this._insideImage(pos.x, pos.y)) { this._mode = 'drawing'; this._drawStart = { ...pos }; this._crop = null; return; }
-                this._mode = 'panning'; this._saved = { ...pos, panX: this._panX, panY: this._panY };
-            }
-            _onMove(e) {
-                if (e.type === 'touchmove') e.preventDefault();
-                const pos = this._getPos(e);
-                this._updateCursor(pos);
-                const dx = pos.x - (this._saved.x ?? pos.x);
-                const dy = pos.y - (this._saved.y ?? pos.y);
-                switch (this._mode) {
-                    case 'panning':
-                        this._panX = this._saved.panX + dx; this._panY = this._saved.panY + dy;
-                        this._clampPan(); this._draw(); break;
-                    case 'drawing': {
-                        const ds = this._drawStart;
-                        const x = Math.min(ds.x, pos.x), y = Math.min(ds.y, pos.y);
-                        const w = Math.abs(pos.x - ds.x), h = Math.abs(pos.y - ds.y);
-                        if (w > 5 || h > 5) this._crop = { x, y, w, h };
-                        this._draw(); this._updateInfo(); break;
+                    _loadFile(file) {
+                        const reader = new FileReader();
+                        reader.onload = e => {
+                            const img = new Image();
+                            img.onload = () => {
+                                this._image = img;
+                                this._crop = null;
+                                this._setupCanvas();
+                                this._fitImage();
+                                this._show();
+                            };
+                            img.src = e.target.result;
+                        };
+                        reader.readAsDataURL(file);
                     }
-                    case 'moving': {
-                        const { w, h } = this._saved.crop;
-                        const cw = this._canvasW, ch = this._canvasH;
-                        let nx = Math.max(0, Math.min(this._saved.crop.x + dx, cw - w));
-                        let ny = Math.max(0, Math.min(this._saved.crop.y + dy, ch - h));
-                        this._crop = { x: nx, y: ny, w, h };
-                        this._draw(); this._updateInfo(); break;
+                    _setupCanvas() {
+                        const maxW = Math.min(780, window.innerWidth - 48);
+                        const maxH = Math.min(500, window.innerHeight - 230);
+                        this._canvasW = this._canvas.width = maxW;
+                        this._canvasH = this._canvas.height = maxH;
                     }
-                    case 'resizing': this._doResize(pos); break;
-                }
-            }
-            _onUp() { this._mode = 'idle'; this._resizeHandle = null; }
-            _onWheel(e) {
-                e.preventDefault();
-                const pos = this._getPos(e);
-                this._zoomBy(e.deltaY < 0 ? 0.14 : -0.14, pos.x, pos.y);
-            }
-            _updateCursor(pos) {
-                const handle = this._hitHandle(pos.x, pos.y);
-                if (handle) {
-                    const map = { nw:'nwse-resize',se:'nwse-resize',ne:'nesw-resize',sw:'nesw-resize',n:'ns-resize',s:'ns-resize',e:'ew-resize',w:'ew-resize' };
-                    this._canvas.style.cursor = map[handle] || 'pointer';
-                } else if (this._insideCrop(pos.x, pos.y)) {
-                    this._canvas.style.cursor = 'move';
-                } else if (this._insideImage(pos.x, pos.y)) {
-                    this._canvas.style.cursor = this._mode === 'panning' ? 'grabbing' : 'crosshair';
-                } else {
-                    this._canvas.style.cursor = this._mode === 'panning' ? 'grabbing' : 'grab';
-                }
-            }
-            _doResize(pos) {
-                const MIN = 20, cw = this._canvasW, ch = this._canvasH;
-                const dx = pos.x - this._saved.x, dy = pos.y - this._saved.y;
-                let { x, y, w, h } = this._saved.crop;
-                const id = this._resizeHandle;
-                if (id.includes('e')) w = Math.max(MIN, Math.min(cw - x, w + dx));
-                if (id.includes('s')) h = Math.max(MIN, Math.min(ch - y, h + dy));
-                if (id.includes('w')) { const nx = Math.max(0, Math.min(x + w - MIN, x + dx)); w += x - nx; x = nx; }
-                if (id.includes('n')) { const ny = Math.max(0, Math.min(y + h - MIN, y + dy)); h += y - ny; y = ny; }
-                this._crop = { x, y, w, h }; this._draw(); this._updateInfo();
-            }
-            _updateInfo() {
-                const el = document.getElementById('icpDimInfo');
-                if (!el) return;
-                if (!this._crop) { el.textContent = 'Draw a crop area on the image'; return; }
-                const { w, h } = this._crop;
-                el.textContent = `Crop: ${Math.round(w / this._zoom)} × ${Math.round(h / this._zoom)} px`;
-            }
-            async _apply() {
-                const btn = document.getElementById('icpApplyBtn');
-                btn.disabled = true; btn.innerHTML = '<span class="icp-spinner"></span> Processing…';
-                try {
-                    const file = await this._cropAndCompress();
-                    const sizeEl = document.getElementById('icpSizeInfo');
-                    if (sizeEl) sizeEl.textContent = `Output: ${(file.size / 1024).toFixed(1)} KB`;
-                    this._hide(); this._resolvePromise(file);
-                } catch (err) {
-                    console.error(err); alert('Failed to process the image. Please try again.');
-                } finally {
-                    btn.disabled = false;
-                    btn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg> Apply & Compress`;
-                }
-            }
-            async _cropAndCompress() {
-                const img = this._image;
-                let natX, natY, natW, natH;
-                if (this._crop) {
-                    const { x, y, w, h } = this._crop;
-                    const tl = this._toImage(x, y), br = this._toImage(x + w, y + h);
-                    natX = Math.max(0, Math.round(tl.x)); natY = Math.max(0, Math.round(tl.y));
-                    natW = Math.min(img.naturalWidth  - natX, Math.round(br.x - tl.x));
-                    natH = Math.min(img.naturalHeight - natY, Math.round(br.y - tl.y));
-                } else {
-                    natX = 0; natY = 0; natW = img.naturalWidth; natH = img.naturalHeight;
-                }
-                const off = document.createElement('canvas');
-                off.width = natW; off.height = natH;
-                off.getContext('2d').drawImage(img, natX, natY, natW, natH, 0, 0, natW, natH);
-                const TARGET = 100 * 1024;
-                const baseName = (this._originalFile?.name || 'image.jpg').replace(/\.[^.]+$/, '');
-                const toBlob = (canvas, type, quality) =>
-                    new Promise((res, rej) => canvas.toBlob(b => b ? res(b) : rej(new Error('toBlob failed')), type, quality));
-                let quality = 0.92, blob;
-                while (quality >= 0.05) {
-                    blob = await toBlob(off, 'image/jpeg', quality);
-                    if (blob.size <= TARGET) break;
-                    quality = parseFloat((quality - 0.05).toFixed(2));
-                }
-                if (blob.size > TARGET) {
-                    let scale = 0.9;
-                    while (scale >= 0.2) {
-                        const sc = document.createElement('canvas');
-                        sc.width  = Math.round(natW * scale);
-                        sc.height = Math.round(natH * scale);
-                        sc.getContext('2d').drawImage(off, 0, 0, sc.width, sc.height);
-                        blob = await toBlob(sc, 'image/jpeg', 0.85);
-                        if (blob.size <= TARGET) break;
-                        scale = parseFloat((scale - 0.1).toFixed(2));
+                    _fitImage() {
+                        const img = this._image;
+                        const scaleW = this._canvasW / img.naturalWidth;
+                        const scaleH = this._canvasH / img.naturalHeight;
+                        this._zoom = Math.min(scaleW, scaleH, 1);
+                        this._panX = (this._canvasW - img.naturalWidth * this._zoom) / 2;
+                        this._panY = (this._canvasH - img.naturalHeight * this._zoom) / 2;
+                        this._clampPan();
+                        this._draw();
+                        this._updateZoomLabel();
                     }
-                }
-                return new File([blob], `${baseName}.jpg`, { type: 'image/jpeg' });
-            }
-            _cancel() { this._hide(); this._resolvePromise(null); }
-            _show() { this._modal.classList.remove('hidden'); document.body.style.overflow = 'hidden'; }
-            _hide() {
-                this._modal.classList.add('hidden'); document.body.style.overflow = '';
-                const si = document.getElementById('icpSizeInfo'), di = document.getElementById('icpDimInfo');
-                if (si) si.textContent = '';
-                if (di) di.textContent = 'Draw a crop area on the image';
-            }
-            _injectStyles() {
-                if (document.getElementById('icpStyles')) return;
-                const s = document.createElement('style'); s.id = 'icpStyles';
-                s.textContent = `
+                    _zoomBy(delta, pivotX, pivotY) {
+                        const oldZoom = this._zoom;
+                        const newZoom = Math.min(10, Math.max(0.05, oldZoom + delta));
+                        if (newZoom === oldZoom) return;
+                        const px = pivotX ?? this._canvasW / 2;
+                        const py = pivotY ?? this._canvasH / 2;
+                        this._panX = px - (px - this._panX) * (newZoom / oldZoom);
+                        this._panY = py - (py - this._panY) * (newZoom / oldZoom);
+                        this._zoom = newZoom;
+                        this._clampPan();
+                        this._draw();
+                        this._updateZoomLabel();
+                    }
+                    _clampPan() {
+                        const imgW = this._image.naturalWidth * this._zoom;
+                        const imgH = this._image.naturalHeight * this._zoom;
+                        const m = 50;
+                        this._panX = Math.max(m - imgW, Math.min(this._canvasW - m, this._panX));
+                        this._panY = Math.max(m - imgH, Math.min(this._canvasH - m, this._panY));
+                    }
+                    _updateZoomLabel() {
+                        const el = document.getElementById('icpZoomLabel');
+                        if (el) el.textContent = Math.round(this._zoom * 100) + '%';
+                    }
+                    _toImage(cx, cy) {
+                        return {
+                            x: (cx - this._panX) / this._zoom,
+                            y: (cy - this._panY) / this._zoom
+                        };
+                    }
+                    _draw() {
+                        const ctx = this._ctx,
+                            cw = this._canvasW,
+                            ch = this._canvasH;
+                        ctx.clearRect(0, 0, cw, ch);
+                        this._drawCheckerboard();
+                        ctx.save();
+                        ctx.translate(this._panX, this._panY);
+                        ctx.scale(this._zoom, this._zoom);
+                        ctx.drawImage(this._image, 0, 0);
+                        ctx.restore();
+                        if (!this._crop) return;
+                        const {
+                            x,
+                            y,
+                            w,
+                            h
+                        } = this._crop;
+                        ctx.fillStyle = 'rgba(0,0,0,0.55)';
+                        ctx.fillRect(0, 0, cw, ch);
+                        ctx.save();
+                        ctx.beginPath();
+                        ctx.rect(x, y, w, h);
+                        ctx.clip();
+                        ctx.translate(this._panX, this._panY);
+                        ctx.scale(this._zoom, this._zoom);
+                        ctx.drawImage(this._image, 0, 0);
+                        ctx.restore();
+                        ctx.strokeStyle = '#3B82F6';
+                        ctx.lineWidth = 1.5;
+                        ctx.strokeRect(x + 0.5, y + 0.5, w, h);
+                        ctx.strokeStyle = 'rgba(255,255,255,0.28)';
+                        ctx.lineWidth = 1;
+                        for (let i = 1; i <= 2; i++) {
+                            ctx.beginPath();
+                            ctx.moveTo(x + w / 3 * i, y);
+                            ctx.lineTo(x + w / 3 * i, y + h);
+                            ctx.stroke();
+                            ctx.beginPath();
+                            ctx.moveTo(x, y + h / 3 * i);
+                            ctx.lineTo(x + w, y + h / 3 * i);
+                            ctx.stroke();
+                        }
+                        const HS = 7;
+                        this._handles(x, y, w, h).forEach(({
+                            hx,
+                            hy
+                        }) => {
+                            ctx.fillStyle = '#fff';
+                            ctx.strokeStyle = '#3B82F6';
+                            ctx.lineWidth = 1.5;
+                            ctx.fillRect(hx - HS / 2, hy - HS / 2, HS, HS);
+                            ctx.strokeRect(hx - HS / 2, hy - HS / 2, HS, HS);
+                        });
+                    }
+                    _drawCheckerboard() {
+                        const ctx = this._ctx,
+                            s = 14;
+                        for (let r = 0; r * s < this._canvasH; r++)
+                            for (let c = 0; c * s < this._canvasW; c++) {
+                                ctx.fillStyle = (r + c) % 2 === 0 ? '#c8cdd4' : '#e2e5ea';
+                                ctx.fillRect(c * s, r * s, s, s);
+                            }
+                    }
+                    _handles(x, y, w, h) {
+                        return [{
+                                id: 'nw',
+                                hx: x,
+                                hy: y
+                            }, {
+                                id: 'n',
+                                hx: x + w / 2,
+                                hy: y
+                            }, {
+                                id: 'ne',
+                                hx: x + w,
+                                hy: y
+                            },
+                            {
+                                id: 'e',
+                                hx: x + w,
+                                hy: y + h / 2
+                            }, {
+                                id: 'se',
+                                hx: x + w,
+                                hy: y + h
+                            }, {
+                                id: 's',
+                                hx: x + w / 2,
+                                hy: y + h
+                            },
+                            {
+                                id: 'sw',
+                                hx: x,
+                                hy: y + h
+                            }, {
+                                id: 'w',
+                                hx: x,
+                                hy: y + h / 2
+                            },
+                        ];
+                    }
+                    _hitHandle(mx, my) {
+                        if (!this._crop) return null;
+                        const {
+                            x,
+                            y,
+                            w,
+                            h
+                        } = this._crop, tol = 10;
+                        for (const {
+                                id,
+                                hx,
+                                hy
+                            }
+                            of this._handles(x, y, w, h))
+                            if (Math.abs(mx - hx) <= tol && Math.abs(my - hy) <= tol) return id;
+                        return null;
+                    }
+                    _insideCrop(mx, my) {
+                        if (!this._crop) return false;
+                        const {
+                            x,
+                            y,
+                            w,
+                            h
+                        } = this._crop;
+                        return mx > x + 8 && mx < x + w - 8 && my > y + 8 && my < y + h - 8;
+                    }
+                    _insideImage(mx, my) {
+                        return mx >= this._panX && mx <= this._panX + this._image.naturalWidth * this._zoom &&
+                            my >= this._panY && my <= this._panY + this._image.naturalHeight * this._zoom;
+                    }
+                    _getPos(e) {
+                        const rect = this._canvas.getBoundingClientRect();
+                        const src = e.touches ? e.touches[0] : e;
+                        return {
+                            x: src.clientX - rect.left,
+                            y: src.clientY - rect.top
+                        };
+                    }
+                    _onDown(e) {
+                        if (e.type === 'touchstart') e.preventDefault();
+                        const pos = this._getPos(e);
+                        const handle = this._hitHandle(pos.x, pos.y);
+                        if (handle) {
+                            this._mode = 'resizing';
+                            this._resizeHandle = handle;
+                            this._saved = {
+                                ...pos,
+                                crop: {
+                                    ...this._crop
+                                }
+                            };
+                            return;
+                        }
+                        if (this._insideCrop(pos.x, pos.y)) {
+                            this._mode = 'moving';
+                            this._saved = {
+                                ...pos,
+                                crop: {
+                                    ...this._crop
+                                }
+                            };
+                            return;
+                        }
+                        if (this._insideImage(pos.x, pos.y)) {
+                            this._mode = 'drawing';
+                            this._drawStart = {
+                                ...pos
+                            };
+                            this._crop = null;
+                            return;
+                        }
+                        this._mode = 'panning';
+                        this._saved = {
+                            ...pos,
+                            panX: this._panX,
+                            panY: this._panY
+                        };
+                    }
+                    _onMove(e) {
+                        if (e.type === 'touchmove') e.preventDefault();
+                        const pos = this._getPos(e);
+                        this._updateCursor(pos);
+                        const dx = pos.x - (this._saved.x ?? pos.x);
+                        const dy = pos.y - (this._saved.y ?? pos.y);
+                        switch (this._mode) {
+                            case 'panning':
+                                this._panX = this._saved.panX + dx;
+                                this._panY = this._saved.panY + dy;
+                                this._clampPan();
+                                this._draw();
+                                break;
+                            case 'drawing': {
+                                const ds = this._drawStart;
+                                const x = Math.min(ds.x, pos.x),
+                                    y = Math.min(ds.y, pos.y);
+                                const w = Math.abs(pos.x - ds.x),
+                                    h = Math.abs(pos.y - ds.y);
+                                if (w > 5 || h > 5) this._crop = {
+                                    x,
+                                    y,
+                                    w,
+                                    h
+                                };
+                                this._draw();
+                                this._updateInfo();
+                                break;
+                            }
+                            case 'moving': {
+                                const {
+                                    w,
+                                    h
+                                } = this._saved.crop;
+                                const cw = this._canvasW,
+                                    ch = this._canvasH;
+                                let nx = Math.max(0, Math.min(this._saved.crop.x + dx, cw - w));
+                                let ny = Math.max(0, Math.min(this._saved.crop.y + dy, ch - h));
+                                this._crop = {
+                                    x: nx,
+                                    y: ny,
+                                    w,
+                                    h
+                                };
+                                this._draw();
+                                this._updateInfo();
+                                break;
+                            }
+                            case 'resizing':
+                                this._doResize(pos);
+                                break;
+                        }
+                    }
+                    _onUp() {
+                        this._mode = 'idle';
+                        this._resizeHandle = null;
+                    }
+                    _onWheel(e) {
+                        e.preventDefault();
+                        const pos = this._getPos(e);
+                        this._zoomBy(e.deltaY < 0 ? 0.14 : -0.14, pos.x, pos.y);
+                    }
+                    _updateCursor(pos) {
+                        const handle = this._hitHandle(pos.x, pos.y);
+                        if (handle) {
+                            const map = {
+                                nw: 'nwse-resize',
+                                se: 'nwse-resize',
+                                ne: 'nesw-resize',
+                                sw: 'nesw-resize',
+                                n: 'ns-resize',
+                                s: 'ns-resize',
+                                e: 'ew-resize',
+                                w: 'ew-resize'
+                            };
+                            this._canvas.style.cursor = map[handle] || 'pointer';
+                        } else if (this._insideCrop(pos.x, pos.y)) {
+                            this._canvas.style.cursor = 'move';
+                        } else if (this._insideImage(pos.x, pos.y)) {
+                            this._canvas.style.cursor = this._mode === 'panning' ? 'grabbing' : 'crosshair';
+                        } else {
+                            this._canvas.style.cursor = this._mode === 'panning' ? 'grabbing' : 'grab';
+                        }
+                    }
+                    _doResize(pos) {
+                        const MIN = 20,
+                            cw = this._canvasW,
+                            ch = this._canvasH;
+                        const dx = pos.x - this._saved.x,
+                            dy = pos.y - this._saved.y;
+                        let {
+                            x,
+                            y,
+                            w,
+                            h
+                        } = this._saved.crop;
+                        const id = this._resizeHandle;
+                        if (id.includes('e')) w = Math.max(MIN, Math.min(cw - x, w + dx));
+                        if (id.includes('s')) h = Math.max(MIN, Math.min(ch - y, h + dy));
+                        if (id.includes('w')) {
+                            const nx = Math.max(0, Math.min(x + w - MIN, x + dx));
+                            w += x - nx;
+                            x = nx;
+                        }
+                        if (id.includes('n')) {
+                            const ny = Math.max(0, Math.min(y + h - MIN, y + dy));
+                            h += y - ny;
+                            y = ny;
+                        }
+                        this._crop = {
+                            x,
+                            y,
+                            w,
+                            h
+                        };
+                        this._draw();
+                        this._updateInfo();
+                    }
+                    _updateInfo() {
+                        const el = document.getElementById('icpDimInfo');
+                        if (!el) return;
+                        if (!this._crop) {
+                            el.textContent = 'Draw a crop area on the image';
+                            return;
+                        }
+                        const {
+                            w,
+                            h
+                        } = this._crop;
+                        el.textContent =
+                            `Crop: ${Math.round(w / this._zoom)} × ${Math.round(h / this._zoom)} px`;
+                    }
+                    async _apply() {
+                        const btn = document.getElementById('icpApplyBtn');
+                        btn.disabled = true;
+                        btn.innerHTML = '<span class="icp-spinner"></span> Processing…';
+                        try {
+                            const file = await this._cropAndCompress();
+                            const sizeEl = document.getElementById('icpSizeInfo');
+                            if (sizeEl) sizeEl.textContent = `Output: ${(file.size / 1024).toFixed(1)} KB`;
+                            this._hide();
+                            this._resolvePromise(file);
+                        } catch (err) {
+                            console.error(err);
+                            alert('Failed to process the image. Please try again.');
+                        } finally {
+                            btn.disabled = false;
+                            btn.innerHTML =
+                                `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg> Apply & Compress`;
+                        }
+                    }
+                    async _cropAndCompress() {
+                        const img = this._image;
+                        let natX, natY, natW, natH;
+                        if (this._crop) {
+                            const {
+                                x,
+                                y,
+                                w,
+                                h
+                            } = this._crop;
+                            const tl = this._toImage(x, y),
+                                br = this._toImage(x + w, y + h);
+                            natX = Math.max(0, Math.round(tl.x));
+                            natY = Math.max(0, Math.round(tl.y));
+                            natW = Math.min(img.naturalWidth - natX, Math.round(br.x - tl.x));
+                            natH = Math.min(img.naturalHeight - natY, Math.round(br.y - tl.y));
+                        } else {
+                            natX = 0;
+                            natY = 0;
+                            natW = img.naturalWidth;
+                            natH = img.naturalHeight;
+                        }
+                        const off = document.createElement('canvas');
+                        off.width = natW;
+                        off.height = natH;
+                        off.getContext('2d').drawImage(img, natX, natY, natW, natH, 0, 0, natW, natH);
+                        const TARGET = 100 * 1024;
+                        const baseName = (this._originalFile?.name || 'image.jpg').replace(/\.[^.]+$/, '');
+                        const toBlob = (canvas, type, quality) =>
+                            new Promise((res, rej) => canvas.toBlob(b => b ? res(b) : rej(new Error(
+                                'toBlob failed')), type, quality));
+                        let quality = 0.92,
+                            blob;
+                        while (quality >= 0.05) {
+                            blob = await toBlob(off, 'image/jpeg', quality);
+                            if (blob.size <= TARGET) break;
+                            quality = parseFloat((quality - 0.05).toFixed(2));
+                        }
+                        if (blob.size > TARGET) {
+                            let scale = 0.9;
+                            while (scale >= 0.2) {
+                                const sc = document.createElement('canvas');
+                                sc.width = Math.round(natW * scale);
+                                sc.height = Math.round(natH * scale);
+                                sc.getContext('2d').drawImage(off, 0, 0, sc.width, sc.height);
+                                blob = await toBlob(sc, 'image/jpeg', 0.85);
+                                if (blob.size <= TARGET) break;
+                                scale = parseFloat((scale - 0.1).toFixed(2));
+                            }
+                        }
+                        return new File([blob], `${baseName}.jpg`, {
+                            type: 'image/jpeg'
+                        });
+                    }
+                    _cancel() {
+                        this._hide();
+                        this._resolvePromise(null);
+                    }
+                    _show() {
+                        this._modal.classList.remove('hidden');
+                        document.body.style.overflow = 'hidden';
+                    }
+                    _hide() {
+                        this._modal.classList.add('hidden');
+                        document.body.style.overflow = '';
+                        const si = document.getElementById('icpSizeInfo'),
+                            di = document.getElementById('icpDimInfo');
+                        if (si) si.textContent = '';
+                        if (di) di.textContent = 'Draw a crop area on the image';
+                    }
+                    _injectStyles() {
+                        if (document.getElementById('icpStyles')) return;
+                        const s = document.createElement('style');
+                        s.id = 'icpStyles';
+                        s.textContent = `
                     .icp-overlay{position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.82);display:flex;align-items:center;justify-content:center;padding:16px;box-sizing:border-box;}
                     .icp-overlay.hidden{display:none!important;}
                     .icp-dialog{background:#fff;border-radius:16px;padding:20px;display:flex;flex-direction:column;gap:12px;max-width:840px;width:100%;box-shadow:0 32px 100px rgba(0,0,0,0.55);box-sizing:border-box;}
@@ -1044,241 +1365,263 @@
                     @keyframes icpSpin{to{transform:rotate(360deg);}}
                     @media(max-width:540px){.icp-dialog{padding:12px;gap:10px;}.icp-footer{flex-direction:column;align-items:stretch;}.icp-actions{flex-wrap:wrap;}.icp-actions button{flex:1;}.icp-info{justify-content:flex-start;}.icp-hint span{display:block;}}
                 `;
-                document.head.appendChild(s);
-            }
-        }
-
-        let _cropperInstance = null;
-        function getCropper() {
-            if (!_cropperInstance) _cropperInstance = new ImageCropperModal();
-            return _cropperInstance;
-        }
-
-        function setupImagePreview(uploadId, previewId) {
-            const imageUpload  = document.getElementById(uploadId);
-            const imagePreview = document.getElementById(previewId);
-            if (!imageUpload || !imagePreview) return;
-            if (!imagePreview.dataset.defaultSrc)
-                imagePreview.dataset.defaultSrc = imagePreview.src || '';
-            imageUpload.addEventListener('change', async (event) => {
-                const file = event.target.files[0];
-                if (!file) return;
-                const allowed = ['image/jpeg', 'image/jpg', 'image/png'];
-                if (!allowed.includes(file.type)) {
-                    alert('Please select a valid image file (JPEG or PNG).');
-                    imageUpload.value = ''; imagePreview.src = imagePreview.dataset.defaultSrc || ''; return;
+                        document.head.appendChild(s);
+                    }
                 }
-                if (file.size > 20 * 1024 * 1024) {
-                    alert('File is too large (max 20 MB before compression).');
-                    imageUpload.value = ''; imagePreview.src = imagePreview.dataset.defaultSrc || ''; return;
+
+                let _cropperInstance = null;
+
+                function getCropper() {
+                    if (!_cropperInstance) _cropperInstance = new ImageCropperModal();
+                    return _cropperInstance;
                 }
-                const croppedFile = await getCropper().open(file);
-                if (!croppedFile) {
-                    imageUpload.value = ''; imagePreview.src = imagePreview.dataset.defaultSrc || ''; return;
-                }
-                try {
-                    const dt = new DataTransfer();
-                    dt.items.add(croppedFile);
-                    imageUpload.files = dt.files;
-                } catch { /* fallback */ }
-                const reader = new FileReader();
-                reader.onload = e => { imagePreview.src = e.target.result; };
-                reader.readAsDataURL(croppedFile);
-            });
-        }
 
-        setupImagePreview('npImageUpload', 'npImagePreview');
-
-    })();
-
-    // ── VIEW RESOURCE MODAL ──────────────────────────────────────────────
-    const viewModal       = document.getElementById('viewNpModal');
-    const viewBackdrop    = document.getElementById('viewNpModalBackdrop');
-    const closeViewBtn    = document.getElementById('closeNpViewModal');
-    const closeViewFooter = document.getElementById('closeNpViewModalFooter');
-
-    function openViewModal(btn) {
-        const isRequest = btn.dataset.isRequest === 'true';
-
-        document.getElementById('vm-cover').src              = btn.dataset.cover;
-        document.getElementById('vm-title').textContent      = btn.dataset.title;
-        document.getElementById('vm-type-badge').textContent = btn.dataset.type;
-        document.getElementById('vm-brand').textContent      = btn.dataset.brand;
-        document.getElementById('vm-code').textContent       = btn.dataset.code;
-        document.getElementById('vm-version').textContent    = btn.dataset.version;
-        document.getElementById('vm-model').textContent      = btn.dataset.model;
-        document.getElementById('vm-size').textContent       = btn.dataset.size;
-        document.getElementById('vm-url').textContent        = btn.dataset.url !== '-' ? btn.dataset.url : '-';
-        document.getElementById('vm-subjects').textContent   = btn.dataset.subjects;
-
-        const vmStatusBadge = document.getElementById('vm-status-badge');
-        if (vmStatusBadge && isRequest) {
-            vmStatusBadge.textContent = '⏳ Pending Approval';
-            vmStatusBadge.className   = 'inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800';
-        }
-
-        viewModal.classList.remove('hidden');
-        document.body.style.overflow = 'hidden';
-    }
-
-    function closeModal() {
-        viewModal.classList.add('hidden');
-        document.body.style.overflow = '';
-    }
-
-    function attachViewBtnListeners() {
-        document.querySelectorAll('.view-resource-btn').forEach(btn => {
-            if (btn.dataset.viewBound) return;
-            btn.dataset.viewBound = '1';
-            btn.addEventListener('click', () => openViewModal(btn));
-        });
-    }
-
-    attachViewBtnListeners();
-
-    closeViewBtn    && closeViewBtn.addEventListener('click', closeModal);
-    closeViewFooter && closeViewFooter.addEventListener('click', closeModal);
-    viewBackdrop    && viewBackdrop.addEventListener('click', closeModal);
-
-    document.addEventListener('keydown', e => {
-        if (e.key === 'Escape' && !viewModal.classList.contains('hidden')) closeModal();
-    });
-
-    // ── SUBMIT SPINNER ───────────────────────────────────────────────────
-    const saveBtn     = document.getElementById('saveNpBtn');
-    const saveText    = document.getElementById('saveNpText');
-    const saveLoading = document.getElementById('saveNpLoading');
-    const editFormEl  = document.getElementById('editNpForm');
-    if (editFormEl && saveBtn) {
-        editFormEl.addEventListener('submit', () => {
-            saveBtn.disabled = true;
-            if (saveText)    saveText.classList.add('hidden');
-            if (saveLoading) saveLoading.classList.remove('hidden');
-        });
-    }
-
-    // ── AJAX PARTIAL TABLE RELOAD ────────────────────────────────────────
-    (function () {
-        let currentController = null;
-
-        function setLoading(tabId, loading) {
-            const tab = document.getElementById(tabId);
-            if (!tab) return;
-            const wrap = tab.querySelector('.overflow-x-auto');
-            if (wrap) wrap.style.opacity = loading ? '0.5' : '1';
-        }
-
-        function rehydrateTab(tabId) {
-            attachViewBtnListeners();
-            attachPaginationListeners();
-            attachSearchFormListeners();
-            const tab = document.getElementById(tabId);
-            if (!tab) return;
-            tab.querySelectorAll('a[href*="nonprint-masterlist"]').forEach(link => {
-                if (link.href.includes('/edit')) return; // let edit links navigate normally
-                if (link.dataset.ajaxBound) return;
-                link.dataset.ajaxBound = '1';
-                link.addEventListener('click', function (e) {
-                    e.preventDefault();
-                    ajaxFetch(this.href, tabId);
-                });
-            });
-        }
-
-        function ajaxFetch(url, tabId) {
-            if (currentController) currentController.abort();
-            currentController = new AbortController();
-
-            setLoading(tabId, true);
-            history.pushState({ tabId }, '', url);
-
-            fetch(url, {
-                signal: currentController.signal,
-                headers: {
-                    'X-Requested-With': 'XMLHttpRequest',
-                    'Accept': 'text/html',
-                }
-            })
-            .then(r => {
-                if (!r.ok) throw new Error('Network response was not ok');
-                return r.text();
-            })
-            .then(html => {
-                const parser = new DOMParser();
-                const doc    = parser.parseFromString(html, 'text/html');
-                const newTab = doc.getElementById(tabId);
-                const oldTab = document.getElementById(tabId);
-                if (newTab && oldTab) {
-                    newTab.classList.remove('hidden');
-                    oldTab.replaceWith(newTab);
-                    rehydrateTab(tabId);
-                }
-            })
-            .catch(err => {
-                if (err.name === 'AbortError') return;
-                console.error('AJAX fetch failed, falling back:', err);
-                window.location.href = url;
-            })
-            .finally(() => {
-                setLoading(tabId, false);
-                currentController = null;
-            });
-        }
-
-        function attachPaginationListeners() {
-            ['tab-masterlist', 'tab-requests'].forEach(tabId => {
-                const tab = document.getElementById(tabId);
-                if (!tab) return;
-                tab.querySelectorAll('nav[role="navigation"] a, .pagination a').forEach(link => {
-                    if (link.dataset.ajaxBound) return;
-                    link.dataset.ajaxBound = '1';
-                    link.addEventListener('click', function (e) {
-                        e.preventDefault();
-                        const url = new URL(this.href, window.location.origin);
-                        url.searchParams.set('active_tab', tabId);
-                        ajaxFetch(url.toString(), tabId);
+                function setupImagePreview(uploadId, previewId) {
+                    const imageUpload = document.getElementById(uploadId);
+                    const imagePreview = document.getElementById(previewId);
+                    if (!imageUpload || !imagePreview) return;
+                    if (!imagePreview.dataset.defaultSrc)
+                        imagePreview.dataset.defaultSrc = imagePreview.src || '';
+                    imageUpload.addEventListener('change', async (event) => {
+                        const file = event.target.files[0];
+                        if (!file) return;
+                        const allowed = ['image/jpeg', 'image/jpg', 'image/png'];
+                        if (!allowed.includes(file.type)) {
+                            alert('Please select a valid image file (JPEG or PNG).');
+                            imageUpload.value = '';
+                            imagePreview.src = imagePreview.dataset.defaultSrc || '';
+                            return;
+                        }
+                        if (file.size > 20 * 1024 * 1024) {
+                            alert('File is too large (max 20 MB before compression).');
+                            imageUpload.value = '';
+                            imagePreview.src = imagePreview.dataset.defaultSrc || '';
+                            return;
+                        }
+                        const croppedFile = await getCropper().open(file);
+                        if (!croppedFile) {
+                            imageUpload.value = '';
+                            imagePreview.src = imagePreview.dataset.defaultSrc || '';
+                            return;
+                        }
+                        try {
+                            const dt = new DataTransfer();
+                            dt.items.add(croppedFile);
+                            imageUpload.files = dt.files;
+                        } catch {
+                            /* fallback */ }
+                        const reader = new FileReader();
+                        reader.onload = e => {
+                            imagePreview.src = e.target.result;
+                        };
+                        reader.readAsDataURL(croppedFile);
                     });
+                }
+
+                setupImagePreview('npImageUpload', 'npImagePreview');
+
+            })();
+
+            // ── VIEW RESOURCE MODAL ──────────────────────────────────────────────
+            const viewModal = document.getElementById('viewNpModal');
+            const viewBackdrop = document.getElementById('viewNpModalBackdrop');
+            const closeViewBtn = document.getElementById('closeNpViewModal');
+            const closeViewFooter = document.getElementById('closeNpViewModalFooter');
+
+            function openViewModal(btn) {
+                const isRequest = btn.dataset.isRequest === 'true';
+
+                document.getElementById('vm-cover').src = btn.dataset.cover;
+                document.getElementById('vm-title').textContent = btn.dataset.title;
+                document.getElementById('vm-type-badge').textContent = btn.dataset.type;
+                document.getElementById('vm-brand').textContent = btn.dataset.brand;
+                document.getElementById('vm-code').textContent = btn.dataset.code;
+                document.getElementById('vm-version').textContent = btn.dataset.version;
+                document.getElementById('vm-model').textContent = btn.dataset.model;
+                document.getElementById('vm-size').textContent = btn.dataset.size;
+                document.getElementById('vm-url').textContent = btn.dataset.url !== '-' ? btn.dataset.url : '-';
+                document.getElementById('vm-subjects').textContent = btn.dataset.subjects;
+
+                const vmStatusBadge = document.getElementById('vm-status-badge');
+                if (vmStatusBadge && isRequest) {
+                    vmStatusBadge.textContent = '⏳ Pending Approval';
+                    vmStatusBadge.className =
+                        'inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800';
+                }
+
+                viewModal.classList.remove('hidden');
+                document.body.style.overflow = 'hidden';
+            }
+
+            function closeModal() {
+                viewModal.classList.add('hidden');
+                document.body.style.overflow = '';
+            }
+
+            function attachViewBtnListeners() {
+                document.querySelectorAll('.view-resource-btn').forEach(btn => {
+                    if (btn.dataset.viewBound) return;
+                    btn.dataset.viewBound = '1';
+                    btn.addEventListener('click', () => openViewModal(btn));
                 });
-            });
-        }
+            }
 
-        function attachSearchFormListeners() {
-            const configs = [
-                { tabId: 'tab-masterlist', searchParam: 'ml_search' },
-                { tabId: 'tab-requests',   searchParam: 'rq_search'  },
-            ];
-            configs.forEach(({ tabId, searchParam }) => {
-                const tab = document.getElementById(tabId);
-                if (!tab) return;
-                const form = tab.querySelector('form');
-                if (!form || form.dataset.ajaxBound) return;
-                form.dataset.ajaxBound = '1';
-                form.addEventListener('submit', function (e) {
-                    e.preventDefault();
-                    const url = new URL(form.action, window.location.origin);
-                    url.searchParams.delete(searchParam);
-                    const val = form.querySelector(`input[name="${searchParam}"]`)?.value?.trim();
-                    if (val) url.searchParams.set(searchParam, val);
-                    url.searchParams.set('active_tab', tabId);
-                    ajaxFetch(url.toString(), tabId);
+            attachViewBtnListeners();
+
+            closeViewBtn && closeViewBtn.addEventListener('click', closeModal);
+            closeViewFooter && closeViewFooter.addEventListener('click', closeModal);
+            viewBackdrop && viewBackdrop.addEventListener('click', closeModal);
+
+            document.addEventListener('keydown', e => {
+                if (e.key === 'Escape' && !viewModal.classList.contains('hidden')) closeModal();
+            });
+
+            // ── SUBMIT SPINNER ───────────────────────────────────────────────────
+            const saveBtn = document.getElementById('saveNpBtn');
+            const saveText = document.getElementById('saveNpText');
+            const saveLoading = document.getElementById('saveNpLoading');
+            const editFormEl = document.getElementById('editNpForm');
+            if (editFormEl && saveBtn) {
+                editFormEl.addEventListener('submit', () => {
+                    saveBtn.disabled = true;
+                    if (saveText) saveText.classList.add('hidden');
+                    if (saveLoading) saveLoading.classList.remove('hidden');
                 });
-            });
-        }
+            }
 
-        window.addEventListener('popstate', function (e) {
-            if (isEditing) return;
-            const params = new URLSearchParams(window.location.search);
-            const tabId  = e.state?.tabId || params.get('active_tab') || 'tab-masterlist';
-            activatePageTab(tabId);
-            ajaxFetch(window.location.href, tabId);
-        });
+            // ── AJAX PARTIAL TABLE RELOAD ────────────────────────────────────────
+            (function() {
+                let currentController = null;
 
-        attachSearchFormListeners();
-        attachPaginationListeners();
+                function setLoading(tabId, loading) {
+                    const tab = document.getElementById(tabId);
+                    if (!tab) return;
+                    const wrap = tab.querySelector('.overflow-x-auto');
+                    if (wrap) wrap.style.opacity = loading ? '0.5' : '1';
+                }
 
-    })();
+                function rehydrateTab(tabId) {
+                    attachViewBtnListeners();
+                    attachPaginationListeners();
+                    attachSearchFormListeners();
+                    const tab = document.getElementById(tabId);
+                    if (!tab) return;
+                    tab.querySelectorAll('a[href*="nonprint-masterlist"]').forEach(link => {
+                        if (link.href.includes('/edit')) return; // let edit links navigate normally
+                        if (link.dataset.ajaxBound) return;
+                        link.dataset.ajaxBound = '1';
+                        link.addEventListener('click', function(e) {
+                            e.preventDefault();
+                            ajaxFetch(this.href, tabId);
+                        });
+                    });
+                }
 
-})();
-</script>
+                function ajaxFetch(url, tabId) {
+                    if (currentController) currentController.abort();
+                    currentController = new AbortController();
+
+                    setLoading(tabId, true);
+                    history.pushState({
+                        tabId
+                    }, '', url);
+
+                    fetch(url, {
+                            signal: currentController.signal,
+                            headers: {
+                                'X-Requested-With': 'XMLHttpRequest',
+                                'Accept': 'text/html',
+                            }
+                        })
+                        .then(r => {
+                            if (!r.ok) throw new Error('Network response was not ok');
+                            return r.text();
+                        })
+                        .then(html => {
+                            const parser = new DOMParser();
+                            const doc = parser.parseFromString(html, 'text/html');
+                            const newTab = doc.getElementById(tabId);
+                            const oldTab = document.getElementById(tabId);
+                            if (newTab && oldTab) {
+                                newTab.classList.remove('hidden');
+                                oldTab.replaceWith(newTab);
+                                rehydrateTab(tabId);
+                            }
+                        })
+                        .catch(err => {
+                            if (err.name === 'AbortError') return;
+                            console.error('AJAX fetch failed, falling back:', err);
+                            window.location.href = url;
+                        })
+                        .finally(() => {
+                            setLoading(tabId, false);
+                            currentController = null;
+                        });
+                }
+
+                function attachPaginationListeners() {
+                    ['tab-masterlist', 'tab-requests'].forEach(tabId => {
+                        const tab = document.getElementById(tabId);
+                        if (!tab) return;
+                        tab.querySelectorAll('nav[role="navigation"] a, .pagination a').forEach(link => {
+                            if (link.dataset.ajaxBound) return;
+                            link.dataset.ajaxBound = '1';
+                            link.addEventListener('click', function(e) {
+                                e.preventDefault();
+                                const url = new URL(this.href, window.location.origin);
+                                url.searchParams.set('active_tab', tabId);
+                                ajaxFetch(url.toString(), tabId);
+                            });
+                        });
+                    });
+                }
+
+                function attachSearchFormListeners() {
+                    const configs = [{
+                            tabId: 'tab-masterlist',
+                            searchParam: 'ml_search'
+                        },
+                        {
+                            tabId: 'tab-requests',
+                            searchParam: 'rq_search'
+                        },
+                    ];
+                    configs.forEach(({
+                        tabId,
+                        searchParam
+                    }) => {
+                        const tab = document.getElementById(tabId);
+                        if (!tab) return;
+                        const form = tab.querySelector('form');
+                        if (!form || form.dataset.ajaxBound) return;
+                        form.dataset.ajaxBound = '1';
+                        form.addEventListener('submit', function(e) {
+                            e.preventDefault();
+                            const url = new URL(form.action, window.location.origin);
+                            url.searchParams.delete(searchParam);
+                            const val = form.querySelector(`input[name="${searchParam}"]`)?.value
+                                ?.trim();
+                            if (val) url.searchParams.set(searchParam, val);
+                            url.searchParams.set('active_tab', tabId);
+                            ajaxFetch(url.toString(), tabId);
+                        });
+                    });
+                }
+
+                window.addEventListener('popstate', function(e) {
+                    if (isEditing) return;
+                    const params = new URLSearchParams(window.location.search);
+                    const tabId = e.state?.tabId || params.get('active_tab') || 'tab-masterlist';
+                    activatePageTab(tabId);
+                    ajaxFetch(window.location.href, tabId);
+                });
+
+                attachSearchFormListeners();
+                attachPaginationListeners();
+
+            })();
+
+        })();
+    </script>
 
 @endsection
