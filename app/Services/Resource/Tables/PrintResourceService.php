@@ -79,7 +79,9 @@ class PrintResourceService
         // Separate search param so it doesn't collide with the school tab's 'search'
         $this->applySearch($query, (string) $request->input('division_search', ''));
 
-        return $query->paginate(self::PER_PAGE, ['*'], 'division_page')->withQueryString();
+        $paginated = $query->paginate(self::PER_PAGE, ['*'], 'division_page')->withQueryString();
+        $this->attachLibraryNames($paginated);
+        return $paginated;
     }
 
     // library_name lives on the acquisition, not the resource — pick the first non-null one
