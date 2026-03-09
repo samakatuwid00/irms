@@ -1,29 +1,4 @@
-
-/**
- * Safely parse an integer, falling back to 0.
- * @param {*} value
- * @returns {number}
- */
-function safeInt(value) {
-    return parseInt(value || 0, 10);
-}
-
-/**
- * Format a numeric cost value as a Philippine Peso string.
- * @param {string|number} cost
- * @returns {string}
- */
-function formatCost(cost) {
-    if (!cost) return '-';
-    return '₱' + parseFloat(cost).toLocaleString('en-US', {
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 2,
-    });
-}
-
 // ─── Modal Logic ─────────────────────────────────────────────────────────────
-
-const DEFAULT_IMAGE = '/assets/images/default.jpg';
 
 /**
  * Open the Non-Print Resource modal and populate it with the given resource data.
@@ -39,16 +14,29 @@ const DEFAULT_IMAGE = '/assets/images/default.jpg';
  * @param {string}   resource.size
  * @param {string}   resource.model
  * @param {Array}    resource.subjects      - [{ subject, grade }]
- * @param {Array}    resource.acquisitions  - [{ source, date_acquired, cost, iar, remarks, usable, partially_damaged, damaged, lost, condemnable }]
+ * @param {Array}    resource.acquisitions  - [{ library_name, source, date_acquired, cost, iar, remarks, usable, partially_damaged, damaged, lost, condemnable }]
  */
 export function openNonPrintModal(resource) {
+    // ── Helpers (defined inside to avoid module-scope issues with global onclick) ──
+    const safeInt = value => parseInt(value || 0, 10);
+
+    const formatCost = cost => {
+        if (!cost) return '-';
+        return '₱' + parseFloat(cost).toLocaleString('en-US', {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2,
+        });
+    };
+
+    const DEFAULT_IMAGE = '/assets/images/default.jpg';
+
     // ── Image ──────────────────────────────────────────────────────────────
     const imgElement = document.getElementById('nonprintImage');
     imgElement.src = resource.image || DEFAULT_IMAGE;
-    imgElement.alt = resource.title || 'Book Cover';
+    imgElement.alt = resource.title || 'Resource Cover';
     imgElement.onerror = function () {
         this.src = DEFAULT_IMAGE;
-        this.onerror = null; // prevent infinite loop
+        this.onerror = null;
     };
 
     // ── Basic Info ─────────────────────────────────────────────────────────
@@ -56,7 +44,7 @@ export function openNonPrintModal(resource) {
     document.getElementById('nonprintType').textContent  = resource.type    || '-';
     document.getElementById('brand').textContent         = resource.brand   || '-';
     document.getElementById('code').textContent          = resource.code    || '-';
-    document.getElementById('version').textContent       = resource.version || 'N/A';
+    document.getElementById('version').textContent       = resource.version || '-';
     document.getElementById('url').textContent           = resource.url     || '-';
     document.getElementById('size').textContent          = resource.size    || '-';
     document.getElementById('model').textContent         = resource.model   || '-';
@@ -92,6 +80,11 @@ export function openNonPrintModal(resource) {
 
             tbody.insertAdjacentHTML('beforeend', `
                 <tr class="hover:bg-gray-50">
+                    <td class="px-3 py-2">
+                        <span class="inline-block bg-indigo-100 text-indigo-700 text-xs font-medium px-2 py-1 rounded-full whitespace-nowrap">
+                            ${aq.library_name || '-'}
+                        </span>
+                    </td>
                     <td class="px-3 py-2">${aq.source          || '-'}</td>
                     <td class="px-3 py-2">${aq.date_acquired   || '-'}</td>
                     <td class="px-3 py-2">${formatCost(aq.cost)}</td>
@@ -113,7 +106,7 @@ export function openNonPrintModal(resource) {
             totals.condemnable += condemnable;
         });
     } else {
-        tbody.innerHTML = '<tr><td colspan="11" class="text-center py-4 text-gray-500">No acquisition records.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="12" class="text-center py-4 text-gray-500">No acquisition records.</td></tr>';
     }
 
     // ── Overall Quantity Summary ───────────────────────────────────────────

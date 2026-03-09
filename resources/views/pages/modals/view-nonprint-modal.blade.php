@@ -74,6 +74,7 @@
                     <table class="w-full text-sm">
                         <thead class="bg-gray-100">
                             <tr>
+                                <th class="border-b px-3 py-2 text-left">Library</th>
                                 <th class="border-b px-3 py-2 text-left">Source</th>
                                 <th class="border-b px-3 py-2 text-left">Date Acquired</th>
                                 <th class="border-b px-3 py-2 text-left">Cost</th>

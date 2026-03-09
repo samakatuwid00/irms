@@ -103,7 +103,6 @@
                             <th class="px-4 py-3">URL</th>
                             <th class="px-4 py-3">Size</th>
                             <th class="px-4 py-3">Model</th>
-                            <th class="px-4 py-3">Station Name</th>
                             <th class="px-4 py-3">Subject</th>
                             <th class="px-4 py-3 text-center">Quantity Breakdown</th>
                             <th class="px-4 py-3 text-center">Actions</th>
@@ -132,10 +131,6 @@
                                 <td class="px-4 py-3 text-gray-600">{{ $item->url }}</td>
                                 <td class="px-4 py-3 text-gray-600">{{ $item->size }}</td>
                                 <td class="px-4 py-3 text-gray-600">{{ $item->model }}</td>
-                                <td class="px-4 py-3 text-gray-700">
-                                    <span
-                                        class="text-xs font-medium text-blue-600">{{ $item->library_name ?? 'N/A' }}</span>
-                                </td>
                                 <td class="px-4 py-3 text-xs">
                                     @if ($item->subjects()->count())
                                         <div class="flex flex-wrap gap-1">
@@ -183,7 +178,7 @@
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="13" class="text-center py-8 text-gray-500">No resources found.</td>
+                                <td colspan="12" class="text-center py-8 text-gray-500">No resources found.</td>
                             </tr>
                         @endforelse
                     </tbody>

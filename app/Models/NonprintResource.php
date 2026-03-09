@@ -93,7 +93,7 @@ class NonprintResource extends Model
         return asset('assets/images/def.jpg');
     }
 
-    public function showDetails(): array
+    public function showDetails(?array $libraryIds = null): array
     {
         // Get quantities from the quantities accessor/attribute
         $quantities = $this->quantities ?? [
@@ -115,11 +115,18 @@ class NonprintResource extends Model
             }
         }
 
-        // Format acquisitions
+        // Format acquisitions — optionally scoped to specific library IDs
         $acquisitions = [];
         if ($this->relationLoaded('nonprintAcquisitions')) {
-            foreach ($this->nonprintAcquisitions as $acquisition) {
+            $rows = $this->nonprintAcquisitions;
+
+            if ($libraryIds !== null) {
+                $rows = $rows->whereIn('library_id', $libraryIds);
+            }
+
+            foreach ($rows as $acquisition) {
                 $acquisitions[] = [
+                    'library_name' => $acquisition->library_name ?? '-',
                     'source' => $acquisition->source ?? '-',
                     'date_acquired' => $acquisition->date_acquired
                         ? date('M d, Y', strtotime($acquisition->date_acquired))
