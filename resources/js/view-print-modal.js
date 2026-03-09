@@ -1,13 +1,44 @@
+// ─── Modal Logic ─────────────────────────────────────────────────────────────
+
+/**
+ * Open the Print Resource modal and populate it with the given resource data.
+ *
+ * @param {Object} resource
+ * @param {string}   resource.image
+ * @param {string}   resource.title
+ * @param {string}   resource.author
+ * @param {string}   resource.publisher
+ * @param {string}   resource.type
+ * @param {string}   resource.isbn
+ * @param {string}   resource.copyright
+ * @param {string}   resource.pages
+ * @param {Array}    resource.subjects      - [{ subject, grade }]
+ * @param {Array}    resource.acquisitions  - [{ library_name, source, date_acquired, cost, iar, remarks, usable, partially_damaged, damaged, lost, condemnable }]
+ */
 export function openPrintModal(resource) {
+    // ── Helpers (defined inside to avoid module-scope issues with global onclick) ──
+    const safeInt = value => parseInt(value || 0, 10);
+
+    const formatCost = cost => {
+        if (!cost) return '-';
+        return '₱' + parseFloat(cost).toLocaleString('en-US', {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2,
+        });
+    };
+
     const DEFAULT_IMAGE = '/assets/images/default.jpg';
+
+    // ── Image ──────────────────────────────────────────────────────────────
     const imgElement = document.getElementById('printImage');
     imgElement.src = resource.image || DEFAULT_IMAGE;
     imgElement.alt = resource.title || 'Book Cover';
     imgElement.onerror = function () {
         this.src = DEFAULT_IMAGE;
-        this.onerror = null;
+        this.onerror = null; // prevent infinite loop
     };
 
+    // ── Basic Info ─────────────────────────────────────────────────────────
     document.getElementById('printTitle').textContent     = resource.title     || 'N/A';
     document.getElementById('printAuthor').textContent    = resource.author    || '-';
     document.getElementById('printPublisher').textContent = resource.publisher || '-';
@@ -16,6 +47,7 @@ export function openPrintModal(resource) {
     document.getElementById('printCopyright').textContent = resource.copyright || '-';
     document.getElementById('printPages').textContent     = resource.pages     || '-';
 
+    // ── Subject Assignment ─────────────────────────────────────────────────
     const subjectsContainer = document.getElementById('printSubjects');
     if (resource.subjects && resource.subjects.length > 0) {
         subjectsContainer.innerHTML = resource.subjects
@@ -29,6 +61,7 @@ export function openPrintModal(resource) {
         subjectsContainer.innerHTML = '<p class="text-gray-500">No subject assignment.</p>';
     }
 
+    // ── Acquisition History ────────────────────────────────────────────────
     const tbody = document.getElementById('printAcquisitionBody');
     tbody.innerHTML = '';
 
@@ -74,6 +107,7 @@ export function openPrintModal(resource) {
         tbody.innerHTML = '<tr><td colspan="12" class="text-center py-4 text-gray-500">No acquisition records.</td></tr>';
     }
 
+    // ── Overall Quantity Summary ───────────────────────────────────────────
     const grandTotal = totals.usable + totals.pd + totals.damaged + totals.lost + totals.condemnable;
 
     document.getElementById('printUsable').textContent      = totals.usable;
@@ -83,29 +117,37 @@ export function openPrintModal(resource) {
     document.getElementById('printCondemnable').textContent = totals.condemnable;
     document.getElementById('printTotal').textContent       = grandTotal;
 
+    // ── Show Modal ─────────────────────────────────────────────────────────
     document.getElementById('viewPrintModal').classList.remove('hidden');
 }
 
-
+/**
+ * Close the Print Resource modal.
+ */
 export function closePrintModal() {
     document.getElementById('viewPrintModal').classList.add('hidden');
 }
 
+// ─── Event Listeners ─────────────────────────────────────────────────────────
 
 function initModalListeners() {
     const modal = document.getElementById('viewPrintModal');
     if (!modal) return;
 
+    // Click-outside to close
     modal.addEventListener('click', e => {
         if (e.target === modal) closePrintModal();
     });
 }
 
+// Escape key to close
 document.addEventListener('keydown', e => {
     if (e.key === 'Escape') closePrintModal();
 });
 
 document.addEventListener('DOMContentLoaded', initModalListeners);
 
+// ─── Global Exposure (for Blade inline onclick handlers) ─────────────────────
+// If you use onclick="openPrintModal(...)" in your HTML, these need to be global.
 window.openPrintModal  = openPrintModal;
 window.closePrintModal = closePrintModal;

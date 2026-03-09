@@ -132,6 +132,7 @@ class PrintResource extends Model
         if ($this->relationLoaded('printAcquisitions')) {
             foreach ($this->printAcquisitions as $acquisition) {
                 $acquisitions[] = [
+                    'library_name' => $acquisition->library_name ?? '-',  // ← added
                     'source' => $acquisition->source ?? '-',
                     'date_acquired' => $acquisition->date_acquired
                         ? date('M d, Y', strtotime($acquisition->date_acquired))
