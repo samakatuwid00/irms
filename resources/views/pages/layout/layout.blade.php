@@ -137,7 +137,7 @@
                                             <path d="M6 18h12v4H6z"/>
                                             <path d="M6 14h12"/>
                                         </svg>
-                                        Add Print Resource
+                                        Add Print
                                     </a>
                                 </li>
                                 <li>
@@ -148,7 +148,7 @@
                                             <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
                                             <path d="M14 2v6h6"/>
                                         </svg>
-                                        Add Non-Print Resource
+                                        Add Non-Print
                                     </a>
                                 </li>
                             </ul>
@@ -184,7 +184,7 @@
                                         <path d="M6 18h12v4H6z"/>
                                         <path d="M6 14h12"/>
                                     </svg>
-                                    Print Resource
+                                    Print
                                 </a>
                             </li>
                             <li>
@@ -195,7 +195,7 @@
                                         <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
                                         <path d="M14 2v6h6"/>
                                     </svg>
-                                    Non-Print Resource
+                                    Non-Print
                                 </a>
                             </li>
                         </ul>
@@ -231,7 +231,7 @@
                                             <path d="M6 18h12v4H6z"/>
                                             <path d="M6 14h12"/>
                                         </svg>
-                                        Print Masterlist
+                                        Print
                                     </a>
                                 </li>
                                 <li>
@@ -242,7 +242,7 @@
                                             <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
                                             <path d="M14 2v6h6"/>
                                         </svg>
-                                        Non-Print Masterlist
+                                        Non-Print
                                     </a>
                                 </li>
                             </ul>
@@ -438,7 +438,7 @@
                                                 <path d="M6 18h12v4H6z"/>
                                                 <path d="M6 14h12"/>
                                             </svg>
-                                            Add Print Resource
+                                            Add Print
                                         </a>
                                     </li>
                                     <li>
@@ -451,7 +451,7 @@
                                                 <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
                                                 <path d="M14 2v6h6"/>
                                             </svg>
-                                            Add Non-Print Resource
+                                            Add Non-Print
                                         </a>
                                     </li>
                                 </ul>
@@ -495,7 +495,7 @@
                                             <path d="M6 18h12v4H6z"/>
                                             <path d="M6 14h12"/>
                                         </svg>
-                                        Print Resource
+                                        Print
                                     </a>
                                 </li>
                                 <li>
@@ -508,7 +508,7 @@
                                             <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
                                             <path d="M14 2v6h6"/>
                                         </svg>
-                                        Non-Print Resource
+                                        Non-Print
                                     </a>
                                 </li>
                             </ul>
@@ -552,7 +552,7 @@
                                                 <path d="M6 18h12v4H6z"/>
                                                 <path d="M6 14h12"/>
                                             </svg>
-                                            Print Masterlist
+                                            Print
                                         </a>
                                     </li>
                                     <li>
@@ -565,7 +565,7 @@
                                                 <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
                                                 <path d="M14 2v6h6"/>
                                             </svg>
-                                            Non-Print Masterlist
+                                            Non-Print
                                         </a>
                                     </li>
                                 </ul>
