@@ -60,14 +60,13 @@ class NonPrintResourceExportController extends BaseController
             'F1' => 'URL',
             'G1' => 'Size',
             'H1' => 'Model',
-            'I1' => 'Library/Station',
-            'J1' => 'Subject & Grade',
-            'K1' => 'Usable',
-            'L1' => 'Partially Damaged',
-            'M1' => 'Damaged',
-            'N1' => 'Lost',
-            'O1' => 'Condemnable',
-            'P1' => 'Total Quantity'
+            'I1' => 'Subject & Grade',
+            'J1' => 'Usable',
+            'K1' => 'Partially Damaged',
+            'L1' => 'Damaged',
+            'M1' => 'Lost',
+            'N1' => 'Condemnable',
+            'O1' => 'Total Quantity'
         ];
 
         foreach ($headers as $cell => $value) {
@@ -96,7 +95,7 @@ class NonPrintResourceExportController extends BaseController
             ]
         ];
 
-        $sheet->getStyle('A1:P1')->applyFromArray($headerStyle);
+        $sheet->getStyle('A1:O1')->applyFromArray($headerStyle);
 
         $columnWidths = [
             'A' => 35,
@@ -107,14 +106,13 @@ class NonPrintResourceExportController extends BaseController
             'F' => 30,
             'G' => 12,
             'H' => 20,
-            'I' => 25,
-            'J' => 30,
-            'K' => 10,
-            'L' => 12,
+            'I' => 30,
+            'J' => 10,
+            'K' => 12,
+            'L' => 10,
             'M' => 10,
-            'N' => 10,
-            'O' => 12,
-            'P' => 12
+            'N' => 12,
+            'O' => 12
         ];
 
         foreach ($columnWidths as $column => $width) {
@@ -136,15 +134,6 @@ class NonPrintResourceExportController extends BaseController
             }
             $subjectsText = $subjects ? implode(', ', $subjects) : 'No assignment';
 
-            // Library name lives at the acquisition level for non-print resources
-            $libraryName = $resource->nonprintAcquisitions
-                ->whereNotNull('library_name')
-                ->value('library_name')
-                ?? ($resource->nonprintAcquisitions->isNotEmpty() ? 'Unknown Library' : 'No Library Assigned');
-
-            $qty   = $resource->quantities;
-            $total = array_sum($qty);
-
             $sheet->setCellValue('A' . $row, $resource->nonprintTitle->title);
             $sheet->setCellValue('B' . $row, $resource->type->type_name);
             $sheet->setCellValue('C' . $row, $acquisition?->brand   ?? 'N/A');
@@ -153,28 +142,27 @@ class NonPrintResourceExportController extends BaseController
             $sheet->setCellValue('F' . $row, $acquisition?->url     ?? 'N/A');
             $sheet->setCellValue('G' . $row, $acquisition?->size    ?? 'N/A');
             $sheet->setCellValue('H' . $row, $acquisition?->model   ?? 'N/A');
-            $sheet->setCellValue('I' . $row, $libraryName);
-            $sheet->setCellValue('J' . $row, $subjectsText);
-            $sheet->setCellValue('K' . $row, $qty['usable']);
-            $sheet->setCellValue('L' . $row, $qty['partially_damaged']);
-            $sheet->setCellValue('M' . $row, $qty['damaged']);
-            $sheet->setCellValue('N' . $row, $qty['lost']);
-            $sheet->setCellValue('O' . $row, $qty['condemnable']);
-            $sheet->setCellValue('P' . $row, $total);
+            $sheet->setCellValue('I' . $row, $subjectsText);
+            $sheet->setCellValue('J' . $row, $qty['usable']);
+            $sheet->setCellValue('K' . $row, $qty['partially_damaged']);
+            $sheet->setCellValue('L' . $row, $qty['damaged']);
+            $sheet->setCellValue('M' . $row, $qty['lost']);
+            $sheet->setCellValue('N' . $row, $qty['condemnable']);
+            $sheet->setCellValue('O' . $row, $total);
 
             // Wrap text on columns that can get long so they stay readable without manual resizing
             $sheet->getStyle('A' . $row)->getAlignment()->setWrapText(true);
             $sheet->getStyle('F' . $row)->getAlignment()->setWrapText(true);
-            $sheet->getStyle('J' . $row)->getAlignment()->setWrapText(true);
+            $sheet->getStyle('I' . $row)->getAlignment()->setWrapText(true);
 
-            $sheet->getStyle('K' . $row . ':P' . $row)
+            $sheet->getStyle('J' . $row . ':O' . $row)
                   ->getAlignment()
                   ->setHorizontal(Alignment::HORIZONTAL_CENTER);
 
             $row++;
         }
 
-        $dataRange = 'A1:P' . ($row - 1);
+        $dataRange = 'A1:O' . ($row - 1);
         $sheet->getStyle($dataRange)->applyFromArray([
             'borders' => [
                 'allBorders' => [
@@ -187,15 +175,15 @@ class NonPrintResourceExportController extends BaseController
         if ($row > 2) {
             $totalRow = $row;
             $sheet->setCellValue('A' . $totalRow, 'TOTAL');
-            $sheet->mergeCells('A' . $totalRow . ':J' . $totalRow);
+            $sheet->mergeCells('A' . $totalRow . ':I' . $totalRow);
 
             // Use Excel formulas so the totals stay correct if the user edits the file
+            $sheet->setCellValue('J' . $totalRow, '=SUM(J2:J' . ($row - 1) . ')');
             $sheet->setCellValue('K' . $totalRow, '=SUM(K2:K' . ($row - 1) . ')');
             $sheet->setCellValue('L' . $totalRow, '=SUM(L2:L' . ($row - 1) . ')');
             $sheet->setCellValue('M' . $totalRow, '=SUM(M2:M' . ($row - 1) . ')');
             $sheet->setCellValue('N' . $totalRow, '=SUM(N2:N' . ($row - 1) . ')');
             $sheet->setCellValue('O' . $totalRow, '=SUM(O2:O' . ($row - 1) . ')');
-            $sheet->setCellValue('P' . $totalRow, '=SUM(P2:P' . ($row - 1) . ')');
 
             $totalStyle = [
                 'font' => ['bold' => true],
@@ -208,7 +196,7 @@ class NonPrintResourceExportController extends BaseController
                     'vertical'   => Alignment::VERTICAL_CENTER
                 ]
             ];
-            $sheet->getStyle('A' . $totalRow . ':P' . $totalRow)->applyFromArray($totalStyle);
+            $sheet->getStyle('A' . $totalRow . ':O' . $totalRow)->applyFromArray($totalStyle);
         }
 
         // Keep the header visible while scrolling through large exports
