@@ -59,13 +59,12 @@ class PrintResourceExportController extends BaseController
             'E1' => 'Subject & Grade',
             'F1' => 'ISBN',
             'G1' => 'Copyright',
-            'H1' => 'Library/Station',
-            'I1' => 'Usable',
-            'J1' => 'Partially Damaged',
-            'K1' => 'Damaged',
-            'L1' => 'Lost',
-            'M1' => 'Condemnable',
-            'N1' => 'Total Quantity'
+            'H1' => 'Usable',
+            'I1' => 'Partially Damaged',
+            'J1' => 'Damaged',
+            'K1' => 'Lost',
+            'L1' => 'Condemnable',
+            'M1' => 'Total Quantity'
         ];
 
         foreach ($headers as $cell => $value) {
@@ -94,7 +93,7 @@ class PrintResourceExportController extends BaseController
             ]
         ];
 
-        $sheet->getStyle('A1:N1')->applyFromArray($headerStyle);
+        $sheet->getStyle('A1:M1')->applyFromArray($headerStyle);
 
         $columnWidths = [
             'A' => 35,
@@ -104,13 +103,12 @@ class PrintResourceExportController extends BaseController
             'E' => 30,
             'F' => 15,
             'G' => 12,
-            'H' => 25,
-            'I' => 10,
-            'J' => 12,
+            'H' => 10,
+            'I' => 12,
+            'J' => 10,
             'K' => 10,
-            'L' => 10,
-            'M' => 12,
-            'N' => 12
+            'L' => 12,
+            'M' => 12
         ];
 
         foreach ($columnWidths as $column => $width) {
@@ -140,27 +138,25 @@ class PrintResourceExportController extends BaseController
             $sheet->setCellValue('E' . $row, $subjectsText);
             $sheet->setCellValue('F' . $row, $resource->isbn);
             $sheet->setCellValue('G' . $row, $resource->copyright);
-            // library_name is denormalised onto the resource to avoid a join on every row
-            $sheet->setCellValue('H' . $row, $resource->library_name ?? 'N/A');
-            $sheet->setCellValue('I' . $row, $qty['usable']);
-            $sheet->setCellValue('J' . $row, $qty['partially_damaged']);
-            $sheet->setCellValue('K' . $row, $qty['damaged']);
-            $sheet->setCellValue('L' . $row, $qty['lost']);
-            $sheet->setCellValue('M' . $row, $qty['condemnable']);
-            $sheet->setCellValue('N' . $row, $total);
+            $sheet->setCellValue('H' . $row, $qty['usable']);
+            $sheet->setCellValue('I' . $row, $qty['partially_damaged']);
+            $sheet->setCellValue('J' . $row, $qty['damaged']);
+            $sheet->setCellValue('K' . $row, $qty['lost']);
+            $sheet->setCellValue('L' . $row, $qty['condemnable']);
+            $sheet->setCellValue('M' . $row, $total);
 
             // Wrap text on columns that can get long so they stay readable without manual resizing
             $sheet->getStyle('A' . $row)->getAlignment()->setWrapText(true);
             $sheet->getStyle('E' . $row)->getAlignment()->setWrapText(true);
 
-            $sheet->getStyle('I' . $row . ':N' . $row)
+            $sheet->getStyle('H' . $row . ':M' . $row)
                   ->getAlignment()
                   ->setHorizontal(Alignment::HORIZONTAL_CENTER);
 
             $row++;
         }
 
-        $dataRange = 'A1:N' . ($row - 1);
+        $dataRange = 'A1:M' . ($row - 1);
         $sheet->getStyle($dataRange)->applyFromArray([
             'borders' => [
                 'allBorders' => [
@@ -173,15 +169,15 @@ class PrintResourceExportController extends BaseController
         if ($row > 2) {
             $totalRow = $row;
             $sheet->setCellValue('A' . $totalRow, 'TOTAL');
-            $sheet->mergeCells('A' . $totalRow . ':H' . $totalRow);
+            $sheet->mergeCells('A' . $totalRow . ':G' . $totalRow);
 
             // Use Excel formulas so the totals stay correct if the user edits the file
+            $sheet->setCellValue('H' . $totalRow, '=SUM(H2:H' . ($row - 1) . ')');
             $sheet->setCellValue('I' . $totalRow, '=SUM(I2:I' . ($row - 1) . ')');
             $sheet->setCellValue('J' . $totalRow, '=SUM(J2:J' . ($row - 1) . ')');
             $sheet->setCellValue('K' . $totalRow, '=SUM(K2:K' . ($row - 1) . ')');
             $sheet->setCellValue('L' . $totalRow, '=SUM(L2:L' . ($row - 1) . ')');
             $sheet->setCellValue('M' . $totalRow, '=SUM(M2:M' . ($row - 1) . ')');
-            $sheet->setCellValue('N' . $totalRow, '=SUM(N2:N' . ($row - 1) . ')');
 
             $totalStyle = [
                 'font' => ['bold' => true],
@@ -194,7 +190,7 @@ class PrintResourceExportController extends BaseController
                     'vertical'   => Alignment::VERTICAL_CENTER
                 ]
             ];
-            $sheet->getStyle('A' . $totalRow . ':N' . $totalRow)->applyFromArray($totalStyle);
+            $sheet->getStyle('A' . $totalRow . ':M' . $totalRow)->applyFromArray($totalStyle);
         }
 
         // Keep the header visible while scrolling through large exports
