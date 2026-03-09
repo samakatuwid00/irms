@@ -105,7 +105,7 @@ class PrintResource extends Model
             ->get();
     }
 
-    public function showDetails(): array
+    public function showDetails(?array $libraryIds = null): array
     {
         // Get quantities from the quantities accessor/attribute
         $quantities = $this->quantities ?? [
@@ -127,12 +127,18 @@ class PrintResource extends Model
             }
         }
 
-        // Format acquisitions
+        // Format acquisitions — optionally scoped to specific library IDs
         $acquisitions = [];
         if ($this->relationLoaded('printAcquisitions')) {
-            foreach ($this->printAcquisitions as $acquisition) {
+            $rows = $this->printAcquisitions;
+
+            if ($libraryIds !== null) {
+                $rows = $rows->whereIn('library_id', $libraryIds);
+            }
+
+            foreach ($rows as $acquisition) {
                 $acquisitions[] = [
-                    'library_name' => $acquisition->library_name ?? '-',  // ← added
+                    'library_name' => $acquisition->library_name ?? '-',
                     'source' => $acquisition->source ?? '-',
                     'date_acquired' => $acquisition->date_acquired
                         ? date('M d, Y', strtotime($acquisition->date_acquired))
