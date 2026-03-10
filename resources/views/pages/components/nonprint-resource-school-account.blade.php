@@ -273,7 +273,6 @@
                                 <th class="px-4 py-3">URL</th>
                                 <th class="px-4 py-3">Size</th>
                                 <th class="px-4 py-3">Model</th>
-                                <th class="px-4 py-3">Library</th>
                                 <th class="px-4 py-3">Subject</th>
                                 <th class="px-4 py-3 text-center">Quantity Breakdown</th>
                                 <th class="px-4 py-3 text-center">Actions</th>
@@ -302,12 +301,6 @@
                                     <td class="px-4 py-3 text-gray-600">{{ $item->url }}</td>
                                     <td class="px-4 py-3 text-gray-600">{{ $item->size }}</td>
                                     <td class="px-4 py-3 text-gray-600">{{ $item->model }}</td>
-                                    <td class="px-4 py-3 text-gray-600 text-xs">
-                                        <span
-                                            class="inline-block bg-purple-100 text-purple-700 px-2 py-1 rounded-full">
-                                            {{ $item->library_name ?? 'N/A' }}
-                                        </span>
-                                    </td>
                                     <td class="px-4 py-3 text-xs">
                                         @if ($item->subjects()->count())
                                             <div class="flex flex-wrap gap-1">
