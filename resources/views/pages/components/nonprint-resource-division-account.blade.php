@@ -87,7 +87,7 @@
                         <tbody class="divide-y">
                             @forelse ($resources as $item)
                                 @php
-                                    $qty = $item->quantities;
+                                    $qty = $item->scopedQuantities($mainLibraryIds);
                                     $total = array_sum($qty);
                                 @endphp
                                 <tr class="hover:bg-gray-50">
@@ -267,6 +267,7 @@
                                     <th class="px-4 py-3">URL</th>
                                     <th class="px-4 py-3">Size</th>
                                     <th class="px-4 py-3">Model</th>
+                                    <th class="px-4 py-3">School Name</th>
                                     <th class="px-4 py-3">Subject</th>
                                     <th class="px-4 py-3 text-center">Quantity Breakdown</th>
                                     <th class="px-4 py-3 text-center">Actions</th>
@@ -275,7 +276,7 @@
                             <tbody class="divide-y">
                                 @forelse ($filteredResources as $item)
                                     @php
-                                        $qty = $item->quantities;
+                                        $qty = $item->scopedQuantities($filteredLibraryIds);
                                         $total = array_sum($qty);
                                     @endphp
                                     <tr class="hover:bg-gray-50">
@@ -296,6 +297,10 @@
                                         <td class="px-4 py-3 text-gray-600">{{ $item->url }}</td>
                                         <td class="px-4 py-3 text-gray-600">{{ $item->size }}</td>
                                         <td class="px-4 py-3 text-gray-600">{{ $item->model }}</td>
+                                        <td class="px-4 py-3 text-gray-700">
+                                            <span
+                                                class="text-xs font-medium text-blue-600">{{ $item->library_name ?? 'N/A' }}</span>
+                                        </td>
                                         <td class="px-4 py-3 text-xs">
                                             @if ($item->subjects()->count())
                                                 <div class="flex flex-wrap gap-1">
@@ -347,7 +352,7 @@
                                     </tr>
                                 @empty
                                     <tr>
-                                        <td colspan="12" class="text-center py-8 text-gray-500">No resources found.
+                                        <td colspan="13" class="text-center py-8 text-gray-500">No resources found.
                                         </td>
                                     </tr>
                                 @endforelse

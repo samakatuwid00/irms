@@ -74,7 +74,9 @@
                             <th class="px-2 py-3">Subject</th>
                             <th class="px-2 py-3">ISBN</th>
                             <th class="px-2 py-3">Copyright</th>
+                            <th class="px-2 py-3">School</th>
                             <th class="px-2 py-3 text-center">Quantity Breakdown</th>
+                            <th class="px-2 py-3 text-center">School</th>
                             <th class="px-6 py-3 text-center">Actions</th>
                         </tr>
                     </thead>
@@ -82,7 +84,7 @@
                         @forelse ($filteredResources as $item)
                             @php
                                 $authors = $item->printTitle->authors->pluck('author_name')->join(', ');
-                                $qty = $item->quantities;
+                                $qty = $item->scopedQuantities($filteredLibraryIds);
                                 $total = array_sum($qty);
                             @endphp
                             <tr class="hover:bg-gray-50 border border-gray-300">
@@ -149,6 +151,10 @@
                                 </td>
                                 <td class="px-2 py-3 text-gray-600 font-mono text-xs">{{ $item->isbn }}</td>
                                 <td class="px-2 py-3 text-center">{{ $item->copyright }}</td>
+                                <td class="px-2 py-3 text-gray-700">
+                                    <span
+                                        class="text-xs font-medium text-blue-600">{{ $item->library_name ?? 'N/A' }}</span>
+                                </td>
                                 <td class="px-2 py-3 text-center text-xs">
                                     <div class="space-y-1">
                                         <div class="flex justify-center gap-3 text-gray-700">
@@ -171,6 +177,7 @@
                                             {{ $total }}</div>
                                     </div>
                                 </td>
+                                <td class="px-2 py-3 text-center text-xs">School Library</td>
                                 <td class="px-2 py-3">
                                     <div class="flex justify-center gap-2">
                                         <button onclick='openPrintModal(@json($item->showDetails($filteredLibraryIds)))'
@@ -182,7 +189,7 @@
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="10" class="text-center py-8 text-gray-500">No resources found.</td>
+                                <td colspan="12" class="text-center py-8 text-gray-500">No resources found.</td>
                             </tr>
                         @endforelse
                     </tbody>

@@ -9,14 +9,14 @@
                 :class="activeTab === 'school' ? 'border-blue-600 text-blue-600' :
                     'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'"
                 class="px-6 py-3 border-b-2 font-medium text-sm transition-colors">
-                Your School
+                Your School Resources
             </button>
             <button
                 @click="activeTab = 'division'; $nextTick(() => { const url = new URL(window.location); url.searchParams.set('tab', 'division'); window.history.replaceState({}, '', url); })"
                 :class="activeTab === 'division' ? 'border-blue-600 text-blue-600' :
                     'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'"
                 class="px-6 py-3 border-b-2 font-medium text-sm transition-colors">
-                Division
+                Division Resources
             </button>
         </div>
     </div>
@@ -125,7 +125,7 @@
                         <tbody class="divide-y">
                             @forelse ($resources as $item)
                                 @php
-                                    $qty = $item->quantities;
+                                    $qty = $item->scopedQuantities($mainLibraryIds);
                                     $total = array_sum($qty);
                                 @endphp
                                 <tr class="hover:bg-gray-50 border-b border-gray-300">
@@ -282,7 +282,7 @@
                         <tbody class="divide-y">
                             @forelse ($divisionResources as $item)
                                 @php
-                                    $qty = $item->quantities;
+                                    $qty = $item->scopedQuantities($divisionLibraryIds);
                                     $total = array_sum($qty);
                                 @endphp
                                 <tr class="hover:bg-gray-50 border-b border-gray-300">
@@ -350,7 +350,7 @@
                                     </td>
                                     <td class="px-4 py-3">
                                         <div class="flex justify-center gap-2">
-                                            <button onclick='openNonPrintModal(@json($item->showDetails()))'
+                                            <button onclick='openNonPrintModal(@json($item->showDetails($divisionLibraryIds)))'
                                                 class="px-3 py-1 text-xs rounded-lg bg-blue-100 text-blue-600 hover:bg-blue-200">
                                                 View
                                             </button>

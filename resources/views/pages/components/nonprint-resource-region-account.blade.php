@@ -111,7 +111,7 @@
                     <tbody class="divide-y">
                         @forelse ($filteredResources as $item)
                             @php
-                                $qty = $item->quantities;
+                                $qty = $item->scopedQuantities($filteredLibraryIds);
                                 $total = array_sum($qty);
                             @endphp
                             <tr class="hover:bg-gray-50">
@@ -178,7 +178,7 @@
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="12" class="text-center py-8 text-gray-500">No resources found.</td>
+                                <td colspan="13" class="text-center py-8 text-gray-500">No resources found.</td>
                             </tr>
                         @endforelse
                     </tbody>

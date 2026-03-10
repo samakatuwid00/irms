@@ -110,7 +110,7 @@
                         @forelse ($filteredResources as $item)
                             @php
                                 $authors = $item->printTitle->authors->pluck('author_name')->join(', ');
-                                $qty = $item->quantities;
+                                $qty = $item->scopedQuantities($filteredLibraryIds);
                                 $total = array_sum($qty);
                             @endphp
                             <tr class="hover:bg-gray-50 border border-gray-300">
@@ -210,7 +210,7 @@
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="10" class="text-center py-8 text-gray-500">No resources found.</td>
+                                <td colspan="11" class="text-center py-8 text-gray-500">No resources found.</td>
                             </tr>
                         @endforelse
                     </tbody>

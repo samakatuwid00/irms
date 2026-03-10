@@ -55,11 +55,34 @@ class NonprintResource extends Model
     {
         $acqs = $this->nonprintAcquisitions;
         return [
-            'usable' => $acqs->sum('usable'),
+            'usable'            => $acqs->sum('usable'),
             'partially_damaged' => $acqs->sum('partially_damaged'),
-            'damaged' => $acqs->sum('damaged'),
-            'lost' => $acqs->sum('lost'),
-            'condemnable' => $acqs->sum('condemnable'),
+            'damaged'           => $acqs->sum('damaged'),
+            'lost'              => $acqs->sum('lost'),
+            'condemnable'       => $acqs->sum('condemnable'),
+        ];
+    }
+
+    // Quantities scoped to specific library IDs.
+    // null  → sum all acquisitions (unfiltered)
+    // []    → empty result (no matching library)
+    // [ids] → sum only those libraries
+    public function scopedQuantities(?array $libraryIds): array
+    {
+        if ($libraryIds === null) {
+            $acqs = $this->nonprintAcquisitions;
+        } elseif (empty($libraryIds)) {
+            return ['usable' => 0, 'partially_damaged' => 0, 'damaged' => 0, 'lost' => 0, 'condemnable' => 0];
+        } else {
+            $acqs = $this->nonprintAcquisitions->whereIn('library_id', $libraryIds);
+        }
+
+        return [
+            'usable'            => $acqs->sum('usable'),
+            'partially_damaged' => $acqs->sum('partially_damaged'),
+            'damaged'           => $acqs->sum('damaged'),
+            'lost'              => $acqs->sum('lost'),
+            'condemnable'       => $acqs->sum('condemnable'),
         ];
     }
 
@@ -95,14 +118,9 @@ class NonprintResource extends Model
 
     public function showDetails(?array $libraryIds = null): array
     {
-        // Get quantities from the quantities accessor/attribute
-        $quantities = $this->quantities ?? [
-            'usable' => 0,
-            'partially_damaged' => 0,
-            'damaged' => 0,
-            'lost' => 0,
-            'condemnable' => 0
-        ];
+        // Scope quantities to the relevant library IDs so the modal summary
+        // reflects the same filter as the table row that opened it.
+        $quantities = $this->scopedQuantities($libraryIds);
 
         // Format subjects
         $subjects = [];

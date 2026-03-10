@@ -36,9 +36,10 @@ class NonPrintResourceService
         $filteredResources = $this->getFilteredResources($request, $level, $libraryIds['filtered']);
 
         // School users also see a read-only division tab showing their parent division's resources
-        $divisionResources = null;
+        $divisionResources  = null;
+        $divisionLibraryIds = [];
         if ($level === self::LEVEL_SCHOOL) {
-            $divisionResources = $this->getDivisionResourcesForSchool($request, $stationId);
+            [$divisionResources, $divisionLibraryIds] = $this->getDivisionResourcesForSchool($request, $stationId);
         }
 
         return array_merge([
@@ -46,11 +47,9 @@ class NonPrintResourceService
             'resources'          => $resources,
             'filteredResources'  => $filteredResources,
             'divisionResources'  => $divisionResources,
-            // Exposed so blades can pass scoped library IDs into showDetails()
-            // district/division/region views use these to filter the modal's
-            // acquisition list to only the libraries relevant to that view.
             'mainLibraryIds'     => $libraryIds['main']->values()->all(),
             'filteredLibraryIds' => $libraryIds['filtered']->values()->all(),
+            'divisionLibraryIds' => $divisionLibraryIds,
         ], $dropdownData);
     }
 
@@ -76,7 +75,7 @@ class NonPrintResourceService
         );
 
         if ($divisionLibraryIds->isEmpty()) {
-            return $this->emptyPaginator($request);
+            return [$this->emptyPaginator($request), []];
         }
 
         $query = $this->buildLibraryQuery($divisionLibraryIds);
@@ -84,7 +83,11 @@ class NonPrintResourceService
         // Separate search param so it doesn't collide with the school tab's 'search'
         $this->applySearch($query, (string) $request->input('division_search', ''));
 
-        return $query->paginate(self::PER_PAGE, ['*'], 'division_page')->withQueryString();
+        $paginated = $query->paginate(self::PER_PAGE, ['*'], 'division_page')->withQueryString();
+
+        // Return both the paginator and the raw IDs so the blade can scope
+        // quantity breakdowns and modals to division libraries only.
+        return [$paginated, $divisionLibraryIds->values()->all()];
     }
 
     // library_name lives on the acquisition, not the resource — pick the first non-null one
