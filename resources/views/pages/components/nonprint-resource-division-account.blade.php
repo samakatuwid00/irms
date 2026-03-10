@@ -149,7 +149,7 @@
                                     </td>
                                     <td class="px-4 py-3">
                                         <div class="flex justify-center gap-2">
-                                            <button onclick='openNonPrintModal(@json($item->showDetails()))'
+                                            <button onclick='openNonPrintModal(@json($item->showDetails($mainLibraryIds)))'
                                                 class="px-3 py-1 text-xs rounded-lg bg-blue-100 text-blue-600 hover:bg-blue-200">
                                                 View
                                             </button>
@@ -338,7 +338,7 @@
                                         </td>
                                         <td class="px-4 py-3">
                                             <div class="flex justify-center gap-2">
-                                                <button onclick='openNonPrintModal(@json($item->showDetails()))'
+                                                <button onclick='openNonPrintModal(@json($item->showDetails($filteredLibraryIds)))'
                                                     class="px-3 py-1 text-xs rounded-lg bg-blue-100 text-blue-600 hover:bg-blue-200">
                                                     View
                                                 </button>

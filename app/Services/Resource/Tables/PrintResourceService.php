@@ -42,10 +42,15 @@ class PrintResourceService
         }
 
         return array_merge([
-            'level'             => $level,
-            'resources'         => $resources,
-            'filteredResources' => $filteredResources,
-            'divisionResources' => $divisionResources,
+            'level'              => $level,
+            'resources'          => $resources,
+            'filteredResources'  => $filteredResources,
+            'divisionResources'  => $divisionResources,
+            // Exposed so blades can pass scoped library IDs into showDetails()
+            // district/division/region views use these to filter the modal's
+            // acquisition list to only the libraries relevant to that view.
+            'mainLibraryIds'     => $libraryIds['main']->values()->all(),
+            'filteredLibraryIds' => $libraryIds['filtered']->values()->all(),
         ], $dropdownData);
     }
 
