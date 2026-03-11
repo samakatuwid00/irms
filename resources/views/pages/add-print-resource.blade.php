@@ -689,6 +689,12 @@
         }
     });
 
+    window.addEventListener('pagehide', function () {
+        if (!isEditing) {
+            sessionStorage.removeItem(STORAGE_KEY);
+        }
+    });
+
     if (isEditing) {
         history.replaceState(null, '', '{{ url('/edit-request') }}');
     }
