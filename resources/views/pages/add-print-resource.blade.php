@@ -44,16 +44,17 @@
                     class="page-tab-btn whitespace-nowrap pb-3 px-1 text-sm font-medium border-b-2 border-transparent text-gray-500 hover:text-gray-700">
                 Search Masterlist
             </button>
+
             @if ($isDivision)
-                <button type="button" data-page-tab="tab-add"
-                    class="page-tab-btn whitespace-nowrap pb-3 px-1 text-sm font-medium border-b-2 border-transparent text-gray-500 hover:text-gray-700">
+                <button type="button" data-page-tab="tab-add" id="tabAddBtn"
+                    class="page-tab-btn whitespace-nowrap pb-3 px-1 text-sm font-medium border-b-2 border-transparent text-gray-500 hover:text-gray-700 {{ $isEditing ? '' : 'hidden' }}">
                     {{ $isEditing ? 'Edit Request' : 'Add to Masterlist' }}
                 </button>
             @else
-            <button type="button" data-page-tab="tab-add"
-                    class="page-tab-btn whitespace-nowrap pb-3 px-1 text-sm font-medium border-b-2 border-transparent text-gray-500 hover:text-gray-700">
-                {{ $isEditing ? 'Edit Request' : 'Request Add to Masterlist' }}
-            </button>
+                <button type="button" data-page-tab="tab-add" id="tabAddBtn"
+                        class="page-tab-btn whitespace-nowrap pb-3 px-1 text-sm font-medium border-b-2 border-transparent text-gray-500 hover:text-gray-700 {{ $isEditing ? '' : 'hidden' }}">
+                    {{ $isEditing ? 'Edit Request' : 'Request Add to Masterlist' }}
+                </button>
             @endif
 
             {{-- My Requests tab: only for school users (not division) --}}
@@ -79,7 +80,7 @@
                 <p class="text-sm text-gray-500 mt-1">
                     Search the masterlist by title or author, then add your acquisition records to an existing entry.
                     If no title is found, use the
-                    <button type="button" data-page-tab="tab-add" class="page-tab-btn text-blue-600 underline hover:text-blue-800 font-normal">Manual Add</button>
+                    <button type="button" id="triggerTabAdd" class="text-blue-600 underline hover:text-blue-800 font-normal">Manual Add</button>
                     tab to submit a new request.
                 </p>
             </div>
@@ -112,7 +113,7 @@
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/>
                 </svg>
                 <p class="font-medium">No titles found</p>
-                <p class="text-sm mt-1">Try a different keyword or <button type="button" data-page-tab="tab-add" class="page-tab-btn text-blue-600 underline">submit a new request</button>.</p>
+                <p class="text-sm mt-1">Try a different keyword or <button type="button" class="trigger-tab-add text-blue-600 underline">submit a new request</button>.</p>
             </div>
             <div id="initialHint" class="text-center py-16 text-gray-400">
                 <svg class="mx-auto mb-4 h-14 w-14 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -509,7 +510,7 @@
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
                                     </svg>
                                     <p class="text-sm font-medium">No requests submitted yet.</p>
-                                    <p class="text-xs mt-1">Use the <strong>Manual Add</strong> tab to submit your first request.</p>
+                                    <p class="text-xs mt-1">Use the <strong>Search Masterlist</strong> tab to search first, then submit a new request if your title is not found.</p>
                                 </td>
                             </tr>
                         @endforelse
@@ -711,6 +712,58 @@
         if (saveToStorage) sessionStorage.setItem(STORAGE_KEY, targetId);
     }
 
+    // ────────────────────────────────────────────────────────────────────────
+    // REVEAL & ACTIVATE TAB-ADD
+    // The tab button is hidden on fresh load (non-edit mode).
+    // It becomes visible only after the user explicitly clicks
+    // "Manual Add" or "submit a new request" in the search tab,
+    // enforcing the search-first workflow.
+    // ────────────────────────────────────────────────────────────────────────
+    function revealAndOpenTabAdd() {
+        const tabAddBtn = document.getElementById('tabAddBtn');
+        if (tabAddBtn) tabAddBtn.classList.remove('hidden');
+        activatePageTab('tab-add', true);
+    }
+
+    function resetTabAdd() {
+        // Re-hide the tab button
+        const tabAddBtn = document.getElementById('tabAddBtn');
+        if (tabAddBtn) tabAddBtn.classList.add('hidden');
+
+        // Clear sessionStorage so a page reload doesn't re-open tab-add
+        sessionStorage.removeItem(STORAGE_KEY);
+
+        // Reset the form fields
+        const form = document.getElementById('print');
+        if (!form) return;
+
+        form.reset();
+
+        // Reset image preview back to default
+        const preview = document.getElementById('imagePreview');
+        if (preview) preview.src = preview.dataset.defaultSrc;
+
+        // Clear author tags (the tag-input widget managed by add-print-resource.js)
+        const authorWrapper = document.getElementById('author-wrapper');
+        const authorInput   = document.getElementById('author-input');
+        const authorsHidden = document.getElementById('authors-hidden');
+        if (authorWrapper) {
+            authorWrapper.querySelectorAll('.author-tag').forEach(tag => tag.remove());
+        }
+        if (authorsHidden) authorsHidden.value = '';
+        if (authorInput)   authorInput.value   = '';
+
+        // Reset SGL checkboxes (form.reset() handles them, but fire a custom
+        // event in case add-print-resource.js tracks state separately)
+        document.querySelectorAll('input[name="subject_grade_levels[]"]').forEach(cb => {
+            cb.checked = false;
+        });
+    }
+
+    document.querySelectorAll('#triggerTabAdd, .trigger-tab-add').forEach(el => {
+        el.addEventListener('click', revealAndOpenTabAdd);
+    });
+
     // ── INITIAL TAB ──────────────────────────────────────────────────────────
     // When the controller renders the edit form ($isEditing === true), always
     // open tab-add so the user lands directly on the filled-in form.
@@ -721,6 +774,13 @@
         initialTab = '{{ session('active_tab') }}'
             || sessionStorage.getItem(STORAGE_KEY)
             || 'tab-search';
+
+        // If sessionStorage remembers tab-add from a previous visit,
+        // make sure the tab button is visible again so the UI is consistent.
+        if (initialTab === 'tab-add') {
+            const tabAddBtn = document.getElementById('tabAddBtn');
+            if (tabAddBtn) tabAddBtn.classList.remove('hidden');
+        }
     }
     if ('{{ session('just_added_acquisition') }}' === '1') initialTab = 'tab-search';
 
@@ -738,17 +798,19 @@
                 return;
             }
 
+            // If navigating away from tab-add (non-edit mode), reset form and re-hide tab
+            if (!isEditing && targetTab !== 'tab-add') {
+                resetTabAdd();
+            }
+
             activatePageTab(targetTab, true);
         });
     });
 
     // ────────────────────────────────────────────────────────────────────────
     // CANCEL / BACK TO REQUESTS
-    // Redirects the browser to the create route with ?tab=tab-requests so the
-    // page reloads cleanly (no stale edit state) and lands on My Requests.
     // ────────────────────────────────────────────────────────────────────────
     function goBackToRequests() {
-        // Store the desired landing tab so index() picks it up on reload
         sessionStorage.setItem(STORAGE_KEY, 'tab-requests');
         window.location.href = '{{ route('print-resource.create') }}';
     }

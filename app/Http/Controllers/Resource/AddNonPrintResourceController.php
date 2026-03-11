@@ -2,12 +2,9 @@
 
 namespace App\Http\Controllers\Resource;
 
-use App\Models\DivisionLibrary;
 use App\Models\NonprintResource;
 use App\Models\NonprintTitle;
 use App\Models\NonPrintType;
-use App\Models\RegionLibrary;
-use App\Models\SchoolLibrary;
 use App\Models\SubjectGradeLevel;
 use App\Services\Resource\Actions\AddNonPrintResourceService;
 
@@ -165,20 +162,6 @@ class AddNonPrintResourceController extends BaseController
 
         $nonprintTypes = NonPrintType::all();
 
-        // Library options depend on the user's level
-        $divisionLibraries = collect();
-        $regionLibrary     = null;
-        $schoolLibrary     = null;
-
-        if ($level === 3) {
-            $divisionLibraries = DivisionLibrary::where('division_id', $stationId)
-                ->orderBy('library_name')->get();
-        } elseif ($level === 4) {
-            $regionLibrary = RegionLibrary::where('region_id', $stationId)->first();
-        } elseif ($level === 1) {
-            $schoolLibrary = SchoolLibrary::where('school_id', $stationId)->first();
-        }
-
         // Division users don't submit requests, so My Requests tab doesn't apply to them
         if ($level === 3) {
             $myRequests   = collect();
@@ -202,9 +185,6 @@ class AddNonPrintResourceController extends BaseController
             'user',
             'subjectGradeLevels',
             'nonprintTypes',
-            'divisionLibraries',
-            'regionLibrary',
-            'schoolLibrary',
             'myRequests',
             'pendingCount',
             'isDivision',

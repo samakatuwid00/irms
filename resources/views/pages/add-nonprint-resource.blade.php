@@ -46,13 +46,13 @@
             </button>
 
             @if ($isDivision)
-                <button type="button" data-page-tab="tab-add"
-                    class="page-tab-btn whitespace-nowrap pb-3 px-1 text-sm font-medium border-b-2 border-transparent text-gray-500 hover:text-gray-700">
+                <button type="button" data-page-tab="tab-add" id="tabAddBtn"
+                    class="page-tab-btn whitespace-nowrap pb-3 px-1 text-sm font-medium border-b-2 border-transparent text-gray-500 hover:text-gray-700 {{ $isEditing ? '' : 'hidden' }}">
                     {{ $isEditing ? 'Edit Resource' : 'Add to Masterlist' }}
                 </button>
             @else
-                <button type="button" data-page-tab="tab-add"
-                        class="page-tab-btn whitespace-nowrap pb-3 px-1 text-sm font-medium border-b-2 border-transparent text-gray-500 hover:text-gray-700">
+                <button type="button" data-page-tab="tab-add" id="tabAddBtn"
+                        class="page-tab-btn whitespace-nowrap pb-3 px-1 text-sm font-medium border-b-2 border-transparent text-gray-500 hover:text-gray-700 {{ $isEditing ? '' : 'hidden' }}">
                     {{ $isEditing ? 'Edit Request' : 'Request Add to Masterlist' }}
                 </button>
             @endif
@@ -78,7 +78,7 @@
                 <h2 class="text-base font-semibold text-gray-800">Search Existing Non-Print Resources</h2>
                 <p class="text-sm text-gray-500 mt-1">
                     Search the masterlist by title. If no title is found, use the
-                    <button type="button" data-page-tab="tab-add" class="page-tab-btn text-blue-600 underline hover:text-blue-800 font-normal">Manual Add</button>
+                    <button type="button" id="triggerTabAdd" class="text-blue-600 underline hover:text-blue-800 font-normal">Manual Add</button>
                     tab to submit a new request.
                 </p>
             </div>
@@ -111,7 +111,7 @@
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
                 </svg>
                 <p class="font-medium">No titles found</p>
-                <p class="text-sm mt-1">Try a different keyword or <button type="button" data-page-tab="tab-add" class="page-tab-btn text-blue-600 underline">submit a new request</button>.</p>
+                <p class="text-sm mt-1">Try a different keyword or <button type="button" class="trigger-tab-add text-blue-600 underline">submit a new request</button>.</p>
             </div>
             <div id="initialHint" class="text-center py-16 text-gray-400">
                 <svg class="mx-auto mb-4 h-14 w-14 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -175,11 +175,13 @@
                         @if($isEditing && isset($editResource->cover) && $editResource->cover)
                             <img id="nonprintImagePreview"
                                 src="{{ asset('storage/' . $editResource->cover) }}"
+                                data-default-src="{{ asset('storage/' . $editResource->cover) }}"
                                 alt="Image preview"
                                 class="w-full flex-1 object-cover rounded mb-4">
                         @else
                             <img id="nonprintImagePreview"
                                 src="{{ asset('assets/images/def.jpg') }}"
+                                data-default-src="{{ asset('assets/images/def.jpg') }}"
                                 alt="Image preview"
                                 class="w-full flex-1 object-cover rounded mb-4">
                         @endif
@@ -193,27 +195,6 @@
 
                 {{-- Inputs --}}
                 <div class="md:col-span-2 space-y-6">
-
-                    {{-- Library selector --}}
-                    @if ($level === 3)
-                        <div>
-                            <label class="block text-sm font-medium mb-1">Library <span class="text-red-500">*</span></label>
-                            <select name="library_id" class="w-full border border-gray-300 rounded px-3 py-2" required>
-                                <option value="" disabled selected>Select library</option>
-                                @foreach ($divisionLibraries as $library)
-                                    <option value="{{ $library->id }}"
-                                        {{ old('library_id', $isEditing ? ($editResource->library_id ?? '') : '') == $library->id ? 'selected' : '' }}>
-                                        {{ $library->library_name }}
-                                    </option>
-                                @endforeach
-                            </select>
-                        </div>
-                    @elseif ($level === 4)
-                        <input type="hidden" name="library_id" value="{{ $regionLibrary->id ?? '' }}">
-                    @elseif ($level === 1)
-                        <input type="hidden" name="library_id" value="{{ $schoolLibrary->id ?? '' }}">
-                    @endif
-
                     <div class="space-y-4">
                         <div>
                             <label class="block text-sm font-medium mb-1">Title / Name <span class="text-red-500">*</span></label>
@@ -498,7 +479,7 @@
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
                                     </svg>
                                     <p class="text-sm font-medium">No requests submitted yet.</p>
-                                    <p class="text-xs mt-1">Use the <strong>Manual Add</strong> tab to submit your first request.</p>
+                                    <p class="text-xs mt-1">Use the <strong>Search Masterlist</strong> tab to search first, then submit a new request if your title is not found.</p>
                                 </td>
                             </tr>
                         @endforelse
@@ -648,6 +629,46 @@
         if (saveToStorage) sessionStorage.setItem(STORAGE_KEY, targetId);
     }
 
+    // ── REVEAL & ACTIVATE TAB-ADD ────────────────────────────────────────────
+    // The tab button is hidden on fresh load (non-edit mode).
+    // It becomes visible only after the user explicitly clicks
+    // "Manual Add" or "submit a new request" in the search tab,
+    // enforcing the search-first workflow.
+    function revealAndOpenTabAdd() {
+        const tabAddBtn = document.getElementById('tabAddBtn');
+        if (tabAddBtn) tabAddBtn.classList.remove('hidden');
+        activatePageTab('tab-add', true);
+    }
+
+    document.querySelectorAll('#triggerTabAdd, .trigger-tab-add').forEach(el => {
+        el.addEventListener('click', revealAndOpenTabAdd);
+    });
+
+    // ── RESET TAB-ADD ────────────────────────────────────────────────────────
+    // Called when the user navigates away from tab-add (non-edit mode).
+    // Re-hides the tab button, clears sessionStorage, and resets the form.
+    function resetTabAdd() {
+        const tabAddBtn = document.getElementById('tabAddBtn');
+        if (tabAddBtn) tabAddBtn.classList.add('hidden');
+
+        sessionStorage.removeItem(STORAGE_KEY);
+
+        const form = document.getElementById('nonprintForm');
+        if (!form) return;
+
+        form.reset();
+
+        // Reset image preview back to default
+        const preview = document.getElementById('nonprintImagePreview');
+        if (preview) preview.src = preview.dataset.defaultSrc;
+
+        // Reset SGL checkboxes
+        document.querySelectorAll('input[name="subject_grade_levels[]"]').forEach(cb => {
+            cb.checked = false;
+        });
+    }
+
+    // ── INITIAL TAB ──────────────────────────────────────────────────────────
     let initialTab;
     if (isEditing) {
         initialTab = 'tab-add';
@@ -655,9 +676,17 @@
         initialTab = '{{ session('active_tab') }}'
             || sessionStorage.getItem(STORAGE_KEY)
             || 'tab-search';
+
+        // If sessionStorage remembers tab-add from a previous visit,
+        // make sure the tab button is visible again so the UI is consistent.
+        if (initialTab === 'tab-add') {
+            const tabAddBtn = document.getElementById('tabAddBtn');
+            if (tabAddBtn) tabAddBtn.classList.remove('hidden');
+        }
     }
     activatePageTab(initialTab, false);
 
+    // ── TAB BUTTON CLICKS ────────────────────────────────────────────────────
     pageTabBtns.forEach(btn => {
         btn.addEventListener('click', () => {
             const targetTab = btn.dataset.pageTab;
@@ -667,6 +696,11 @@
                 sessionStorage.setItem(STORAGE_KEY, targetTab);
                 window.location.href = '{{ route('nonprint-resource.create') }}?tab=' + targetTab;
                 return;
+            }
+
+            // If navigating away from tab-add (non-edit mode), reset form and re-hide tab
+            if (!isEditing && targetTab !== 'tab-add') {
+                resetTabAdd();
             }
 
             activatePageTab(targetTab, true);
