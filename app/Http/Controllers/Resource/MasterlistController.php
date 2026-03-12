@@ -252,6 +252,40 @@ class MasterlistController extends BaseController
         ]);
     }
 
+    public function destroy(string $id)
+    {
+        $user  = Auth::user();
+        $level = $user->userType?->level ?? 0;
+
+        abort_unless(in_array($level, [3, 4]), 403, 'Unauthorized access.');
+
+        $resource = PrintResource::where('id', $id)
+            ->where('status', 1)
+            ->firstOrFail();
+
+        // Delete cover image + thumbnail — leave PrintTitle and Authors untouched
+        if ($resource->cover) {
+            if (Storage::disk('public')->exists($resource->cover)) {
+                Storage::disk('public')->delete($resource->cover);
+            }
+
+            $thumbPath = $this->printResourceService->thumbnailPathFromCover($resource->cover);
+            if ($thumbPath && Storage::disk('public')->exists($thumbPath)) {
+                Storage::disk('public')->delete($thumbPath);
+            }
+        }
+
+        $resource->delete();
+
+        return redirect()
+            ->route('masterlist.index', [
+                'ml_page'   => request('ml_page'),
+                'ml_search' => request('ml_search'),
+                'active_tab' => 'tab-masterlist',
+            ])
+            ->with('success', 'Resource deleted successfully.');
+    }
+
     // ── PRIVATE HELPERS ──────────────────────────────────────────────────
 
     // Appends two computed URL properties onto every item in a paginator — no extra queries.

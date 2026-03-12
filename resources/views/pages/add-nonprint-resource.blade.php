@@ -77,9 +77,7 @@
             <div>
                 <h2 class="text-base font-semibold text-gray-800">Search Existing Non-Print Resources</h2>
                 <p class="text-sm text-gray-500 mt-1">
-                    Search the masterlist by title. If no title is found, use the
-                    <button type="button" id="triggerTabAdd" class="text-blue-600 underline hover:text-blue-800 font-normal">Manual Add</button>
-                    tab to submit a new request.
+                    Search the masterlist by title or author, then add your acquisition records to an existing entry.
                 </p>
             </div>
             <div>

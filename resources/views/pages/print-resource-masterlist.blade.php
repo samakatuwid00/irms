@@ -170,6 +170,23 @@
                                             </svg>
                                             Edit
                                         </a>
+                                        {{-- Delete --}}
+                                        <form action="{{ route('masterlist.destroy', $row->id) }}" method="POST"
+                                            data-delete-form
+                                            data-title="{{ $row->printTitle->title ?? 'this resource' }}">
+                                            @csrf
+                                            @method('DELETE')
+                                            <input type="hidden" name="ml_page"   value="{{ $masterlist->currentPage() }}">
+                                            <input type="hidden" name="ml_search" value="{{ request('ml_search') }}">
+                                            <button type="button"
+                                                    data-delete-btn
+                                                    class="inline-flex items-center gap-1 text-xs px-3 py-1.5 bg-red-50 text-red-600 border border-red-200 rounded-lg hover:bg-red-100 transition-colors whitespace-nowrap font-medium">
+                                                <svg class="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                                                </svg>
+                                                Delete
+                                            </button>
+                                        </form>
                                     </div>
                                 </td>
                             </tr>
@@ -1130,6 +1147,22 @@
 
     attachViewBtnListeners();
 
+    // ── DELETE CONFIRMATION ──────────────────────────────────────────────
+    function attachDeleteListeners() {
+        document.querySelectorAll('[data-delete-btn]').forEach(btn => {
+            if (btn.dataset.deleteBound) return;
+            btn.dataset.deleteBound = '1';
+            btn.addEventListener('click', function () {
+                const form  = btn.closest('[data-delete-form]');
+                const title = form?.dataset.title ?? 'this resource';
+                if (confirm(`Are you sure you want to delete "${title}"?\n\nThis will permanently remove the resource and its cover image. The title and authors will NOT be deleted.`)) {
+                    form.submit();
+                }
+            });
+        });
+    }
+    attachDeleteListeners();
+
     closeViewBtn    && closeViewBtn.addEventListener('click', closeViewModalFn);
     closeViewFooter && closeViewFooter.addEventListener('click', closeViewModalFn);
     viewBackdrop    && viewBackdrop.addEventListener('click', closeViewModalFn);
@@ -1202,6 +1235,7 @@
 
         function rehydrateTab(tabId) {
             attachViewBtnListeners();
+            attachDeleteListeners();
             attachPaginationListeners();
             attachSearchFormListeners();
             const tab = document.getElementById(tabId);

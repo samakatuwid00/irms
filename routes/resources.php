@@ -55,6 +55,8 @@ Route::middleware('auth')->group(function () {
     Route::delete('/print-masterlist/{id}/reject', [MasterlistController::class, 'reject'])
         ->name('masterlist.reject');
 
+    Route::delete('masterlist/{id}', [MasterlistController::class, 'destroy'])->name('masterlist.destroy');
+
     // AJAX search endpoints
     Route::get('/print-masterlist/search', [MasterlistController::class, 'search'])
         ->name('masterlist.search');
