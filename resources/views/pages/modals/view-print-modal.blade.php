@@ -131,11 +131,6 @@
                     class="px-5 py-2 border border-gray-600 rounded-lg hover:bg-gray-300 transition-colors">
                 Close
             </button>
-            {{-- <a href="#"
-               id="printEditLink"
-               class="px-5 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
-                Edit Resource
-            </a> --}}
         </div>
     </div>
 </div>

@@ -28,16 +28,6 @@
 
     <div id="print-resources-wrapper" class="space-y-4">
 
-        {{-- <!-- ================= HEADER ================= -->
-        <div class="flex justify-end items-center">
-            @if($level == 1 || $level == 3)
-                <a href="{{ route('add-resources') }}"
-                class="px-4 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700">
-                    + Add Resource
-                </a>
-            @endif
-        </div> --}}
-
         <!-- ===================================================== -->
         <!-- LEVEL 1: School account -->
         <!-- ===================================================== -->
