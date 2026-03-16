@@ -132,7 +132,7 @@
                             <span class="text-xs font-normal text-gray-400">(saved with each acquisition)</span>
                         </label>
                         {{-- Division user: dropdown of their division's libraries --}}
-                        <select id="acqLibraryId" class="w-full border border-gray-300 rounded px-3 py-2 text-sm" required>
+                        <select id="acqLibraryId" class="w-full border border-gray-300 rounded px-3 py-2 text-sm">
                             <option value="" disabled selected>Select library</option>
                             @foreach ($divisionLibraries as $lib)
                                 <option value="{{ $lib->id }}" data-name="{{ $lib->library_name }}">

@@ -14,12 +14,12 @@
         <div class="p-6 space-y-8">
             <!-- Image + Basic Info -->
             <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div class="flex items-center justify-center">
+                <div class="shrink-0 flex justify-center" style="width:290px;">
                     <img id="printImage"
                          src=""
                          alt="Book Cover"
                          onerror="this.src='{{ asset('assets/images/default.jpg') }}'"
-                         class="w-full h-72 object-cover rounded-lg shadow-md">
+                         class="w-full max-h-[460px] object-contain rounded-lg border border-gray-300 shadow-md bg-gray-100">
                 </div>
                 <div class="md:col-span-2 space-y-5">
                     <div>

@@ -92,9 +92,9 @@ class DashboardController extends BaseController
 
         // Prepare dropdown data
         $regionOptions = [
-            ['value' => '', 'label' => 'All Library Hubs'],
+            ['value' => '', 'label' => 'All'],
             ['value' => 'division-hub', 'label' => 'Division Library Hub'],
-            ['value' => 'school-hub', 'label' => 'School Library Hub'],
+            ['value' => 'school-hub', 'label' => 'School LRs'],
         ];
 
         // For most users → only show their own level + lower

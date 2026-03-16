@@ -98,7 +98,7 @@ export function openPrintModal(resource) {
                     <td class="px-0.5 py-0.5">${aq.source || '-'}</td>
                     <td class="px-0.5 py-0.5">${aq.date_acquired || '-'}</td>
                     <td class="px-0.5 py-0.5">${formatCost(aq.cost)}</td>
-                    <td class="px-0.5 py-0.5">${aq.iar || '-'}</td>
+                    <td class="px-0.5 py-0.5 uppercase">${aq.iar || '-'}</td>
                     <td class="px-0.5 py-0.5 text-xs">${aq.remarks || '-'}</td>
                     <td class="px-0.5 py-0.5 text-center text-green-600 text-xs">${usable}</td>
                     <td class="px-0.5 py-0.5 text-center text-yellow-600 text-xs">${pd}</td>

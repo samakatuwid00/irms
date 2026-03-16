@@ -196,7 +196,7 @@ class BosyStatusService
         $items = $schools->map(fn($school) => [
             'id' => $school->school_id,
             'name' => $school->school_name,
-            'shortname' => $school->shortname ?? $this->getSchoolShortname($school->school_name),
+            'shortname' => $school->school_name,
             'logo' => $school->logo
                 ? asset('storage/' . $school->logo)
                 : asset('assets/images/no_image.jpg'),
@@ -290,7 +290,7 @@ class BosyStatusService
             return [
                 'id' => $division->division_id,
                 'name' => $division->division_name,  // always the same
-                'shortname' => $division->shortname ?? $this->getShortname($division->division_name),
+                'shortname' => $division->division_name,
                 'logo' => $division->logo
                     ? asset('storage/' . $division->logo)
                     : asset('assets/images/no_image.jpg'),
@@ -365,7 +365,7 @@ class BosyStatusService
         $items = $schools->map(fn($school) => [
             'id' => $school->school_id,
             'name' => $school->school_name,
-            'shortname' => $school->shortname ?? $this->getSchoolShortname($school->school_name),
+            'shortname' => $school->school_name,
             'logo' => $school->logo
                 ? asset('storage/' . $school->logo)
                 : asset('assets/images/no_image.jpg'),

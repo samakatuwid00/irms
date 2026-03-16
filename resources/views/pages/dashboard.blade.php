@@ -233,7 +233,7 @@
         <x-chart-card id="lr-exdef" title="LR Exdef" class="chart-container hidden">
             <div class="space-y-1.5">
                 <p class="text-xs text-gray-500">Grade-Subject ExDef</p>
-                <p class="text-base font-bold text-gray-700">Excess | Deficiency</p>
+                <p class="text-m font-bold mb-2">Excess | Deficiency</p>
             </div>
 
             <!-- Responsive container – no fixed px height -->
@@ -246,7 +246,7 @@
         <x-chart-card id="lr-heatmap" title="LR Heatmap" class="chart-container hidden">
             <div class="w-full aspect-[4/3] min-h-[420px] max-h-[760px] mt-3">
                 <p class="text-xs text-gray-500">Heat Map</p>
-                <p class="text-m text-500 mb-2 font-bold">Equitable Distribution</p>
+                <p class="text-m font-bold mb-2">Equitable Distribution</p>
                 <div id="heatmap" class="w-full h-full"></div> <!-- ← subtract header height -->
             </div>
         </x-chart-card>
@@ -257,10 +257,14 @@
         <x-chart-card id="bosy-status" title="BOSY Status" class="chart-container">
 
             <!-- Period & CY Header -->
+            <div class="space-y-1.5">
+                <p class="text-m font-bold mb-0">Inventory Status/Monitoring</p>
+            </div>
             <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
+                
                 <div>
-                    <p class="text-xs font-medium uppercase tracking-wide text-gray-500">
-                        BOSY Period
+                    <p class="text-xs font-medium tracking-wide text-gray-500">
+                        PERIOD: Beginning-Of-School Year
                     </p>
                     <p class="text-lg font-semibold text-gray-900 period-display">
                         05 June – 25 Dec
@@ -272,7 +276,7 @@
                         Calendar Year
                     </p>
                     <p class="text-2xl font-bold text-cyan-600 year-display">
-                        CY 2026
+                        CY {{ now()->month }}
                     </p>
                 </div>
             </div>

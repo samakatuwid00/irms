@@ -704,51 +704,17 @@
                 </div>
             </footer>
         </div>
-
-        <!-- Main Content Area -->
-        <div class="flex-1 flex flex-col overflow-hidden">
-            <main class="p-6 flex-1 overflow-y-auto mt-16 md:mt-0">
-                @yield('content')
-            </main>
-        </div>
-    </div>
-
-    <!-- Floating Action Button -->
-    <div class="hidden md:block fixed bottom-6 right-6 z-40">
-        <div id="fabMenu" class="relative">
-            <div id="menuItems" class="absolute bottom-20 right-0 mb-4 space-y-3 opacity-0 scale-0 transition-all duration-300 origin-bottom-right pointer-events-none">
-                <a href="#" class="block w-12 h-12 bg-white rounded-full shadow-lg flex items-center justify-center hover:bg-gray-100 transition">
-                    <i class="fas fa-tachometer-alt text-custom-teal text-xl"></i>
-                    <span class="absolute right-16 top-1/2 -translate-y-1/2 bg-gray-800 text-white text-xs px-3 py-1 rounded opacity-0 transition-opacity whitespace-nowrap">Dashboard</span>
-                </a>
-                <a href="#" class="block w-12 h-12 bg-white rounded-full shadow-lg flex items-center justify-center hover:bg-gray-100 transition">
-                    <i class="fas fa-user text-custom-teal text-xl"></i>
-                    <span class="absolute right-16 top-1/2 -translate-y-1/2 bg-gray-800 text-white text-xs px-3 py-1 rounded opacity-0 transition-opacity whitespace-nowrap">Profile</span>
-                </a>
-                <a href="#" class="block w-12 h-12 bg-white rounded-full shadow-lg flex items-center justify-center hover:bg-gray-100 transition">
-                    <i class="fas fa-cog text-custom-teal text-xl"></i>
-                    <span class="absolute right-16 top-1/2 -translate-y-1/2 bg-gray-800 text-white text-xs px-3 py-1 rounded opacity-0 transition-opacity whitespace-nowrap">Settings</span>
-                </a>
-                <a href="#" class="block w-12 h-12 bg-white rounded-full shadow-lg flex items-center justify-center hover:bg-gray-100 transition">
-                    <i class="fas fa-question-circle text-custom-teal text-xl"></i>
-                    <span class="absolute right-16 top-1/2 -translate-y-1/2 bg-gray-800 text-white text-xs px-3 py-1 rounded opacity-0 transition-opacity whitespace-nowrap">Support</span>
-                </a>
-                <form method="POST" action="{{ route('logout') }}" class="relative">
-                    @csrf
-                    <button type="submit"
-                        class="block w-12 h-12 bg-white rounded-full shadow-lg flex items-center justify-center hover:bg-gray-100 transition group">
-                        <i class="fas fa-sign-out-alt text-custom-teal text-xl"></i>
-                        <span class="absolute right-16 top-1/2 -translate-y-1/2 bg-gray-800 text-white text-xs px-3 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
-                            Logout
-                        </span>
-                    </button>
-                </form>
+            <!-- Main Content Area -->
+            <div class="flex-1 flex flex-col overflow-hidden">
+                <main class="p-6 overflow-y-auto mt-16 md:mt-0 flex-1">
+                    @yield('content')
+                    <!-- Copyright Footer - sits below content, scrolls with page -->
+                    <p class="w-full text-center pt-6 pb-3 text-xs text-gray-400 select-none border-t border-gray-200 mt-8">
+                        Designed &amp; Developed by<br>
+                        <span class="font-semibold text-gray-500">LRMS Naga</span> &copy; Copyright 2022
+                    </p>
+                </main>
             </div>
-
-            <button id="fabButton" class="w-14 h-14 bg-custom-yellow rounded-full shadow-xl flex items-center justify-center hover:bg-custom-yellow-hover transition duration-300">
-                <i id="fabIcon" class="fas fa-bars text-gray-800 text-2xl"></i>
-            </button>
-        </div>
     </div>
 
     @stack('scripts')
