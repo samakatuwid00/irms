@@ -55,4 +55,31 @@ class PrintAcquisition extends Model
     {
         return $this->hasMany(PrintMasterlist::class, 'print_acquisition_id');
     }
+
+    public function getDivisionNameAttribute(): string
+    {
+        // Fast path: if it's a division-level library
+        $divisionLibrary = DivisionLibrary::where('id', $this->library_id)->first();
+        if ($divisionLibrary) {
+            return Division::find($divisionLibrary->division_id)?->division_name ?? '-';
+        }
+
+        // School-level library → go up school → district → division
+        $schoolLibrary = SchoolLibrary::where('id', $this->library_id)->first();
+        if ($schoolLibrary) {
+            $school = School::find($schoolLibrary->school_id);
+            if (!$school || !$school->district_id) {
+                return '-';
+            }
+
+            $district = District::find($school->district_id);
+            if (!$district || !$district->division_id) {
+                return '-';
+            }
+
+            return Division::find($district->division_id)?->division_name ?? '-';
+        }
+
+        return '-';
+    }
 }

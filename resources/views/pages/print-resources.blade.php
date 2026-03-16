@@ -11,8 +11,10 @@
         $level = Auth::user()->userType?->level ?? 0;
     @endphp
 
-    @include('pages.partials.page-header')
-
+    <div class="p-6 space-y-6">
+        @include('pages.partials.page-header')
+    </div>
+    
     {{-- Hidden data attributes for JavaScript modules --}}
     <div id="print-resources-data"
          data-user-level="{{ $level }}"

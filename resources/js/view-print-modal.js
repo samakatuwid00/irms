@@ -16,9 +16,7 @@
  * @param {Array}    resource.acquisitions  - [{ library_name, source, date_acquired, cost, iar, remarks, usable, partially_damaged, damaged, lost, condemnable }]
  */
 export function openPrintModal(resource) {
-    // ── Helpers (defined inside to avoid module-scope issues with global onclick) ──
     const safeInt = value => parseInt(value || 0, 10);
-
     const formatCost = cost => {
         if (!cost) return '-';
         return '₱' + parseFloat(cost).toLocaleString('en-US', {
@@ -26,6 +24,11 @@ export function openPrintModal(resource) {
             maximumFractionDigits: 2,
         });
     };
+
+    // ── Read user level from table data attribute ──────────────────────────
+    const table = document.getElementById('printAcquisitionTable');
+    const userLevel = parseInt(table?.dataset?.userLevel || 0, 10);
+    const isLevel4 = userLevel === 4;
 
     const DEFAULT_IMAGE = '/assets/images/default.jpg';
 
@@ -62,38 +65,47 @@ export function openPrintModal(resource) {
     }
 
     // ── Acquisition History ────────────────────────────────────────────────
-    const tbody = document.getElementById('printAcquisitionBody');
+        const tbody = document.getElementById('printAcquisitionBody');
     tbody.innerHTML = '';
-
     const totals = { usable: 0, pd: 0, damaged: 0, lost: 0, condemnable: 0 };
 
     if (resource.acquisitions && resource.acquisitions.length > 0) {
         resource.acquisitions.forEach(aq => {
-            const usable      = safeInt(aq.usable);
-            const pd          = safeInt(aq.partially_damaged);
-            const damaged     = safeInt(aq.damaged);
-            const lost        = safeInt(aq.lost);
+            const usable     = safeInt(aq.usable);
+            const pd         = safeInt(aq.partially_damaged);
+            const damaged    = safeInt(aq.damaged);
+            const lost       = safeInt(aq.lost);
             const condemnable = safeInt(aq.condemnable);
-            const total       = usable + pd + damaged + lost + condemnable;
+            const total      = usable + pd + damaged + lost + condemnable;
+
+            // Division cell only for level 4
+            const divisionCell = isLevel4
+                ? `<td class="px-0.5 py-0.5">
+                       <span class="inline-block bg-purple-50 text-purple-700 text-xs px-0.5 py-0.5 rounded-full">
+                           ${aq.division_name || '-'}
+                       </span>
+                   </td>`
+                : '';
 
             tbody.insertAdjacentHTML('beforeend', `
                 <tr class="hover:bg-gray-50">
-                    <td class="px-3 py-2">
-                        <span class="inline-block bg-indigo-100 text-indigo-700 text-xs font-medium px-2 py-1 rounded-full whitespace-nowrap">
+                    ${divisionCell}
+                    <td class="px-0.5 py-0.5">
+                        <span class="inline-block bg-indigo-100 text-indigo-700 text-xs px-0.5 py-0.5 rounded-full whitespace-nowrap">
                             ${aq.library_name || '-'}
                         </span>
                     </td>
-                    <td class="px-3 py-2">${aq.source          || '-'}</td>
-                    <td class="px-3 py-2">${aq.date_acquired   || '-'}</td>
-                    <td class="px-3 py-2">${formatCost(aq.cost)}</td>
-                    <td class="px-3 py-2">${aq.iar             || '-'}</td>
-                    <td class="px-3 py-2 text-xs">${aq.remarks || '-'}</td>
-                    <td class="px-3 py-2 text-center text-green-600  font-medium">${usable}</td>
-                    <td class="px-3 py-2 text-center text-yellow-600 font-medium">${pd}</td>
-                    <td class="px-3 py-2 text-center text-red-600    font-medium">${damaged}</td>
-                    <td class="px-3 py-2 text-center text-purple-600 font-medium">${lost}</td>
-                    <td class="px-3 py-2 text-center text-gray-800   font-medium">${condemnable}</td>
-                    <td class="px-3 py-2 text-center font-bold text-blue-600">${total}</td>
+                    <td class="px-0.5 py-0.5">${aq.source || '-'}</td>
+                    <td class="px-0.5 py-0.5">${aq.date_acquired || '-'}</td>
+                    <td class="px-0.5 py-0.5">${formatCost(aq.cost)}</td>
+                    <td class="px-0.5 py-0.5">${aq.iar || '-'}</td>
+                    <td class="px-0.5 py-0.5 text-xs">${aq.remarks || '-'}</td>
+                    <td class="px-0.5 py-0.5 text-center text-green-600 text-xs">${usable}</td>
+                    <td class="px-0.5 py-0.5 text-center text-yellow-600 text-xs">${pd}</td>
+                    <td class="px-0.5 py-0.5 text-center text-red-600 text-xs">${damaged}</td>
+                    <td class="px-0.5 py-0.5 text-center text-purple-600 text-xs">${lost}</td>
+                    <td class="px-0.5 py-0.5 text-center text-gray-800 text-xs">${condemnable}</td>
+                    <td class="px-0.5 py-0.5 text-center font-bold text-blue-600">${total}</td>
                 </tr>
             `);
 
@@ -104,7 +116,9 @@ export function openPrintModal(resource) {
             totals.condemnable += condemnable;
         });
     } else {
-        tbody.innerHTML = '<tr><td colspan="12" class="text-center py-4 text-gray-500">No acquisition records.</td></tr>';
+        // colspan adjusts based on level
+        const colspan = isLevel4 ? 13 : 12;
+        tbody.innerHTML = `<tr><td colspan="${colspan}" class="text-center py-4 text-gray-500">No acquisition records.</td></tr>`;
     }
 
     // ── Overall Quantity Summary ───────────────────────────────────────────

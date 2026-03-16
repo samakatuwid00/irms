@@ -156,6 +156,7 @@ class PrintResource extends Model
 
             foreach ($rows as $acquisition) {
                 $acquisitions[] = [
+                    'division_name'  => $acquisition->division_name,
                     'library_name' => $acquisition->library_name ?? '-',
                     'source' => $acquisition->source ?? '-',
                     'date_acquired' => $acquisition->date_acquired
