@@ -2,20 +2,20 @@
 
 namespace App\Models;
 
-use Illuminate\Foundation\Auth\User as Authenticatable;
-use Illuminate\Notifications\Notifiable;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Foundation\Auth\User as Authenticatable;
+use Illuminate\Notifications\Notifiable;
 
 class User extends Authenticatable
 {
     use Notifiable;
 
     public $incrementing = false;
+
     protected $keyType = 'string';
 
     protected $fillable = [
-        'id',
         'firstname',
         'middlename',
         'lastname',
@@ -26,23 +26,18 @@ class User extends Authenticatable
         'password',
         'email',
         'contact_number',
-        'photo',
         'usertype_id',
         'station_id',
-        'status',
-        'approved_by',
-        'created_at',
-        'updated_at'
     ];
 
     protected $hidden = [
         'password',
-        'remember_token'
+        'remember_token',
     ];
 
     protected $casts = [
         'birthday' => 'date',
-        'id' => 'string'
+        'id' => 'string',
     ];
 
     protected $appends = [
@@ -53,7 +48,6 @@ class User extends Authenticatable
         'station_logo',
         'station_logo_url',
     ];
-
 
     public function getUsertypeNameAttribute(): ?string
     {
@@ -68,6 +62,7 @@ class User extends Authenticatable
     public function getStationLogoAttribute(): ?string
     {
         $station = $this->station;
+
         return $station?->logo;
     }
 
@@ -75,7 +70,7 @@ class User extends Authenticatable
     {
         $filename = $this->station_logo;
 
-        if (!$filename) {
+        if (! $filename) {
             return null;
         }
 
@@ -89,14 +84,16 @@ class User extends Authenticatable
             default => null,
         };
 
-        if (!$folder) {
+        if (! $folder) {
             return null;
         }
+
         return asset("storage/{$filename}");
 
         // Alternative (if no storage:link):
         // return asset("storage/app/public/{$folder}/{$filename}");
     }
+
     /* ================= RELATIONSHIPS ================= */
     public function userType(): BelongsTo
     {
@@ -152,10 +149,12 @@ class User extends Authenticatable
     {
         return $this->belongsTo(School::class, 'station_id');
     }
+
     // Accessor for the station model (based on level)
     public function getStationAttribute()
     {
         $level = $this->usertype_level;
+
         return match ($level) {
             4 => $this->regionStation,
             3 => $this->divisionStation,
@@ -169,11 +168,12 @@ class User extends Authenticatable
     public function getStationNameAttribute(): ?string
     {
         $station = $this->station;
-        if (!$station) {
+        if (! $station) {
             return null;
         }
 
         $level = $this->usertype_level;
+
         return match ($level) {
             4 => $station->region_name,
             3 => $station->division_name,

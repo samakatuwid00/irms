@@ -206,6 +206,7 @@ class UserManagementService
      */
     public function updateUserStatus(User $user, string $status): bool
     {
-        return $user->update(['status' => $status]);
+        $user->status = $status;
+        return $user->save();
     }
 }

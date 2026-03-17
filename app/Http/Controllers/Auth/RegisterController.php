@@ -3,10 +3,11 @@
 namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\RegisterRequest;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 use App\Models\{
     Region,
     Division,
@@ -20,11 +21,11 @@ class RegisterController extends Controller
 {
     public function showRegisterForm()
     {
-        $regions = Region::getRegions()->getData();
-        $divisions = Division::getDivisions()->getData();
-        $districts = District::getDistricts()->getData();
-        $schools = School::getSchools()->getData();
-        $usertypes = Usertype::getUsertypes()->getData();
+        $regions   = Region::orderBy('region_name')->get(['id', 'region_name', 'shortname']);
+        $divisions = Division::orderBy('division_name')->get(['id', 'division_name', 'shortname', 'region_id']);
+        $districts = District::orderBy('district_name')->get(['id', 'district_name', 'shortname', 'division_id']);
+        $schools   = School::orderBy('school_name')->get(['id', 'school_name', 'shortname', 'district_id', 'school_type']);
+        $usertypes = UserType::where('level', '!=', 0)->orderBy('type_name')->get(['id', 'type_name', 'level']);
 
         return view('register', compact(
             'regions',
@@ -32,59 +33,50 @@ class RegisterController extends Controller
             'districts',
             'schools',
             'usertypes'
-
         ));
     }
 
-    public function submitRegistration(Request $request)
+    public function submitRegistration(RegisterRequest $request)
     {
-        $request->validate([
-            'firstname'        => 'required|string|max:255',
-            'lastname'         => 'required|string|max:255',
-            'middlename'       => 'nullable|string|max:255',
-            'extension_name'   => 'nullable|string|max:10',
-            'gender'           => 'required|in:male,female,other',
-            'birthday'         => 'nullable|date',
-            'username'         => 'required|string|max:50|unique:users,username',
-            'password'         => 'required|string|min:8|confirmed',
-            'email'            => 'required|email|max:255|unique:users,email',
-            'contact_number' => ['required', 'regex:/^09\d{9}$/'],
-            'usertype'         => 'required|exists:usertypes,id',
-            'authority_level'  => 'required|in:1,2,3,4',
-            'region'           => 'required_if:authority_level,4,3,2,1|nullable|exists:regions,id',
-            'division'         => 'required_if:authority_level,3,2,1|nullable|exists:divisions,id',
-            'district'         => 'required_if:authority_level,2,1|nullable|exists:districts,id',
-            'school'           => 'required_if:authority_level,1|nullable|exists:schools,id',
-            'agree'            => 'accepted',
-        ]);
+        $validated = $request->validated();
 
         DB::beginTransaction();
         try {
-            $userId = Str::uuid()->toString();
+            $stationId = $validated['school']
+                ?? $validated['district']
+                ?? $validated['division']
+                ?? $validated['region']
+                ?? null;
 
-            User::create([
-                'id'             => Str::uuid()->toString(),
-                'firstname'      => $request->firstname,
-                'middlename'     => $request->middlename,
-                'lastname'       => $request->lastname,
-                'extension_name' => $request->extension_name,
-                'gender'         => $request->gender,
-                'birthday'       => $request->birthday,
-                'username'       => $request->username,
-                'password'       => Hash::make($request->password),
-                'email'          => $request->email,
-                'contact_number' => $request->contact_number,
-                'usertype_id'    => $request->usertype,
-                'station_id'     => $request->school ?? $request->district ?? $request->division ?? $request->region ?? null,
-                'status'         => 'pending',
-                'approved_by'    => null,
-            ]);
+            $user = new User();
+            $user->id             = Str::uuid()->toString();
+            $user->firstname      = $validated['firstname'];
+            $user->middlename     = $validated['middlename'] ?? null;
+            $user->lastname       = $validated['lastname'];
+            $user->extension_name = $validated['extension_name'] ?? null;
+            $user->gender         = $validated['gender'];
+            $user->birthday       = $validated['birthday'] ?? null;
+            $user->username       = $validated['username'];
+            $user->password       = Hash::make($validated['password']);
+            $user->email          = $validated['email'];
+            $user->contact_number = $validated['contact_number'];
+            $user->usertype_id    = $validated['usertype'];
+            $user->station_id     = $stationId;
+            $user->status         = 'pending';
+            $user->approved_by    = null;
+            $user->save();
 
             DB::commit();
             return redirect()->route('register')->with('success', 'Account registered successfully! Await approval.');
         } catch (\Exception $e) {
             DB::rollBack();
-            return back()->withInput()->withErrors(['error' => 'Registration failed: '.$e->getMessage()]);
+
+            Log::error('Registration failed', [
+                'message' => $e->getMessage(),
+                'trace'   => $e->getTraceAsString(),
+            ]);
+
+            return back()->withInput()->withErrors(['error' => 'Registration failed. Please try again later.']);
         }
     }
 }
