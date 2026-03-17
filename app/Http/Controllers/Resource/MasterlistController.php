@@ -340,7 +340,7 @@ class MasterlistController extends BaseController
         $requests = null;
         if ($level === 3) {
             $rqSearch      = trim($request->input('rq_search', ''));
-            $requestsQuery = PrintResource::with(['printTitle.authors', 'type'])
+            $requestsQuery = PrintResource::with(['printTitle.authors', 'type', 'encodedBy'])
                 ->where('status', 0)
                 ->where('approver_station', $user->station_id);
 

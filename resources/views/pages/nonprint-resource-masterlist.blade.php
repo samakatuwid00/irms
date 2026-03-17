@@ -89,7 +89,9 @@
                             <input type="hidden" name="active_tab" value="tab-masterlist">
                             <input type="text" name="ml_search" value="{{ request('ml_search') }}"
                                 placeholder="Search title, author, ISBN..."
-                                class="border border-gray-300 rounded-lg px-3 py-2 text-sm w-full sm:w-150 md:w-200 lg:w-250 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                class="border border-gray-300 rounded-lg px-4 py-2.5 text-sm 
+                                    w-full md:w-[300px] lg:w-[400px] xl:w-[500px] 2xl:w-[600px]
+                                    focus:outline-none focus:ring-2 focus:ring-blue-500">
                             <button type="submit"
                                 class="px-4 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 transition-colors">
                                 Search
@@ -433,7 +435,9 @@
                                 <input type="hidden" name="active_tab" value="tab-requests">
                                 <input type="text" name="rq_search" value="{{ request('rq_search') }}"
                                     placeholder="Search requests..."
-                                    class="border border-gray-300 rounded-lg px-3 py-2 text-sm w-56 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                    class="border border-gray-300 rounded-lg px-4 py-2.5 text-sm 
+                                    w-full md:w-[300px] lg:w-[400px] xl:w-[500px] 2xl:w-[600px]
+                                    focus:outline-none focus:ring-2 focus:ring-blue-500">
                                 <button type="submit"
                                     class="px-4 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 transition-colors">
                                     Search

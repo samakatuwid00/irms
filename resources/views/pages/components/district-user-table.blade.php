@@ -85,21 +85,22 @@
                     <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm">Apply Filters</button>
                 </div>
             </form>
+            <div class="relative">
+                <div id="main-spinner" class="htmx-indicator absolute inset-0 z-10 flex items-center justify-center bg-white/60 rounded-lg">
+                    <svg class="animate-spin h-5 w-5 text-blue-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"></path>
+                    </svg>
+                </div>
 
-            <div id="main-spinner" class="htmx-indicator flex justify-center py-4">
-                <svg class="animate-spin h-5 w-5 text-blue-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"></path>
-                </svg>
-            </div>
-
-            <div id="main-table-container">
-                @include('pages.partials.users-table', [
-                    'users' => $mainUsers,
-                    'pageName' => 'main_page',
-                    'emptyMessage' => 'No district users found.',
-                    'activeTab' => 'main'
-                ])
+                <div id="main-table-container">
+                    @include('pages.partials.users-table', [
+                        'users' => $mainUsers,
+                        'pageName' => 'main_page',
+                        'emptyMessage' => 'No district users found.',
+                        'activeTab' => 'main'
+                    ])
+                </div>
             </div>
         </div>
     </div>
@@ -174,20 +175,22 @@
                 </div>
             </form>
 
-            <div id="sub-spinner" class="htmx-indicator flex justify-center py-4">
-                <svg class="animate-spin h-5 w-5 text-blue-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"></path>
-                </svg>
-            </div>
+            <div class="relative">
+                <div id="sub-spinner" class="htmx-indicator absolute inset-0 z-10 flex items-center justify-center bg-white/60 rounded-lg">
+                    <svg class="animate-spin h-5 w-5 text-blue-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"></path>
+                    </svg>
+                </div>
 
-            <div id="sub-table-container">
-                @include('pages.partials.users-table', [
-                    'users' => $subUsers,
-                    'pageName' => 'sub_page',
-                    'emptyMessage' => 'No school users found under this district.',
-                    'activeTab' => 'sub'
-                ])
+                <div id="sub-table-container">
+                    @include('pages.partials.users-table', [
+                        'users' => $subUsers,
+                        'pageName' => 'sub_page',
+                        'emptyMessage' => 'No school users found under this district.',
+                        'activeTab' => 'sub'
+                    ])
+                </div>
             </div>
         </div>
     </div>

@@ -198,4 +198,8 @@ class PrintResource extends Model
             'edit_url' => route('update-print-resource', $this->id),
         ];
     }
+    public function encodedBy()
+    {
+        return $this->belongsTo(User::class, 'encoded_by', 'id');
+    }
 }

@@ -98,20 +98,22 @@
             </form>
 
             <!-- Loading spinner -->
-            <div id="region-spinner" class="htmx-indicator flex justify-center py-4">
-                <svg class="animate-spin h-5 w-5 text-blue-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"></path>
-                </svg>
-            </div>
+            <div class="relative">
+                <div id="region-spinner" class="htmx-indicator absolute inset-0 z-10 flex items-center justify-center bg-white/60 rounded-lg">
+                    <svg class="animate-spin h-5 w-5 text-blue-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"></path>
+                    </svg>
+                </div>
 
-            <!-- Table target -->
-            <div id="region-table-container">
-                @include('pages.partials.users-table', [
-                    'users' => $mainUsers,
-                    'emptyMessage' => 'No region users found.',
-                    'activeTab' => 'region'
-                ])
+                <!-- Table target -->
+                <div id="region-table-container">
+                    @include('pages.partials.users-table', [
+                        'users' => $mainUsers,
+                        'emptyMessage' => 'No region users found.',
+                        'activeTab' => 'region'
+                    ])
+                </div>
             </div>
         </div>
     </div>
@@ -191,21 +193,23 @@
                 </div>
             </form>
 
-            <!-- Loading spinner -->
-            <div id="division-spinner" class="htmx-indicator flex justify-center py-4">
-                <svg class="animate-spin h-5 w-5 text-blue-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"></path>
-                </svg>
-            </div>
+            <div class="relative">
+                <!-- Loading spinner -->
+                <div id="division-spinner" class="htmx-indicator absolute inset-0 z-10 flex items-center justify-center bg-white/60 rounded-lg">
+                    <svg class="animate-spin h-5 w-5 text-blue-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"></path>
+                    </svg>
+                </div>
 
-            <!-- Table target -->
-            <div id="division-table-container">
-                @include('pages.partials.users-table', [
-                    'users' => $subUsers,
-                    'emptyMessage' => 'No division users found under this region.',
-                    'activeTab' => 'division'
-                ])
+                <!-- Table target -->
+                <div id="division-table-container">
+                    @include('pages.partials.users-table', [
+                        'users' => $subUsers,
+                        'emptyMessage' => 'No division users found under this region.',
+                        'activeTab' => 'division'
+                    ])
+                </div>
             </div>
         </div>
     </div>

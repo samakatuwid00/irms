@@ -81,7 +81,9 @@
                         <input type="hidden" name="active_tab" value="tab-masterlist">
                         <input type="text" name="ml_search" value="{{ request('ml_search') }}"
                             placeholder="Search title, author, ISBN..."
-                            class="border border-gray-300 rounded-lg px-3 py-2 text-sm w-full sm:w-150 md:w-200 lg:w-250 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            class="border border-gray-300 rounded-lg px-4 py-2.5 text-sm 
+                            w-full md:w-[300px] lg:w-[400px] xl:w-[500px] 2xl:w-[600px]
+                            focus:outline-none focus:ring-2 focus:ring-blue-500">
                         <button type="submit"
                                 class="px-4 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 transition-colors">
                             Search
@@ -429,7 +431,9 @@
                         <input type="hidden" name="active_tab" value="tab-requests">
                         <input type="text" name="rq_search" value="{{ request('rq_search') }}"
                                placeholder="Search requests..."
-                               class="border border-gray-300 rounded-lg px-3 py-2 text-sm w-56 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                class="border border-gray-300 rounded-lg px-4 py-2.5 text-sm 
+                                    w-full md:w-[300px] lg:w-[400px] xl:w-[500px] 2xl:w-[600px]
+                                    focus:outline-none focus:ring-2 focus:ring-blue-500">
                         <button type="submit"
                                 class="px-4 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 transition-colors">
                             Search
@@ -458,6 +462,7 @@
                             <th class="px-3 py-3 text-left">ISBN</th>
                             <th class="px-3 py-3 text-left">Subjects / Grade Levels</th>
                             <th class="px-3 py-3 text-center">Date Submitted</th>
+                            <th class="px-3 py-3 text-center">Requested by</th>
                             <th class="px-3 py-3 text-center">Actions</th>
                         </tr>
                     </thead>
@@ -491,6 +496,9 @@
                                     <span title="{{ $reqSglText }}">{{ Str::limit($reqSglText, 55) }}</span>
                                 </td>
                                 <td class="px-3 py-2 text-center text-gray-500 text-xs whitespace-nowrap">{{ $req->created_at?->format('M d, Y') ?? '-' }}</td>
+                                <td class="px-3 py-2 text-gray-600 uppercase">
+                                    {{ $req->encodedBy ? trim("{$req->encodedBy->firstname} {$req->encodedBy->lastname}") : '-' }}
+                                </td>
                                 <td class="px-3 py-2 text-center">
                                     <div class="flex justify-center gap-2">
                                         {{-- Approve --}}
