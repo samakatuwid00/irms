@@ -13,6 +13,7 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->redirectGuestsTo('/');
+        $middleware->append(\App\Http\Middleware\SecurityHeaders::class);
     })
     ->withCommands([
         App\Console\Commands\MvViewRefresher::class,
