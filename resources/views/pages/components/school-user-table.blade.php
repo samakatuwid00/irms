@@ -96,6 +96,9 @@
     </div>
 </div>
 
+<!-- change password -->
+<x-change-password-modal />
+
 <style>
     .htmx-indicator { display: none; }
     .htmx-request .htmx-indicator { display: flex; }

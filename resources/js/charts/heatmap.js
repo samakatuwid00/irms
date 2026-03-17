@@ -43,9 +43,6 @@ async function initHeatmapChart() {
         const rawData      = result.series_data;  // [ [subjIdx, gradeIdx, qty], ... ]
         const maxValue     = result.max_value || 100;
 
-        // Optional: log for debugging
-        console.log('Heatmap data loaded:', { subjectsCount: subjects.length, gradesCount: gradeLevels.length, entries: rawData.length });
-
         const option = {
             tooltip: {
                 position: 'top',

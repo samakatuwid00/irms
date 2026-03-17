@@ -22,7 +22,6 @@ async function initRatioChart() {
         const mailData   = chartData.mailData   || [];
 
         // Debug: check what we actually received
-        console.log('Chart data received:', { grades, population, directData, mailData });
 
         const echarts = await import('echarts');
         const myChart = echarts.init(chartDom);
@@ -207,7 +206,6 @@ function setupLazyChartLoading() {
     const observer = new IntersectionObserver(
         (entries, observer) => {
             if (entries[0].isIntersecting) {
-                console.log('Chart container entered viewport → initializing chart');
                 initRatioChart();
                 observer.disconnect(); // load only once
             }

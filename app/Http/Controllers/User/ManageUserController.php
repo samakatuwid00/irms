@@ -10,6 +10,8 @@ use Illuminate\Foundation\Validation\ValidatesRequests;
 use Illuminate\Routing\Controller as BaseController;
 use App\Models\User;
 use App\Services\UserManagementService;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Validation\Rules\Password;
 
 class ManageUserController extends BaseController
 {
@@ -84,5 +86,27 @@ class ManageUserController extends BaseController
                 'status' => $request->input('status_subsub'),
             ],
         ];
+    }
+    public function changePassword(Request $request, User $user)
+    {
+        $request->validate([
+            'password' => 'required|min:8|confirmed',
+        ]);
+
+        try {
+            $user->update([
+                'password' => Hash::make($request->password)
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Password updated successfully!'
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to update password. Please try again.'
+            ], 500);
+        }
     }
 }

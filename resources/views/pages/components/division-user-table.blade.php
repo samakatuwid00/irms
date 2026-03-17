@@ -290,6 +290,12 @@
         </div>
     </div>
 
+    <!-- change password -->
+    <x-change-password-modal />
+
+
+<!-- Add CSRF token for AJAX requests -->
+<meta name="csrf-token" content="{{ csrf_token() }}">
 <script>
     function switchTab(tab) {
         document.querySelectorAll('.tab-content').forEach(content => {

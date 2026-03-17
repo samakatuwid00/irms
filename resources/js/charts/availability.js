@@ -162,7 +162,6 @@ function setupLazyAvailabilityChart() {
     const observer = new IntersectionObserver(
         (entries, obs) => {
             if (entries[0].isIntersecting) {
-                console.log('Chart container is visible → initializing LR Availability chart');
                 initAvailabilityChart();
                 obs.disconnect(); // only load once
             }

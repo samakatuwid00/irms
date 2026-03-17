@@ -194,8 +194,10 @@
             </div>
         </div>
     </div>
-
 </div>
+
+<!-- change password -->
+<x-change-password-modal />
 
 <script>
     function switchTab(tab) {

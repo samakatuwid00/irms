@@ -39,36 +39,30 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    async function showChart(value) {
-        Object.keys(containers).forEach(async (key) => {
-            const el = containers[key];
+async function showChart(value) {
+    // Hide everything first
+    Object.values(containers).forEach(el => el?.classList.add('hidden'));
 
-            if (key === value) {
-                el.classList.remove('hidden');
+    const key = value;
+    const container = containers[key];
+    if (!container) return;
 
-                if (!loaded.has(key)) {
-                    loaded.add(key);
+    container.classList.remove('hidden');
 
-                    try {
-                        const path = moduleMap[key];
-                        if (modules[path]) {
-                            await modules[path]();
-                            console.log(`${key} loaded`);
-                        } else {
-                            console.error(`Module not found: ${path}`);
-                        }
-                    } catch (err) {
-                        console.error(`Failed to load ${key}:`, err);
-                    }
-                }
-
-                forceResize(key);
-
-            } else {
-                el.classList.add('hidden');
+    if (!loaded.has(key)) {
+        loaded.add(key);
+        try {
+            const path = moduleMap[key];
+            if (modules[path]) {
+                await modules[path]();          // only one await — clean
             }
-        });
+        } catch (err) {
+            console.error(`Failed to load ${key}:`, err);
+        }
     }
+
+    forceResize(key);
+}
 
     window.registerChart = (key, chart) => {
         chartInstances[key] = chart;
