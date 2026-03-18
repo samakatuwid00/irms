@@ -19,7 +19,6 @@
     <!-- MAIN TAB: District Users -->
     <div id="content-main" class="tab-content">
         <div class="bg-white rounded-xl shadow p-4">
-            <h2 class="text-lg font-semibold mb-4">District Users</h2>
             <form
                 hx-get="{{ route('users') }}"
                 hx-target="#main-table-container"
@@ -108,7 +107,6 @@
     <!-- SUB TAB: School Users -->
     <div id="content-sub" class="tab-content hidden">
         <div class="bg-white rounded-xl shadow p-4">
-            <h2 class="text-lg font-semibold mb-4">School Users Under District</h2>
             <form
                 hx-get="{{ route('users') }}"
                 hx-target="#sub-table-container"

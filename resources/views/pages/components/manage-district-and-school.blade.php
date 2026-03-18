@@ -66,43 +66,46 @@
 
     {{-- ================= DISTRICTS TAB ================= --}}
     <div id="content-districts" class="tab-content">
-        <div class="flex justify-end mb-2">
-            <button type="button"
-                    data-modal-target="add-district-modal"
-                    data-modal-toggle="add-district-modal"
-                    class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2 text-sm font-medium">
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
-                </svg>
-                Add District
-            </button>
-        </div>
 
         <!-- ================= SEARCH ================= -->
         <div class="bg-white rounded-xl shadow p-4">
-            <form method="GET" class="flex items-center gap-3">
-                <input type="hidden" name="active_tab" value="districts">
-                <div class="relative w-full">
-                    <input type="text"
-                           name="district_search"
-                           value="{{ request('district_search') }}"
-                           placeholder="Search districts..."
-                           class="w-full pl-10 pr-3 py-2 border rounded-lg text-sm focus:ring focus:ring-blue-200">
-                    <svg class="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-gray-400"
-                         xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                        <circle cx="11" cy="11" r="8"/>
-                        <path d="m21 21-4.3-4.3"/>
-                    </svg>
-                </div>
+            <div class="flex items-center gap-3">
+                <!-- Search Form -->
+                <form method="GET" class="flex-1 flex items-center gap-3">
+                    <input type="hidden" name="active_tab" value="districts">
+                    <div class="relative flex-1">
+                        <input type="text"
+                            name="district_search"
+                            value="{{ request('district_search') }}"
+                            placeholder="Search districts..."
+                            class="w-full pl-10 pr-4 py-2.5 border rounded-lg text-sm focus:ring-2 focus:ring-blue-200 focus:outline-none">
+                        <svg class="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-gray-400"
+                            xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                            <circle cx="11" cy="11" r="8"/>
+                            <path d="m21 21-4.3-4.3"/>
+                        </svg>
+                    </div>
 
-                <button type="submit"
-                        class="p-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
-                    <svg class="size-4" xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                        <circle cx="11" cy="11" r="8"/>
-                        <path d="m21 21-4.3-4.3"/>
+                    <button type="submit"
+                            class="inline-flex items-center gap-2 px-4 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium whitespace-nowrap">
+                        <svg class="size-5" xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                            <circle cx="11" cy="11" r="8"/>
+                            <path d="m21 21-4.3-4.3"/>
+                        </svg> Search
+                    </button>
+                </form>
+
+                <!-- Add District Button (outside form) -->
+                <button type="button"
+                        data-modal-target="add-district-modal"
+                        data-modal-toggle="add-district-modal"
+                        class="inline-flex items-center gap-2 px-4 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium whitespace-nowrap">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
                     </svg>
+                    Add District
                 </button>
-            </form>
+            </div>
         </div>
 
         <!-- ================= TABLE ================= -->
@@ -185,74 +188,75 @@
 
     {{-- ================= SCHOOLS TAB ================= --}}
     <div id="content-schools" class="tab-content hidden">
-        <!-- Page Header -->
-        <div class="flex justify-end mb-2">
 
-            <!-- Add School Button -->
-            <button type="button"
-                    data-modal-target="add-school-modal"
-                    id="add-school-btn-header"
-                    class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2 text-sm font-medium">
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
-                </svg>
-                Add School
-            </button>
-        </div>
+    <!-- ================= DISTRICT SELECTOR & SEARCH ================= -->
+    <div class="bg-white rounded-xl shadow p-4">
+        <form method="GET" id="schoolFilterForm">
+            <input type="hidden" name="active_tab" value="schools">
 
-        <!-- ================= DISTRICT SELECTOR & SEARCH ================= -->
-        <div class="bg-white rounded-xl shadow p-4">
-            <form method="GET" id="schoolFilterForm" class="space-y-4">
-                <input type="hidden" name="active_tab" value="schools">
+            <div class="grid grid-cols-1 md:grid-cols-12 gap-4">
+                <!-- District Dropdown - takes 4 columns -->
+                <div class="md:col-span-4 flex flex-col">
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Select District</label>
+                    <select name="selected_district"
+                            id="districtSelector"
+                            onchange="this.form.submit()"
+                            class="w-full border rounded-lg px-4 py-2.5 focus:ring focus:ring-blue-200 text-sm">
+                        <option value="">-- Select District --</option>
+                        @if($districtsWithSchools)
+                            @foreach($districtsWithSchools as $district)
+                                <option value="{{ $district->id }}"
+                                        {{ request('selected_district') == $district->id ? 'selected' : '' }}>
+                                    {{ $district->district_name }} ({{ $district->schools->count() }} schools)
+                                </option>
+                            @endforeach
+                        @endif
+                    </select>
+                </div>
 
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <!-- District Dropdown -->
-                    <div class="relative">
-                        <label class="block text-sm font-medium text-gray-700 mb-2">Select District</label>
-                        <select name="selected_district"
-                                id="districtSelector"
-                                onchange="this.form.submit()"
-                                class="w-full border rounded-lg px-4 py-2 focus:ring focus:ring-blue-200">
-                            <option value="">-- Select District --</option>
-                            @if($districtsWithSchools)
-                                @foreach($districtsWithSchools as $district)
-                                    <option value="{{ $district->id }}"
-                                            {{ request('selected_district') == $district->id ? 'selected' : '' }}>
-                                        {{ $district->district_name }} ({{ $district->schools->count() }} schools)
-                                    </option>
-                                @endforeach
-                            @endif
-                        </select>
-                    </div>
-
-                    <!-- Search Box -->
-                    <div class="relative">
-                        <label class="block text-sm font-medium text-gray-700 mb-2">Search Schools</label>
-                        <div class="flex items-center gap-2">
-                            <div class="relative w-full">
-                                <input type="text"
-                                       name="school_search"
-                                       value="{{ request('school_search') }}"
-                                       placeholder="Search schools..."
-                                       class="w-full pl-10 pr-3 py-2 border rounded-lg text-sm focus:ring focus:ring-blue-200">
-                                <svg class="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-gray-400"
-                                     xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                                    <circle cx="11" cy="11" r="8"/>
-                                    <path d="m21 21-4.3-4.3"/>
-                                </svg>
-                            </div>
-                            <button type="submit"
-                                    class="p-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
-                                <svg class="size-4" xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                                    <circle cx="11" cy="11" r="8"/>
-                                    <path d="m21 21-4.3-4.3"/>
-                                </svg>
-                            </button>
+                <!-- Search Box - takes 8 columns -->
+                <div class="md:col-span-8 flex flex-col">
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Search Schools</label>
+                    <div class="flex items-center gap-2">
+                        <!-- Search Input - expanded -->
+                        <div class="relative flex-grow">
+                            <input type="text"
+                                name="school_search"
+                                value="{{ request('school_search') }}"
+                                placeholder="Search schools by name, city, or zip code..."
+                                class="w-full pl-10 pr-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-shadow">
+                            <svg class="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-gray-400"
+                                xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                <circle cx="11" cy="11" r="8"/>
+                                <path d="m21 21-4.3-4.3"/>
+                            </svg>
                         </div>
+
+                        <!-- Search Button -->
+                        <button type="submit"
+                                class="inline-flex items-center gap-1.5 px-4 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium whitespace-nowrap">
+                            <svg class="size-4" xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                <circle cx="11" cy="11" r="8"/>
+                                <path d="m21 21-4.3-4.3"/>
+                            </svg>
+                            Search
+                        </button>
+
+                        <!-- Add School Button -->
+                        <button type="button"
+                                data-modal-target="add-school-modal"
+                                id="add-school-btn-header"
+                                class="inline-flex items-center gap-2 px-4 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium whitespace-nowrap">
+                            <svg class="size-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                            </svg>
+                            Add School
+                        </button>
                     </div>
                 </div>
-            </form>
-        </div>
+            </div>
+        </form>
+    </div>
 
         <!-- ================= SCHOOLS TABLE ================= -->
         @if(request('selected_district'))

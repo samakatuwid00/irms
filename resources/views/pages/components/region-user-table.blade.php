@@ -24,9 +24,7 @@
 
     <!-- REGION TAB -->
     <div id="content-region" class="tab-content">
-        <div class="bg-white rounded-xl shadow p-4">
-            <h2 class="text-lg font-semibold mb-4">Region Users</h2>
-            
+        <div class="bg-white rounded-xl shadow p-4">            
             <form
                 hx-get="{{ route('users') }}"
                 hx-target="#region-table-container"
@@ -120,9 +118,7 @@
 
     <!-- DIVISION TAB -->
     <div id="content-division" class="tab-content hidden">
-        <div class="bg-white rounded-xl shadow p-4">
-            <h2 class="text-lg font-semibold mb-4">Division Users</h2>
-            
+        <div class="bg-white rounded-xl shadow p-4">            
             <form
                 hx-get="{{ route('users') }}"
                 hx-target="#division-table-container"

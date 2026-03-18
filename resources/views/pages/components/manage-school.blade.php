@@ -41,47 +41,49 @@
     @endif
 
     <!-- Page Header -->
-    <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+    <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-4">
         <h1 class="text-xl font-semibold text-gray-800">Schools</h1>
-
-        <!-- Add School Button -->
-        <button type="button"
-                data-modal-target="add-school-modal"
-                data-modal-toggle="add-school-modal"
-                class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2 text-sm font-medium">
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
-            </svg>
-            Add School
-        </button>
     </div>
 
     <!-- ================= SEARCH ================= -->
     <div class="bg-white rounded-xl shadow p-4">
-        <form method="GET" class="flex items-center gap-3">
-            <input type="hidden" name="tab" value="schools">
-            <div class="relative w-full">
-                <input type="text"
-                       name="search"
-                       value="{{ request('search') }}"
-                       placeholder="Search by school name, type, or address..."
-                       class="w-full pl-10 pr-3 py-2 border rounded-lg text-sm focus:ring focus:ring-blue-200">
-                <!-- Search Icon -->
-                <svg class="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-gray-400"
-                     xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                    <circle cx="11" cy="11" r="8"/>
-                    <path d="m21 21-4.3-4.3"/>
-                </svg>
-            </div>
+        <div class="flex items-center gap-3">
+            <!-- Search Form -->
+            <form method="GET" class="flex-1 flex items-center gap-3">
+                <input type="hidden" name="tab" value="schools">
+                <div class="relative flex-1">
+                    <input type="text"
+                        name="search"
+                        value="{{ request('search') }}"
+                        placeholder="Search by school name, type, or address..."
+                        class="w-full pl-10 pr-4 py-2.5 border rounded-lg text-sm focus:ring-2 focus:ring-blue-200 focus:outline-none">
+                    <svg class="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-gray-400"
+                        xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                        <circle cx="11" cy="11" r="8"/>
+                        <path d="m21 21-4.3-4.3"/>
+                    </svg>
+                </div>
 
-            <button type="submit"
-                    class="p-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
-                <svg class="size-4" xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                    <circle cx="11" cy="11" r="8"/>
-                    <path d="m21 21-4.3-4.3"/>
+                <button type="submit"
+                        class="inline-flex items-center gap-2 px-4 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium whitespace-nowrap">
+                    <svg class="size-5" xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                        <circle cx="11" cy="11" r="8"/>
+                        <path d="m21 21-4.3-4.3"/>
+                    </svg> Search
+                </button>
+            </form>
+
+            <!-- Add School Button (outside form) -->
+            <button type="button"
+                    data-modal-target="add-school-modal"
+                    data-modal-toggle="add-school-modal"
+                    class="inline-flex items-center gap-2 px-4 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium whitespace-nowrap">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
                 </svg>
+                Add School
             </button>
-        </form>
+        </div>
     </div>
 
     <!-- ================= TABLE ================= -->

@@ -41,44 +41,49 @@
     @endif
 
     <!-- Page Header -->
-    <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+    <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-4">
         <h1 class="text-2xl font-bold text-gray-800">Manage Divisions</h1>
-
-        <!-- Add Division Button -->
-        <button type="button"
-                data-modal-target="add-division-modal"
-                class="px-5 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition flex items-center gap-2 shadow-sm">
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
-            </svg>
-            Add Division
-        </button>
     </div>
 
-    <!-- Search -->
-    <div class="bg-white rounded-xl shadow p-5">
-        <form method="GET" class="flex items-center gap-3">
-            <div class="relative flex-1">
-                <input type="text"
-                       name="search"
-                       value="{{ request('search') }}"
-                       placeholder="Search divisions..."
-                       class="w-full pl-11 pr-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
-                <svg class="absolute left-3.5 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400"
-                     fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <circle cx="11" cy="11" r="8"/>
-                    <path d="m21 21-4.3-4.3"/>
-                </svg>
-            </div>
-            <button type="submit"
-                    class="p-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition">
+    <!-- ================= SEARCH ================= -->
+    <div class="bg-white rounded-xl shadow p-4">
+        <div class="flex items-center gap-3">
+            <!-- Search Form -->
+            <form method="GET" class="flex-1 flex items-center gap-3">
+                <div class="relative flex-1">
+                    <input type="text"
+                        name="search"
+                        value="{{ request('search') }}"
+                        placeholder="Search divisions..."
+                        class="w-full pl-10 pr-4 py-2.5 border rounded-lg text-sm focus:ring-2 focus:ring-blue-200 focus:outline-none">
+                    <svg class="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-gray-400"
+                        xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                        <circle cx="11" cy="11" r="8"/>
+                        <path d="m21 21-4.3-4.3"/>
+                    </svg>
+                </div>
+
+                <button type="submit"
+                        class="inline-flex items-center gap-2 px-4 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium whitespace-nowrap">
+                    <svg class="size-5" xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                        <circle cx="11" cy="11" r="8"/>
+                        <path d="m21 21-4.3-4.3"/>
+                    </svg> Search
+                </button>
+            </form>
+
+            <!-- Add Division Button (outside form) -->
+            <button type="button"
+                    data-modal-target="add-division-modal"
+                    class="inline-flex items-center gap-2 px-4 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium whitespace-nowrap">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <circle cx="11" cy="11" r="8"/>
-                    <path d="m21 21-4.3-4.3"/>
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
                 </svg>
+                Add Division
             </button>
-        </form>
+        </div>
     </div>
+
 
     <!-- Table -->
     <div class="bg-white rounded-xl shadow overflow-hidden">
