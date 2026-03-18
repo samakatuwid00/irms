@@ -41,8 +41,8 @@
     @endif
 
     <!-- Page Header -->
-    <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-4">
-        <h1 class="text-xl font-semibold text-gray-800">Schools</h1>
+    <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+        <h1 class="text-2xl font-bold text-gray-800">Manage Schools</h1>
     </div>
 
     <!-- ================= SEARCH ================= -->
