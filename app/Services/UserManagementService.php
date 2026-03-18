@@ -181,9 +181,9 @@ class UserManagementService
             $search = strtolower($filters['search']);
             $query->where(function ($q) use ($search) {
                 $q->whereRaw('LOWER(users.firstname) LIKE ?', ["%{$search}%"])
-                  ->orWhereRaw('LOWER(users.lastname) LIKE ?', ["%{$search}%"])
-                  ->orWhereRaw('LOWER(users.username) LIKE ?', ["%{$search}%"])
-                  ->orWhereRaw('LOWER(users.email) LIKE ?', ["%{$search}%"]);
+                ->orWhereRaw('LOWER(users.lastname) LIKE ?', ["%{$search}%"])
+                ->orWhereRaw('LOWER(users.username) LIKE ?', ["%{$search}%"])
+                ->orWhereRaw('LOWER(users.email) LIKE ?', ["%{$search}%"]);
             });
         }
 
@@ -192,10 +192,24 @@ class UserManagementService
             $query->where('usertype_id', $filters['usertype']);
         }
 
-        // Filter by status
+        // Filter by status (still allows explicit filtering when needed)
         if (!empty($filters['status'])) {
             $query->where('status', $filters['status']);
         }
+
+        // ─── Add default sorting: pending → active → deactivated ───────────────
+        $query->orderByRaw("
+            CASE users.status
+                WHEN 'pending'     THEN 1
+                WHEN 'deactivated' THEN 2
+                WHEN 'active'      THEN 3
+                ELSE 4
+            END ASC
+        ");
+
+        // You can add secondary sorting if desired (most common choice)
+        $query->orderBy('users.lastname')
+            ->orderBy('users.firstname');
 
         // Paginate with unique page parameter name and preserve query string
         return $query->paginate(10, ['*'], $pageName)->withQueryString();
