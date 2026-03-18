@@ -1,5 +1,3 @@
-<h2 class="text-lg font-semibold">Library Resources</h2>
-
 <!-- Tab Navigation -->
 <div class="bg-white rounded-t-xl shadow">
     <div class="flex border-b">

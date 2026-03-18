@@ -166,7 +166,7 @@ class LrSubjectGradeHeatmapService
         // Final response (common)
         // ────────────────────────────────────────────────
         $gradeNames   = $gradeLevels->pluck('grade')->toArray();
-        $subjectNames = $subjects->pluck('subject_name')->toArray();
+        $subjectNames = $subjects->pluck('abbrv')->toArray();
 
         return [
             'x_axis'        => $subjectNames,           // subjects = columns

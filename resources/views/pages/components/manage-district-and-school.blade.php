@@ -1,5 +1,10 @@
 <div class="p-6 space-y-6">
 
+    <!-- Page Header -->
+    <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+        <h1 class="text-2xl font-bold text-gray-800">Manage Districts and Schools</h1>
+    </div>
+
     {{-- MESSAGE --}}
     @if (session('success'))
         <div id="success-message"
@@ -61,11 +66,7 @@
 
     {{-- ================= DISTRICTS TAB ================= --}}
     <div id="content-districts" class="tab-content">
-        <!-- Page Header -->
-        <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-2">
-            <h1 class="text-xl font-semibold text-gray-800">Districts</h1>
-
-            <!-- Add District Button -->
+        <div class="flex justify-end mb-2">
             <button type="button"
                     data-modal-target="add-district-modal"
                     data-modal-toggle="add-district-modal"
@@ -185,8 +186,7 @@
     {{-- ================= SCHOOLS TAB ================= --}}
     <div id="content-schools" class="tab-content hidden">
         <!-- Page Header -->
-        <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-2">
-            <h1 class="text-xl font-semibold text-gray-800">Schools</h1>
+        <div class="flex justify-end mb-2">
 
             <!-- Add School Button -->
             <button type="button"

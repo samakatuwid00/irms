@@ -1,6 +1,4 @@
 <div x-data="{ activeTab: new URLSearchParams(window.location.search).get('tab') || '{{ request('tab', 'school') }}' }" class="space-y-4">
-    <h2 class="text-lg font-semibold">Library Non-Print Resources</h2>
-
     <!-- Tab Navigation -->
     <div class="bg-white rounded-xl shadow">
         <div class="flex border-b border-gray-200">

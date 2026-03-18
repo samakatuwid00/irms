@@ -1,5 +1,3 @@
-<h2 class="text-lg font-semibold">School Library Resources</h2>
-
 <form method="GET" data-ajax class="bg-white p-4 rounded-xl shadow space-y-4">
 
     <!-- TOP ROW: Search -->

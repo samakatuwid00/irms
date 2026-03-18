@@ -82,7 +82,7 @@ class LrSufficiencyService
                     ->first();
 
                 if (!$sgl) {
-                    $tableData[] = $this->makeEmptyRow($subject->subject_name, $grade->grade);
+                    $tableData[] = $this->makeEmptyRow($subject->abbrv, $grade->grade);
                     continue;
                 }
 
@@ -118,7 +118,7 @@ class LrSufficiencyService
                 $diff = $lrQty - $population;
 
                 $tableData[] = [
-                    'subject'    => $subject->subject_name,
+                    'subject'    => $subject->abbrv ?? $subject->subject_name,
                     'grade'      => $grade->grade,
                     'population' => $population,
                     'lr_quantity' => $lrQty,

@@ -55,7 +55,10 @@ class LrAvailabilityService
         $gradeNames = $gradeLevels->pluck('grade')->toArray();
         $gradeIds = $gradeLevels->pluck('id')->toArray();
 
-        $subjects = Subject::query()->select('id', 'subject_name')->orderBy('subject_name')->get();
+        $subjects = Subject::query()
+            ->select('id', 'subject_name', 'abbrv')
+            ->orderBy('subject_name')
+            ->get();
         $subjectIds = $subjects->pluck('id')->toArray();
         $useMaterializedView = in_array($userLevel, [2, 3, 4]);
 
@@ -222,7 +225,7 @@ private function getLiveLrAggregation(?Collection $allowedLibraryIds, array $gra
             }
 
             $serie = [
-                'name' => $subject->subject_name,
+                'name' => $subject->abbrv ?? $subject->subject_name,
                 'type' => 'bar',
                 'data' => $dataPoints
             ];
@@ -252,7 +255,7 @@ private function getLiveLrAggregation(?Collection $allowedLibraryIds, array $gra
             }
 
             $serie = [
-                'name' => $subject->subject_name,
+                'name' => $subject->abbrv ?? $subject->subject_name,
                 'type' => 'bar',
                 'data' => $data
             ];

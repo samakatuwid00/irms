@@ -12,7 +12,10 @@
     @endphp
 
     <div class="p-6 space-y-6">
-        @include('pages.partials.page-header')
+        <!-- Page Header -->
+        <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+            <h1 class="text-2xl font-bold text-gray-800">List of Non-Print Resources</h1>
+        </div>
     </div>
     
     {{-- Hidden data attributes for JavaScript modules --}}
