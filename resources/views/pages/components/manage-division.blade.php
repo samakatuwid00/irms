@@ -164,7 +164,7 @@
 </div>
 
 <!-- ====================== ADD MODAL ====================== -->
-<div id="add-division-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+<div id="add-division-modal" class="fixed inset-0 bg-black/50 z-50 hidden flex items-center justify-center p-4">
     <div class="bg-white rounded-2xl shadow-2xl p-7 w-full max-w-lg">
         <h2 class="text-2xl font-bold text-gray-800 mb-6">Add New Division</h2>
 
@@ -218,7 +218,7 @@
 </div>
 
 <!-- ====================== EDIT MODAL ====================== -->
-<div id="edit-division-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+<div id="edit-division-modal" class="fixed inset-0 bg-black/50 z-50 hidden flex items-center justify-center p-4">
     <div class="bg-white rounded-2xl shadow-2xl p-7 w-full max-w-lg">
         <h2 class="text-2xl font-bold text-gray-800 mb-6">Edit Division</h2>
 
@@ -266,7 +266,7 @@
 </div>
 
 <!-- ====================== DELETE MODAL ====================== -->
-<div id="delete-division-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+<div id="delete-division-modal" class="fixed inset-0 bg-black/50 z-50 hidden flex items-center justify-center p-4">
     <div class="bg-white rounded-2xl shadow-2xl p-7 w-full max-w-md">
         <h2 class="text-2xl font-bold text-red-700 mb-5">Confirm Deletion</h2>
         <p class="text-gray-700 mb-6" id="deleteDivisionMessage"></p>

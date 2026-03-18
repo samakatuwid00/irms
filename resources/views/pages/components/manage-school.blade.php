@@ -170,7 +170,7 @@
 
 </div>
 {{-- ADD SCHOOL MODAL --}}
-<div id="add-school-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+<div id="add-school-modal" class="fixed inset-0 bg-black/50 z-50 hidden flex items-center justify-center p-4">
     <div class="bg-white rounded-2xl shadow-2xl p-7 w-full max-w-lg">
         <h2 class="text-xl font-bold mb-6">Add School</h2>
 
@@ -214,7 +214,7 @@
     </div>
 </div>
 {{-- EDIT SCHOOL MODAL --}}
-<div id="edit-school-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+<div id="edit-school-modal" class="fixed inset-0 bg-black/50 z-50 hidden flex items-center justify-center p-4">
     <div class="bg-white rounded-2xl shadow-2xl p-7 w-full max-w-lg">
         <h2 class="text-xl font-bold mb-6">Edit School</h2>
 
@@ -267,7 +267,7 @@
     </div>
 </div>
 {{-- DELETE SCHOOL MODAL --}}
-<div id="delete-school-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+<div id="delete-school-modal" class="fixed inset-0 bg-black/50 z-50 hidden flex items-center justify-center p-4">
     <div class="bg-white rounded-xl p-6 max-w-md w-full">
         <h2 class="text-lg font-bold text-red-600 mb-4">Delete School</h2>
         <p id="deleteSchoolMessage" class="mb-6"></p>

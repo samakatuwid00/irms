@@ -1,5 +1,5 @@
 <!-- Change Password Modal Component -->
-<div id="change-password-modal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full hidden z-50">
+<div id="change-password-modal" class="fixed inset-0 bg-black/50 z-50 hidden flex items-center justify-center p-4">
     <div class="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
         <div class="mt-3">
             <h3 class="text-lg font-medium leading-6 text-gray-900 mb-4">Change Password for <span id="modal-user-name"></span></h3>

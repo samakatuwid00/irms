@@ -337,7 +337,7 @@
                                             </button>
 
                                             <!-- Delete -->
-                                            <button type="button"
+                                            <!-- <button type="button"
                                                     data-modal-target="delete-school-modal"
                                                     data-id="{{ $school->id }}"
                                                     data-name="{{ $school->school_name }}"
@@ -345,7 +345,7 @@
                                                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                                                 </svg>
-                                            </button>
+                                            </button> -->
                                         </div>
                                     </td>
                                 </tr>
@@ -371,7 +371,7 @@
 </div>
 
 {{-- ADD DISTRICT MODAL --}}
-<div id="add-district-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+<div id="add-district-modal" class="fixed inset-0 bg-black/50 z-50 hidden flex items-center justify-center p-4">
     <div class="bg-white rounded-2xl shadow-2xl p-7 w-full max-w-lg">
         <h2 class="text-xl font-bold mb-6">Add District</h2>
 
@@ -414,7 +414,7 @@
 </div>
 
 {{-- EDIT DISTRICT MODAL --}}
-<div id="edit-district-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+<div id="edit-district-modal" class="fixed inset-0 bg-black/50 z-50 hidden flex items-center justify-center p-4">
     <div class="bg-white rounded-2xl shadow-2xl p-7 w-full max-w-lg">
         <h2 class="text-xl font-bold mb-6">Edit District</h2>
 
@@ -458,7 +458,7 @@
 </div>
 
 {{-- DELETE DISTRICT MODAL --}}
-<div id="delete-district-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+<div id="delete-district-modal" class="fixed inset-0 bg-black/50 z-50 hidden flex items-center justify-center p-4">
     <div class="bg-white rounded-xl p-6 max-w-md w-full">
         <h2 class="text-lg font-bold text-red-600 mb-4">Delete District</h2>
         <p id="deleteDistrictMessage" class="mb-6"></p>
@@ -480,7 +480,7 @@
 </div>
 
 {{-- ADD SCHOOL MODAL --}}
-<div id="add-school-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+<div id="add-school-modal" class="fixed inset-0 bg-black/50 z-50 hidden flex items-center justify-center p-4">
     <div class="bg-white rounded-2xl shadow-2xl p-7 w-full max-w-lg">
         <h2 class="text-xl font-bold mb-6">Add School</h2>
 
@@ -551,7 +551,7 @@
 </div>
 
 {{-- EDIT SCHOOL MODAL --}}
-<div id="edit-school-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+<div id="edit-school-modal" class="fixed inset-0 bg-black/50 z-50 hidden flex items-center justify-center p-4">
     <div class="bg-white rounded-2xl shadow-2xl p-7 w-full max-w-lg">
         <h2 class="text-xl font-bold mb-6">Edit School</h2>
 
