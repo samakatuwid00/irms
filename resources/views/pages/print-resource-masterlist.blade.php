@@ -435,7 +435,7 @@
                         <input type="text" name="rq_search" value="{{ request('rq_search') }}"
                                placeholder="Search requests..."
                                 class="border border-gray-300 rounded-lg px-4 py-2.5 text-sm 
-                                    w-full md:w-[300px] lg:w-[400px] xl:w-[500px] 2xl:w-[600px]
+                                    w-full md:w-[200px] lg:w-[300px] xl:w-[400px] 2xl:w-[500px]
                                     focus:outline-none focus:ring-2 focus:ring-blue-500">
                         <button type="submit"
                                 class="px-4 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 transition-colors">

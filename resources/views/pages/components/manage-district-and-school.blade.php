@@ -485,7 +485,7 @@
 
 {{-- ADD SCHOOL MODAL --}}
 <div id="add-school-modal" class="fixed inset-0 bg-black/50 z-50 hidden flex items-center justify-center p-4">
-    <div class="bg-white rounded-2xl shadow-2xl p-7 w-full max-w-lg">
+    <div class="bg-white rounded-2xl shadow-2xl p-7 w-full max-w-lg max-h-[90vh] overflow-y-auto">
         <h2 class="text-xl font-bold mb-6">Add School</h2>
 
         <form action="{{ route('schools.store') }}" method="POST" id="addSchoolForm">
@@ -556,7 +556,7 @@
 
 {{-- EDIT SCHOOL MODAL --}}
 <div id="edit-school-modal" class="fixed inset-0 bg-black/50 z-50 hidden flex items-center justify-center p-4">
-    <div class="bg-white rounded-2xl shadow-2xl p-7 w-full max-w-lg">
+    <div class="bg-white rounded-2xl shadow-2xl p-7 w-full max-w-lg max-h-[90vh] overflow-y-auto">
         <h2 class="text-xl font-bold mb-6">Edit School</h2>
 
         <form method="POST" id="editSchoolForm">
