@@ -1,4 +1,46 @@
 // exdef.js
+
+const KEY_STAGE_RANGES = {
+    'K1': ['Kindergarten', 'Grade 1', 'Grade 2', 'Grade 3'],
+    'K2': ['Grade 4', 'Grade 5', 'Grade 6'],
+    'JH': ['Grade 7', 'Grade 8', 'Grade 9', 'Grade 10'],
+    'SH': ['Grade 11', 'Grade 12'],
+};
+
+let _exdefFullData = null;
+let _exdefChart    = null;
+
+function filterAndRenderExdefChart(keyStage) {
+    if (!_exdefFullData || !_exdefChart) return;
+
+    const allowedGrades = KEY_STAGE_RANGES[keyStage] ?? null;
+
+    const filtered = allowedGrades
+        ? _exdefFullData.filter(item => allowedGrades.includes(item.grade))
+        : _exdefFullData;
+
+    const totalItems    = filtered.length;
+    const visibleRatio  = totalItems > 20 ? 0.20 : 0.35;
+    const startPercent  = Math.max(0, 100 - (visibleRatio * 100));
+
+    _exdefChart.setOption({
+        xAxis: {
+            data: filtered.map(item => `${item.subject} - ${item.grade}`)
+        },
+        dataZoom: [
+            { type: 'inside', start: startPercent, end: 100 },
+            { type: 'slider', start: startPercent, end: 100 }
+        ],
+        series: [{
+            name: 'ExDef',
+            data: filtered.map(item => ({
+                value: item.exdef,
+                itemStyle: { color: item.exdef >= 0 ? '#4CAF50' : '#F44336' }
+            }))
+        }]
+    });
+}
+
 async function initExdefChart() {
     const chartDom = document.getElementById('exdef');
     if (!chartDom) {
@@ -9,19 +51,16 @@ async function initExdefChart() {
     try {
         const echarts = await import('echarts');
         const myChart = echarts.init(chartDom, null, { renderer: 'canvas' });
+        _exdefChart = myChart;
 
-        // Fetch real data
         const response = await fetch('/chart/exdef');
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-        }
+        if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
 
         const result = await response.json();
 
         if (result.error) {
             console.error('Backend error:', result.error);
             myChart.setOption({
-                title: { text: 'Error loading data', left: 'center', top: 'middle' },
                 graphic: [{
                     type: 'text',
                     left: 'center',
@@ -32,18 +71,17 @@ async function initExdefChart() {
             return;
         }
 
-        // Format data
-        const tableData = result.table_data || [];
-        const exdefDataFormatted = tableData
+        // Cache full sorted dataset
+        _exdefFullData = (result.table_data || [])
             .map(item => ({
                 subject: item.subject,
-                grade: item.grade,
-                exdef: item.difference ?? 0
+                grade:   item.grade,
+                exdef:   item.difference ?? 0
             }))
-            .sort((a, b) => b.exdef - a.exdef); // descending
+            .sort((a, b) => b.exdef - a.exdef);
 
-        const totalItems = exdefDataFormatted.length;
-        const visibleRatio = totalItems > 20 ? 0.20 : 0.35; // show more when few items
+        const totalItems   = _exdefFullData.length;
+        const visibleRatio = totalItems > 20 ? 0.20 : 0.35;
         const startPercent = Math.max(0, 100 - (visibleRatio * 100));
 
         const option = {
@@ -78,11 +116,10 @@ async function initExdefChart() {
                                         chartDom.style.backgroundColor = chartDom.dataset.originalBg;
                                     });
                             } else {
-                                document.exitFullscreen()
-                                    .then(() => {
-                                        chartDom.style.backgroundColor = chartDom.dataset.originalBg || '';
-                                        myChart.resize();
-                                    });
+                                document.exitFullscreen().then(() => {
+                                    chartDom.style.backgroundColor = chartDom.dataset.originalBg || '';
+                                    myChart.resize();
+                                });
                             }
                         }
                     }
@@ -91,23 +128,23 @@ async function initExdefChart() {
             grid: {
                 left: '4%',
                 right: '5%',
-                bottom: '18%',          // balanced for tilted labels + dataZoom
+                bottom: '18%',
                 top: '12%',
                 containLabel: true
             },
             xAxis: {
                 type: 'category',
-                data: exdefDataFormatted.map(item => `${item.subject} - ${item.grade}`),
+                data: _exdefFullData.map(item => `${item.subject} - ${item.grade}`),
                 axisTick: { show: false },
                 axisLabel: {
                     interval: 0,
-                    rotate: 55,               // slightly less aggressive than 60°
+                    rotate: 55,
                     fontSize: 11,
                     margin: 12,
                     color: '#555',
                     align: 'right',
                     verticalAlign: 'middle',
-                    overflow: 'truncate',     // safety net
+                    overflow: 'truncate',
                     width: 120
                 }
             },
@@ -119,56 +156,48 @@ async function initExdefChart() {
                 nameTextStyle: { color: '#666', fontWeight: 'bold' }
             },
             dataZoom: [
-                {
-                    type: 'inside',
-                    start: startPercent,
-                    end: 100
-                },
+                { type: 'inside', start: startPercent, end: 100 },
                 {
                     type: 'slider',
                     start: startPercent,
                     end: 100,
-                    // IMPORTANT: no fixed bottom value → auto positions below grid
                     height: 26,
-                    bottom: 'auto',           // explicit auto (optional)
+                    bottom: 'auto',
                     fillerColor: 'rgba(76, 175, 80, 0.18)',
                     borderColor: 'transparent',
                     handleStyle: { color: '#4CAF50' },
                     textStyle: { color: '#444', fontSize: 11 }
                 }
             ],
-            series: [
-                {
-                    name: 'ExDef',
-                    type: 'bar',
-                    data: exdefDataFormatted.map(item => ({
-                        value: item.exdef,
-                        itemStyle: {
-                            color: item.exdef >= 0 ? '#4CAF50' : '#F44336'
-                        }
-                    })),
-                    barWidth: '58%',
-                    itemStyle: {
-                        borderRadius: [4, 4, 0, 0]
-                    }
-                }
-            ]
+            series: [{
+                name: 'ExDef',
+                type: 'bar',
+                data: _exdefFullData.map(item => ({
+                    value: item.exdef,
+                    itemStyle: { color: item.exdef >= 0 ? '#4CAF50' : '#F44336' }
+                })),
+                barWidth: '58%',
+                itemStyle: { borderRadius: [4, 4, 0, 0] }
+            }]
         };
 
         myChart.setOption(option, true);
 
-        // Register for global resize handling if you have it
-        if (window.registerChart) {
-            window.registerChart('exdef', myChart);
+        // ── Apply default key stage filter on first load ──
+        const ksSelect = document.getElementById('schoolYearFilter');
+        if (ksSelect) {
+            filterAndRenderExdefChart(ksSelect.value);
+
+            ksSelect.addEventListener('change', (e) => {
+                filterAndRenderExdefChart(e.target.value);
+            });
         }
 
-        // Responsive resize
-        const resizeObserver = new ResizeObserver(() => {
-            myChart.resize();
-        });
+        if (window.registerChart) window.registerChart('exdef', myChart);
+
+        const resizeObserver = new ResizeObserver(() => myChart.resize());
         resizeObserver.observe(chartDom);
 
-        // Cleanup
         window.addEventListener('beforeunload', () => {
             resizeObserver.disconnect();
             myChart.dispose?.();
@@ -177,12 +206,12 @@ async function initExdefChart() {
     } catch (err) {
         console.error('Failed to initialize ExDef chart:', err);
         chartDom.innerHTML = `
-            <div style="display:flex; align-items:center; justify-content:center; height:100%; color:#e74c3c; font-size:1.1rem;">
+            <div style="display:flex; align-items:center; justify-content:center;
+                        height:100%; color:#e74c3c; font-size:1.1rem;">
                 Failed to load chart
             </div>
         `;
     }
 }
 
-// Run immediately (or move to DOMContentLoaded if preferred)
 initExdefChart();

@@ -1,4 +1,42 @@
 // availability.js
+
+// Key Stage grade index ranges (based on grade_level array order from backend)
+const KEY_STAGE_RANGES = {
+    'K1': { label: 'Kindergarten', grades: ['Kindergarten', 'Grade 1', 'Grade 2', 'Grade 3'] },
+    'K2': { label: 'Key Stage 2',  grades: ['Grade 4', 'Grade 5', 'Grade 6'] },
+    'JH': { label: 'Junior High',  grades: ['Grade 7', 'Grade 8', 'Grade 9', 'Grade 10'] },
+    'SH': { label: 'Senior High',  grades: ['Grade 11', 'Grade 12'] },
+};
+
+// Store original full data globally so filter can re-slice without re-fetching
+let _availabilityFullData = null;
+let _availabilityChart = null;
+
+function filterAndRenderChart(keyStage) {
+    if (!_availabilityFullData || !_availabilityChart) return;
+
+    const { grade_level, series } = _availabilityFullData;
+    const allowedGrades = KEY_STAGE_RANGES[keyStage]?.grades ?? grade_level;
+
+    // Find indices of grades that belong to the selected key stage
+    const indices = grade_level
+        .map((g, i) => ({ grade: g, index: i }))
+        .filter(({ grade }) => allowedGrades.includes(grade))
+        .map(({ index }) => index);
+
+    const filteredGrades = indices.map(i => grade_level[i]);
+    const filteredSeries = series.map(s => ({
+        ...s,
+        data: indices.map(i => s.data[i])
+    }));
+
+    _availabilityChart.setOption({
+        xAxis: [{ data: filteredGrades }],
+        series: filteredSeries,
+        legend: { data: filteredSeries.map(s => s.name) }
+    }, /* notMerge: */ false);
+}
+
 async function initAvailabilityChart() {
     const chartDom = document.getElementById('chart');
     if (!chartDom) {
@@ -9,25 +47,20 @@ async function initAvailabilityChart() {
     try {
         const echarts = await import('echarts');
         const myChart = echarts.init(chartDom);
+        _availabilityChart = myChart;
 
-        // Fetch real data from Laravel
         const response = await fetch('/chart/lr-availability', {
-            headers: {
-                'Accept': 'application/json',
-                // Uncomment if you need CSRF token
-                // 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content
-            },
+            headers: { 'Accept': 'application/json' },
             credentials: 'same-origin'
         });
 
-        if (!response.ok) {
-            throw new Error(`Failed to load chart data: ${response.status}`);
-        }
+        if (!response.ok) throw new Error(`Failed to load chart data: ${response.status}`);
 
         const result = await response.json();
+        _availabilityFullData = result; // ← cache full data
+
         const { grade_level, series } = result;
 
-        // Prepare label style (keeping your original)
         const labelOption = {
             show: false,
             position: 'insideBottom',
@@ -40,22 +73,16 @@ async function initAvailabilityChart() {
             rich: { name: {} }
         };
 
-        // Apply label only to bar series
-        const finalSeries = series.map(s => {
-            if (s.type === 'bar') {
-                return { ...s, label: labelOption };
-            }
-            return s;
-        });
+        const finalSeries = series.map(s =>
+            s.type === 'bar' ? { ...s, label: labelOption } : s
+        );
+
+        // Store labelled series back so filterAndRenderChart uses them too
+        _availabilityFullData = { ...result, series: finalSeries };
 
         const option = {
-            tooltip: {
-                trigger: 'axis',
-                axisPointer: { type: 'shadow' }
-            },
-            legend: {
-                data: finalSeries.map(s => s.name)
-            },
+            tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
+            legend: { data: finalSeries.map(s => s.name) },
             toolbox: {
                 show: true,
                 orient: 'horizontal',
@@ -82,28 +109,23 @@ async function initAvailabilityChart() {
                                         chartDom.style.backgroundColor = chartDom.dataset.originalBg;
                                     });
                             } else {
-                                document.exitFullscreen()
-                                    .then(() => {
-                                        chartDom.style.backgroundColor = chartDom.dataset.originalBg || '';
-                                        myChart.resize();
-                                    });
+                                document.exitFullscreen().then(() => {
+                                    chartDom.style.backgroundColor = chartDom.dataset.originalBg || '';
+                                    myChart.resize();
+                                });
                             }
                         }
                     }
                 }
             },
-            grid: {
-                left: '5%',
-                right: '5%',
-                containLabel: true       // important for rotated labels
-            },
+            grid: { left: '5%', right: '5%', containLabel: true },
             xAxis: [{
                 type: 'category',
                 axisTick: { show: false },
                 data: grade_level,
                 axisLabel: {
-                    interval: 0,              // show ALL grade levels
-                    rotate: 60,               // tilted for readability
+                    interval: 0,
+                    rotate: 60,
                     fontSize: 12,
                     margin: 14,
                     color: '#555',
@@ -120,16 +142,21 @@ async function initAvailabilityChart() {
 
         myChart.setOption(option);
 
-        // Optional: global chart registry
-        if (window.registerChart) {
-            window.registerChart('chart', myChart);
+        // ── Apply the currently selected key stage on first load ──
+        const ksSelect = document.getElementById('schoolYearFilter');
+        if (ksSelect) {
+            filterAndRenderChart(ksSelect.value); // K1 is selected by default
+
+            ksSelect.addEventListener('change', (e) => {
+                filterAndRenderChart(e.target.value);
+            });
         }
 
-        // Resize handling
+        if (window.registerChart) window.registerChart('chart', myChart);
+
         const resizeObserver = new ResizeObserver(() => myChart.resize());
         resizeObserver.observe(chartDom);
 
-        // Cleanup
         window.addEventListener('beforeunload', () => {
             resizeObserver.disconnect();
             myChart.dispose?.();
@@ -138,14 +165,11 @@ async function initAvailabilityChart() {
     } catch (err) {
         console.error('Failed to initialize LR Availability chart:', err);
         if (chartDom) {
-            chartDom.innerHTML = '<div style="text-align:center; padding:60px; color:#888;">Failed to load availability chart</div>';
+            chartDom.innerHTML = '<div style="text-align:center;padding:60px;color:#888;">Failed to load availability chart</div>';
         }
     }
 }
 
-// ────────────────────────────────────────────────
-// Lazy loading with IntersectionObserver
-// ────────────────────────────────────────────────
 function setupLazyAvailabilityChart() {
     const chartContainer = document.getElementById('chart');
     if (!chartContainer) {
@@ -154,7 +178,6 @@ function setupLazyAvailabilityChart() {
     }
 
     if (!('IntersectionObserver' in window)) {
-        console.warn('IntersectionObserver not supported — loading chart immediately');
         initAvailabilityChart();
         return;
     }
@@ -163,18 +186,13 @@ function setupLazyAvailabilityChart() {
         (entries, obs) => {
             if (entries[0].isIntersecting) {
                 initAvailabilityChart();
-                obs.disconnect(); // only load once
+                obs.disconnect();
             }
         },
-        {
-            root: null,
-            rootMargin: '0px',
-            threshold: 0.1
-        }
+        { root: null, rootMargin: '0px', threshold: 0.1 }
     );
 
     observer.observe(chartContainer);
 }
 
-// Kick off lazy loading
 setupLazyAvailabilityChart();

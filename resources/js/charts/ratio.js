@@ -1,4 +1,75 @@
-// Main chart initialization function
+// ratio.js
+
+const KEY_STAGE_RANGES = {
+    'K1': ['Kindergarten', 'Grade 1', 'Grade 2', 'Grade 3'],
+    'K2': ['Grade 4', 'Grade 5', 'Grade 6'],
+    'JH': ['Grade 7', 'Grade 8', 'Grade 9', 'Grade 10'],
+    'SH': ['Grade 11', 'Grade 12'],
+};
+
+let _ratioFullData   = null;
+let _ratioChart      = null;
+
+function filterAndRenderRatioChart(keyStage) {
+    if (!_ratioFullData || !_ratioChart) return;
+
+    const { grades, population, directData, mailData } = _ratioFullData;
+    const allowedGrades = KEY_STAGE_RANGES[keyStage] ?? grades;
+
+    // Find indices of grades in the selected key stage
+    const indices = grades
+        .map((g, i) => ({ g, i }))
+        .filter(({ g }) => allowedGrades.includes(g))
+        .map(({ i }) => i);
+
+    const filteredGrades    = indices.map(i => grades[i]);
+    const filteredDirect    = indices.map(i => directData[i]);
+    const filteredMail      = indices.map(i => mailData[i]);
+    const filteredPop       = filteredGrades.map(g => population[g] || 0);
+    const filteredRatioDummy = new Array(filteredGrades.length).fill(0);
+
+    _ratioChart.setOption({
+        yAxis: { data: filteredGrades },
+        series: [
+            {
+                name: 'Total LR',
+                data: filteredDirect
+            },
+            {
+                name: 'Population',
+                data: filteredPop
+            },
+            {
+                name: 'Total Ratio',
+                data: filteredRatioDummy,
+                label: {
+                    show: true,
+                    position: 'right',
+                    distance: 8,
+                    formatter: function (params) {
+                        const idx    = params.dataIndex;
+                        const grade  = filteredGrades[idx];
+                        const lrCount = (filteredDirect[idx] || 0) + (filteredMail[idx] || 0);
+                        const pop    = population[grade] || 0;
+
+                        if (lrCount <= 0 || pop <= 0) return 'N/A';
+
+                        const peoplePerLR = pop / lrCount;
+                        if (peoplePerLR >= 1) {
+                            return `${Math.round(peoplePerLR).toLocaleString()} : 1`;
+                        } else {
+                            return `${Math.round(lrCount / pop).toLocaleString()} : 1`;
+                        }
+                    },
+                    color: '#333',
+                    fontSize: 13,
+                    fontWeight: 'bold'
+                }
+            }
+        ]
+    });
+}
+
 async function initRatioChart() {
     const chartDom = document.getElementById('main');
     if (!chartDom) {
@@ -7,24 +78,23 @@ async function initRatioChart() {
     }
 
     try {
-        // Fetch live data (scoped to user level + station)
         const response = await fetch('/chart/lr-ratio');
         if (!response.ok) throw new Error(`HTTP ${response.status}`);
         const chartData = await response.json();
 
-        if (chartData.message) {
-            console.warn(chartData.message);
-        }
+        if (chartData.message) console.warn(chartData.message);
 
         const grades     = chartData.grades     || [];
         const population = chartData.population || {};
         const directData = chartData.directData || [];
         const mailData   = chartData.mailData   || [];
 
-        // Debug: check what we actually received
+        // Cache full dataset
+        _ratioFullData = { grades, population, directData, mailData };
 
         const echarts = await import('echarts');
         const myChart = echarts.init(chartDom);
+        _ratioChart = myChart;
 
         const option = {
             tooltip: {
@@ -32,18 +102,10 @@ async function initRatioChart() {
                 axisPointer: { type: 'shadow' },
                 formatter: function (params) {
                     let txt = params[0].name + '<br/>';
-                    let totalLR = 0;
-
                     params.forEach(p => {
                         if (p.seriesName === 'Total Ratio') return;
-                        totalLR += p.value || 0;
-                        // Add comma separator
-                        const valueWithCommas = (p.value || 0).toLocaleString();
-                        txt += `${p.marker} ${p.seriesName}: ${valueWithCommas}<br/>`;
+                        txt += `${p.marker} ${p.seriesName}: ${(p.value || 0).toLocaleString()}<br/>`;
                     });
-
-                    const pop = population[params[0].name] || 0;
-
                     return txt;
                 }
             },
@@ -74,24 +136,19 @@ async function initRatioChart() {
                                         chartDom.style.backgroundColor = chartDom.dataset.originalBg;
                                     });
                             } else {
-                                document.exitFullscreen()
-                                    .then(() => {
-                                        chartDom.style.backgroundColor = chartDom.dataset.originalBg || '';
-                                        myChart.resize();
-                                    });
+                                document.exitFullscreen().then(() => {
+                                    chartDom.style.backgroundColor = chartDom.dataset.originalBg || '';
+                                    myChart.resize();
+                                });
                             }
                         }
                     }
                 }
             },
 
-            legend: {
-                data: ['Total LR', 'Population']
-            },
+            legend: { data: ['Total LR', 'Population'] },
 
-            xAxis: {
-                type: 'value'
-            },
+            xAxis: { type: 'value' },
 
             yAxis: {
                 type: 'category',
@@ -106,9 +163,7 @@ async function initRatioChart() {
                     label: {
                         show: true,
                         position: 'inside',
-                        formatter: function (params) {
-                            return (params.value || 0).toLocaleString(); // comma separator
-                        },
+                        formatter: p => (p.value || 0).toLocaleString(),
                         color: '#fff'
                     },
                     data: directData,
@@ -118,16 +173,14 @@ async function initRatioChart() {
                     name: 'Population',
                     type: 'bar',
                     stack: 'total',
-                    barMinWidth: 10,   // 👈 ensures small values are visible
+                    barMinWidth: 10,
                     label: {
                         show: true,
                         position: 'inside',
-                        formatter: function (params) {
-                            return (params.value || 0).toLocaleString();
-                        },
+                        formatter: p => (p.value || 0).toLocaleString(),
                         color: '#fff'
                     },
-                    data: grades.map(grade => population[grade] || 0),
+                    data: grades.map(g => population[g] || 0),
                     itemStyle: { color: '#91cc75' }
                 },
                 {
@@ -140,21 +193,16 @@ async function initRatioChart() {
                         position: 'right',
                         distance: 8,
                         formatter: function (params) {
-                            const idx = params.dataIndex;
-                            const category = grades[idx];
+                            const idx     = params.dataIndex;
+                            const grade   = grades[idx];
                             const lrCount = (directData[idx] || 0) + (mailData[idx] || 0);
-                            const pop = population[category] || 0;
+                            const pop     = population[grade] || 0;
 
-                            if (lrCount <= 0) return 'N/A';
-                            if (pop <= 0) return 'N/A';
-
-                            const peoplePerLR = pop / lrCount;
-                            if (peoplePerLR >= 1) {
-                                return `${Math.round(peoplePerLR).toLocaleString()} : 1`;
-                            } else {
-                                const lrPerPerson = Math.round(lrCount / pop);
-                                return `${lrPerPerson.toLocaleString()} : 1`;
-                            }
+                            if (lrCount <= 0 || pop <= 0) return 'N/A';
+                            const ppl = pop / lrCount;
+                            return ppl >= 1
+                                ? `${Math.round(ppl).toLocaleString()} : 1`
+                                : `${Math.round(lrCount / pop).toLocaleString()} : 1`;
                         },
                         color: '#333',
                         fontSize: 13,
@@ -169,7 +217,16 @@ async function initRatioChart() {
         myChart.setOption(option);
         window.ratioChart = myChart;
 
-        // Resize handling
+        // ── Apply default key stage filter on first load ──
+        const ksSelect = document.getElementById('schoolYearFilter');
+        if (ksSelect) {
+            filterAndRenderRatioChart(ksSelect.value);
+
+            ksSelect.addEventListener('change', (e) => {
+                filterAndRenderRatioChart(e.target.value);
+            });
+        }
+
         const resizeObserver = new ResizeObserver(() => myChart.resize());
         resizeObserver.observe(chartDom);
 
@@ -186,9 +243,6 @@ async function initRatioChart() {
     }
 }
 
-// ────────────────────────────────────────────────
-// Lazy loading setup – chart loads only when visible
-// ────────────────────────────────────────────────
 function setupLazyChartLoading() {
     const chartContainer = document.getElementById('main');
     if (!chartContainer) {
@@ -196,29 +250,22 @@ function setupLazyChartLoading() {
         return;
     }
 
-    // Fallback for browsers without IntersectionObserver
     if (!('IntersectionObserver' in window)) {
-        console.warn('IntersectionObserver not supported, loading chart immediately');
         initRatioChart();
         return;
     }
 
     const observer = new IntersectionObserver(
-        (entries, observer) => {
+        (entries, obs) => {
             if (entries[0].isIntersecting) {
                 initRatioChart();
-                observer.disconnect(); // load only once
+                obs.disconnect();
             }
         },
-        {
-            root: null,           // use viewport
-            rootMargin: '0px',    // can be '100px' or '20%' to load earlier
-            threshold: 0.1        // trigger when 10% of the element is visible
-        }
+        { root: null, rootMargin: '0px', threshold: 0.1 }
     );
 
     observer.observe(chartContainer);
 }
 
-// Start lazy loading
 setupLazyChartLoading();

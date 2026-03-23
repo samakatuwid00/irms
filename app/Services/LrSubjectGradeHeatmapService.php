@@ -4,18 +4,16 @@ namespace App\Services;
 
 use App\Models\GradeLevel;
 use App\Models\Subject;
-use App\Models\SubjectGradeLevel;
 use App\Services\LibraryScopeService;
-use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
 class LrSubjectGradeHeatmapService
 {
     public function __construct(
-        private readonly LibraryScopeService $libraryScopeService
-    ) {
-    }
+        private readonly LibraryScopeService  $libraryScopeService,
+        private readonly LrAggregationService $aggregationService,  // ← injected
+    ) {}
 
     public function getHeatmapData(?string $explicitLibraryId, int $userLevel, ?string $stationId): array
     {
@@ -28,149 +26,30 @@ class LrSubjectGradeHeatmapService
             return $this->emptyResponse('No grade levels found');
         }
 
-        $subjects = Subject::query()
-            ->orderBy('subject_name')
-            ->get();
+        $subjects = Subject::query()->orderBy('subject_name')->get();
 
         if ($subjects->isEmpty()) {
             return $this->emptyResponse('No subjects found');
         }
 
+        // Index maps: model id → position in the axis arrays
         $gradeIndexMap   = $gradeLevels->pluck('id')->values()->flip()->toArray();
         $subjectIndexMap = $subjects->pluck('id')->values()->flip()->toArray();
 
-        $heatmapData = []; // [ [subjectIndex, gradeIndex, lr_qty], ... ]
-
-        // Decide which MV to use (if any)
-        $useMv       = false;
-        $mvTable     = null;
-        $mvIdColumn  = null;
-        $mvScope     = 'live';
-
-        if ($userLevel === 4 && $stationId !== null) {
-            $useMv      = true;
-            $mvTable    = 'lrmis.mv_lr_charts_by_region';
-            $mvIdColumn = 'region_id';
-            $mvScope    = 'region_mv';
-        } elseif ($userLevel === 3 && $stationId !== null) {
-            $useMv      = true;
-            $mvTable    = 'lrmis.mv_lr_charts_by_division';
-            $mvIdColumn = 'division_id';
-            $mvScope    = 'division_mv';
-        } elseif ($userLevel === 2 && $stationId !== null) {
-            $useMv      = true;
-            $mvTable    = 'lrmis.mv_lr_charts_by_district';
-            $mvIdColumn = 'district_id';
-            $mvScope    = 'district_mv';
-        }
-        // level 1 → always live / real-time
+        [$useMv, $mvTable, $mvIdColumn, $mvScope] = $this->resolveMvConfig($userLevel, $stationId);
 
         if ($useMv) {
-            // ────────────────────────────────────────────────
-            // MATERIALIZED VIEW PATH (region 4, division 3, district 2)
-            // ────────────────────────────────────────────────
-            Log::info("Using materialized view for LR subject-grade heatmap", [
-                'user_level' => $userLevel,
-                'mv_scope'   => $mvScope,
-                'mv_table'   => $mvTable,
-                'station_id' => $stationId,
-            ]);
-
-            if (!$stationId) {
-                Log::warning("No {$mvIdColumn} provided for level {$userLevel} heatmap");
-                return $this->emptyResponse("{$mvIdColumn} required for this level");
-            }
-
-            $rows = DB::table($mvTable)
-                ->select([
-                    'subject_id',
-                    'grade_level_id',
-                    'total_lr_qty',
-                ])
-                ->where($mvIdColumn, $stationId)
-                ->get();
-
-            foreach ($rows as $row) {
-                $subjIdx = $subjectIndexMap[$row->subject_id] ?? null;
-                $gradeIdx = $gradeIndexMap[$row->grade_level_id] ?? null;
-
-                if ($subjIdx === null || $gradeIdx === null) {
-                    continue;
-                }
-
-                $heatmapData[] = [
-                    $subjIdx,
-                    $gradeIdx,
-                    (int) $row->total_lr_qty
-                ];
-            }
+            $heatmapData = $this->buildFromMv($mvTable, $mvIdColumn, $stationId, $subjectIndexMap, $gradeIndexMap);
         } else {
-            // ────────────────────────────────────────────────
-            // LIVE QUERY PATH (school level 1, explicit single library, fallback)
-            // ────────────────────────────────────────────────
-            $allowedLibraryIds = $this->libraryScopeService->getAllowedLibraryIds(
-                $explicitLibraryId,
-                $userLevel,
-                $stationId
+            $heatmapData = $this->buildFromLiveQuery(
+                $explicitLibraryId, $userLevel, $stationId,
+                $subjects, $gradeLevels, $subjectIndexMap, $gradeIndexMap
             );
-
-            // Safe handling — assume it's array (common pattern in your codebase)
-            $libraryIdsArray = is_array($allowedLibraryIds) ? $allowedLibraryIds : ($allowedLibraryIds?->toArray() ?? []);
-
-            Log::info('Using live aggregation for LR subject-grade heatmap', [
-                'user_level'    => $userLevel,
-                'explicit_lib'  => $explicitLibraryId,
-                'station_id'    => $stationId,
-                'library_count' => count($libraryIdsArray),
-            ]);
-
-            foreach ($subjects as $subject) {
-                $subjIdx = $subjectIndexMap[$subject->id] ?? null;
-                if ($subjIdx === null) continue;
-
-                foreach ($gradeLevels as $grade) {
-                    $gradeIdx = $gradeIndexMap[$grade->id] ?? null;
-                    if ($gradeIdx === null) continue;
-
-                    $sgl = SubjectGradeLevel::where('subject_id', $subject->id)
-                        ->where('grade_level_id', $grade->id)
-                        ->first();
-
-                    $totalQty = 0;
-
-                    if ($sgl) {
-                        $query = DB::table('print_acquisitions')
-                            ->join('print_resources', 'print_acquisitions.print_id', '=', 'print_resources.id')
-                            ->whereRaw("? = ANY(string_to_array(subject_grade_level_ids, ','))", [$sgl->id]);
-
-                    if (!empty($libraryIdsArray)) {
-                        // Modified: Filter by library_id on print_acquisitions instead of print_resources
-                        $query->whereIn('print_acquisitions.library_id', $libraryIdsArray);
-                        // Removed: $query->whereIn('print_resources.library_id', $libraryIdsArray);
-                    } elseif ($explicitLibraryId === null && $allowedLibraryIds !== null) {
-                            // No libraries allowed → force zero
-                            $totalQty = 0;
-                            goto next_cell;
-                        }
-
-                        $totalQty = (int) $query->sum('print_acquisitions.total_qty');
-                    }
-
-                    next_cell:
-                    $heatmapData[] = [$subjIdx, $gradeIdx, $totalQty];
-                }
-            }
         }
 
-        // ────────────────────────────────────────────────
-        // Final response (common)
-        // ────────────────────────────────────────────────
-        $gradeNames   = $gradeLevels->pluck('grade')->toArray();
-        $subjectNames = $subjects->pluck('abbrv')->toArray();
-
         return [
-            'x_axis'        => $subjectNames,           // subjects = columns
-            'y_axis'        => $gradeNames,             // grades   = rows
+            'x_axis'        => $subjects->pluck('abbrv')->toArray(),
+            'y_axis'        => $gradeLevels->pluck('grade')->toArray(),
             'series_data'   => $heatmapData,
             'library_scope' => $mvScope,
             'scope_id'      => $useMv ? ($stationId ?? 'unknown') : ($explicitLibraryId ?: 'auto'),
@@ -183,21 +62,128 @@ class LrSubjectGradeHeatmapService
         ];
     }
 
+    // ── MV path ─────────────────────────────────────────────────────────────
+
+    private function buildFromMv(
+        string $mvTable,
+        string $mvIdColumn,
+        string $stationId,
+        array  $subjectIndexMap,
+        array  $gradeIndexMap
+    ): array {
+        $rows = DB::table($mvTable)
+            ->select(['subject_id', 'grade_level_id', 'total_lr_qty'])
+            ->where($mvIdColumn, $stationId)
+            ->get();
+
+        $heatmapData = [];
+
+        foreach ($rows as $row) {
+            $subjIdx  = $subjectIndexMap[$row->subject_id]    ?? null;
+            $gradeIdx = $gradeIndexMap[$row->grade_level_id]  ?? null;
+
+            if ($subjIdx === null || $gradeIdx === null) {
+                continue;
+            }
+
+            $heatmapData[] = [$subjIdx, $gradeIdx, (int) $row->total_lr_qty];
+        }
+
+        return $heatmapData;
+    }
+
+    // ── Live query path ──────────────────────────────────────────────────────
+
+    private function buildFromLiveQuery(
+        ?string $explicitLibraryId,
+        int     $userLevel,
+        ?string $stationId,
+        $subjects,
+        $gradeLevels,
+        array   $subjectIndexMap,
+        array   $gradeIndexMap
+    ): array {
+        $allowedLibraryIds = $this->libraryScopeService->getAllowedLibraryIds(
+            $explicitLibraryId, $userLevel, $stationId
+        );
+
+        $libraryIds = $allowedLibraryIds?->values()->toArray() ?? [];
+
+        Log::info('Using live aggregation for LR subject-grade heatmap', [
+            'user_level'    => $userLevel,
+            'library_count' => count($libraryIds),
+        ]);
+
+        // No libraries in scope → return all-zero matrix
+        if (empty($libraryIds)) {
+            return $this->buildZeroMatrix($subjectIndexMap, $gradeIndexMap);
+        }
+
+        $gradeIds   = $gradeLevels->pluck('id')->all();
+        $subjectIds = $subjects->pluck('id')->all();
+
+        // ── OPTIMIZATION: one aggregation query replaces the nested loop ──
+        // Previously: SubjectGradeLevel lookup + acquisition SUM per subject×grade
+        // = up to 130 DB queries for 10 subjects × 13 grades.
+        // Now: one query via LrAggregationService.
+        $aggregated = $this->aggregationService
+            ->aggregateBySubjectGrade($libraryIds, $gradeIds, $subjectIds)
+            ->keyBy(fn($r) => $r->subject_id . '_' . $r->grade_level_id);
+
+        $heatmapData = [];
+
+        foreach ($subjectIndexMap as $subjectId => $subjIdx) {
+            foreach ($gradeIndexMap as $gradeId => $gradeIdx) {
+                $qty = (int) ($aggregated->get("{$subjectId}_{$gradeId}")?->total_qty ?? 0);
+                $heatmapData[] = [$subjIdx, $gradeIdx, $qty];
+            }
+        }
+
+        return $heatmapData;
+    }
+
+    // ── Helpers ──────────────────────────────────────────────────────────────
+
+    private function resolveMvConfig(int $userLevel, ?string $stationId): array
+    {
+        if (!$stationId) {
+            return [false, null, null, 'live'];
+        }
+
+        return match ($userLevel) {
+            4 => [true, 'lrmis.mv_lr_charts_by_region',   'region_id',   'region_mv'],
+            3 => [true, 'lrmis.mv_lr_charts_by_division', 'division_id', 'division_mv'],
+            2 => [true, 'lrmis.mv_lr_charts_by_district', 'district_id', 'district_mv'],
+            default => [false, null, null, 'live'],
+        };
+    }
+
+    /**
+     * All-zero matrix for when there are no libraries in scope.
+     * Preserves the expected shape of the series_data array.
+     */
+    private function buildZeroMatrix(array $subjectIndexMap, array $gradeIndexMap): array
+    {
+        $heatmapData = [];
+
+        foreach ($subjectIndexMap as $subjIdx) {
+            foreach ($gradeIndexMap as $gradeIdx) {
+                $heatmapData[] = [$subjIdx, $gradeIdx, 0];
+            }
+        }
+
+        return $heatmapData;
+    }
+
     private function emptyResponse(string $message): array
     {
-        return [
-            'x_axis'      => [],
-            'y_axis'      => [],
-            'series_data' => [],
-            'message'     => $message,
-        ];
+        return ['x_axis' => [], 'y_axis' => [], 'series_data' => [], 'message' => $message];
     }
 
     private function getApproximateMax(array $data): int
     {
         if (empty($data)) return 100;
-        $values = array_column($data, 2);
-        $max = $values ? max($values) : 0;
+        $max = max(array_column($data, 2));
         return max(20, (int) ceil($max / 10) * 10);
     }
 }

@@ -44,6 +44,8 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        //
+        // In App\Providers\AppServiceProvider::register()
+        $this->app->singleton(\App\Services\LrAggregationService::class);
+
     }
 }

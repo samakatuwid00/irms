@@ -180,35 +180,33 @@
 
         </div>
 
-        <!-- Dropdown filter -->
-        <div class="relative max-w-[300px] mb-4">
+        <div class="flex flex-wrap items-end gap-0 md:gap-6 mb-0">
+            <x-filter-select
+                id="globalFilter"
+                label="Visualization"
+                :options="[
+                    ['value' => 'lr-availability', 'label' => 'Subject Level LR Availability'],
+                    ['value' => 'lr-ratio',        'label' => 'Learning Resources to Learner Ratio'],
+                    ['value' => 'lr-exdef',        'label' => 'Excess / Deficiency'],
+                    ['value' => 'lr-heatmap',      'label' => 'Equitable Distribution'],
+                ]"
+                class="flex-1 min-w-[220px]"
+            />
 
-            <!-- Floating label -->
-            <label for="globalFilter"
-                class="absolute left-3 -top-2 px-2 bg-gray-100 text-xs font-semibold text-gray-600 tracking-wide z-10">
-                Visualization
-            </label>
-
-            <!-- Select -->
-            <select id="globalFilter" class="w-full px-3 py-2 text-sm bg-gray-100 border border-black rounded-lg
-                        focus:ring-2 focus:ring-indigo-400 focus:border-black
-                        hover:border-gray-700 transition appearance-none cursor-pointer pr-9">
-                <option value="lr-availability">Subject Level LR Availability</option>
-                <option value="lr-ratio">Learning Resources to Learner Ratio</option>
-                <option value="lr-exdef">Excess / Deficiency</option>
-                <option value="lr-heatmap">Equitable Distribution</option>
-            </select>
-
-            <!-- Arrow -->
-            <span class="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none text-gray-600">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
-                </svg>
-            </span>
-
+            <x-filter-select
+                id="schoolYearFilter"
+                label="Key Stages"
+                :options="[
+                    ['value' => 'All', 'label' => 'All Key Stages', 'selected' => true],
+                    ['value' => 'K1', 'label' => 'Key Stage 1'],
+                    ['value' => 'K2', 'label' => 'Key Stage 2'],
+                    ['value' => 'JH', 'label' => 'Junior High'],
+                    ['value' => 'SH', 'label' => 'Senior High'],
+                ]"
+                class="flex-1 min-w-[180px] md:min-w-[160px]"
+            />
         </div>
-
-
+  
         <!-- LR Availability -->
         <x-chart-card id="lr-availability" title="LR Availability" class="chart-container">
             <p class="text-xs text-gray-500">Subject Level LR Availability</p>
@@ -252,7 +250,20 @@
         </x-chart-card>
 
         <!-- BOSY -->
-        @include('pages.components.bosy-dp')
+        @if($userLevel >= 4)
+            <x-filter-select
+                id="regionFilter"
+                label="Region / Library Level"
+                :options="$regionOptions"
+            />
+        @endif
+        @if($userLevel == 3)
+            <x-filter-select id="divisionFilter" label="District">
+                @foreach($divisions as $district)
+                    <option value="{{ $district['id'] }}">{{ $district['name'] }}</option>
+                @endforeach
+            </x-filter-select>
+        @endif
 
         <x-chart-card id="bosy-status" title="BOSY Status" class="chart-container">
 

@@ -486,42 +486,6 @@ class BosyStatusService
             ->value('division_name') ?? 'Division';
     }
 
-    private function getShortname(string $name): string
-    {
-        $patterns = [
-            '/^Division\s+of\s+/i' => '',
-            '/^Schools\s+Division\s+of\s+/i' => '',
-            '/^City\s+Schools\s+Division\s+of\s+/i' => '',
-            '/^Provincial\s+Schools\s+Division\s+of\s+/i' => '',
-        ];
-
-        $shortname = $name;
-        foreach ($patterns as $pattern => $replacement) {
-            $shortname = preg_replace($pattern, $replacement, $shortname);
-        }
-
-        return trim($shortname);
-    }
-
-    private function getSchoolShortname(string $schoolName): string
-    {
-        $patterns = [
-            '/^Elementary School of\s+/i' => '',
-            '/^Elementary School\s+/i' => '',
-            '/^High School of\s+/i' => '',
-            '/^National High School\s+/i' => '',
-            '/^Central School\s+/i' => '',
-            '/^Primary School\s+/i' => '',
-        ];
-
-        $shortname = $schoolName;
-        foreach ($patterns as $pattern => $replacement) {
-            $shortname = preg_replace($pattern, $replacement, $shortname);
-        }
-
-        return trim($shortname);
-    }
-
     private function determineBosyStatus(int $percentage): string
     {
         return match (true) {

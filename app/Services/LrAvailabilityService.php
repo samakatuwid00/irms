@@ -5,16 +5,17 @@ namespace App\Services;
 use App\Models\GradeLevel;
 use App\Models\Subject;
 use App\Services\LibraryScopeService;
+use App\Support\GradeColumnMap;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Collection;
 
 class LrAvailabilityService
 {
     public function __construct(
-        private readonly LibraryScopeService $libraryScopeService
-    ) {
-    }
+        private readonly LibraryScopeService  $libraryScopeService,
+        private readonly LrAggregationService $aggregationService,  // add this
+    ) {}
 
     private function getPopulationColumn(string $grade): ?string
     {
@@ -145,7 +146,10 @@ class LrAvailabilityService
         }
 
         // Build aggregated LR qty per subject + grade
-        $aggregated = $this->getLiveLrAggregation($allowedLibraryIds, $gradeIds, $subjectIds);
+        $libraryIds = $allowedLibraryIds->values()->toArray();
+        $aggregated = $this->aggregationService
+            ->aggregateBySubjectGrade($libraryIds, $gradeIds, $subjectIds);
+
 
         $series = $this->buildSeriesFromData($subjects, $gradeLevels, $aggregated, 'total_qty');
 
@@ -169,47 +173,6 @@ class LrAvailabilityService
             'user_level' => $userLevel,
         ];
     }
-
-private function getLiveLrAggregation(?Collection $allowedLibraryIds, array $gradeIds, array $subjectIds): Collection
-{
-    if ($allowedLibraryIds === null || $allowedLibraryIds->isEmpty()) {
-        return collect();
-    }
-
-    $libraryIdsArray = $allowedLibraryIds->values()->toArray();
-
-    // Sum acquisitions per print resource, filtered by library_id from acquisitions
-    $qtyPerPrint = DB::table('print_acquisitions')
-        ->select('print_id', DB::raw('COALESCE(SUM(total_qty), 0)::integer as total_per_print'))
-        ->whereIn('library_id', $libraryIdsArray)  // ← Filter by library_id here!
-        ->groupBy('print_id');
-
-    // Explode comma-separated sgl_ids (text) and cast each to uuid for joining
-    $base = DB::table('print_resources')
-        ->joinSub($qtyPerPrint, 'acq', fn($j) => $j->on('print_resources.id', '=', 'acq.print_id'))
-        ->select([
-            'print_resources.id',
-            DB::raw("unnest(string_to_array(subject_grade_level_ids, ','))::uuid as sgl_id"),
-            'acq.total_per_print',
-        ])
-        ->whereNotNull('print_resources.subject_grade_level_ids')
-        ->where('print_resources.subject_grade_level_ids', '<>', '');
-
-    $aggregated = DB::table(DB::raw("({$base->toSql()}) as exploded"))
-        ->mergeBindings($base)
-        ->join('subject_grade_levels as sgl', 'exploded.sgl_id', '=', 'sgl.id')
-        ->select([
-            'sgl.subject_id',
-            'sgl.grade_level_id',
-            DB::raw('SUM(exploded.total_per_print)::integer as total_qty')
-        ])
-        ->whereIn('sgl.subject_id', $subjectIds)
-        ->whereIn('sgl.grade_level_id', $gradeIds)
-        ->groupBy('sgl.subject_id', 'sgl.grade_level_id')
-        ->get();
-
-    return $aggregated;
-}
 
     private function buildSeriesFromData($subjects, $gradeLevels, Collection $data, string $qtyColumn): array
     {
@@ -291,11 +254,15 @@ private function getLiveLrAggregation(?Collection $allowedLibraryIds, array $gra
                 continue;
             }
 
-            $sum = DB::table('populations')
-                ->whereIn('school_id', $schoolIds)
-                ->sum($column);
+            $row = DB::table('populations')
+            ->whereIn('school_id', $schoolIds)
+            ->selectRaw(GradeColumnMap::sumSelectRaw())
+            ->first();
 
-            $popData[] = (int) $sum;
+            foreach ($gradeLevels as $gl) {
+            $col = GradeColumnMap::column($gl->grade);
+            $popData[] = $col ? (int)($row?->{$col} ?? 0) : 0;
+            }
         }
 
         return $popData;

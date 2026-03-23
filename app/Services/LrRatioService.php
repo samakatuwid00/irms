@@ -8,12 +8,11 @@ use Illuminate\Support\Facades\Log;
 
 class LrRatioService
 {
-    private $libraryScopeService;
 
-    public function __construct(LibraryScopeService $libraryScopeService)
-    {
-        $this->libraryScopeService = $libraryScopeService;
-    }
+    public function __construct(
+        private readonly LibraryScopeService  $libraryScopeService,
+        private readonly LrAggregationService $aggregationService,  // add this
+    ) {}
 
     public function getChartDataCached($explicitLibraryId, $userLevel, $stationId)
     {
@@ -84,7 +83,9 @@ class LrRatioService
         }
 
         // ── Optimized LR aggregation (same pattern as LrAvailabilityService) ──
-        $lrTotals = $this->getOptimizedLrTotalsPerGrade($allowedLibraryIds, $gradeIds);
+        $libraryIds = $allowedLibraryIds->values()->toArray();
+        $lrTotals = $this->aggregationService
+            ->aggregateByGrade($libraryIds, $gradeIds);
 
         // Population
         $populationAssoc = $this->getPopulationPerGrade($allowedLibraryIds, $gradeLevels);
