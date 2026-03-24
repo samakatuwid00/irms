@@ -2,7 +2,7 @@
 
 namespace App\Services;
 
-use App\Models\{Division, District, School};
+use App\Models\{Division, District, School, SchoolLibrary};
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Str;
 
@@ -122,8 +122,9 @@ class StationManagementService
 
     public function createDivision(array $data, string $regionId): Division
     {
-        return Division::create([
-            'id' => Str::uuid(),
+        $id = Str::uuid(); 
+        $division = Division::create([
+            'id' => $id,
             'division_name' => $data['division_name'],
             'shortname' => $data['shortname'] ?? null,
             'address' => $data['address'] ?? null,
@@ -133,6 +134,14 @@ class StationManagementService
             'legislative_district' => $data['legislative_district'] ?? null,
             'region_id' => $regionId,
         ]);
+        DivisionLibrary::create([
+            'id' => Str::uuid(),
+            'division_id' => $id,
+            'library_name' => $data['division_name'],
+        ]);
+
+        return $division;
+        
     }
 
     public function updateDivision(Division $division, array $data): Division
@@ -174,8 +183,10 @@ class StationManagementService
 
     public function createSchool(array $data, string $districtId): School
     {
-        return School::create([
-            'id' => Str::uuid(),
+        $id = Str::uuid();
+        
+        $school = School::create([
+            'id' => $id,
             'school_name' => $data['school_name'],
             'shortname' => $data['shortname'] ?? null,
             'school_id' => $data['school_id'],
@@ -187,6 +198,15 @@ class StationManagementService
             'district_id' => $districtId,
             'school_type' => $data['school_type'] ?? null,
         ]);
+
+        SchoolLibrary::create([
+            'id' => Str::uuid(),
+            'school_id' => $id,
+            'library_name' => $data['school_name'],
+        ]);
+
+        return $school;
+        
     }
 
     public function updateSchool(School $school, array $data): School
