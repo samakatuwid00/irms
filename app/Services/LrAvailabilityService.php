@@ -14,7 +14,7 @@ class LrAvailabilityService
 {
     public function __construct(
         private readonly LibraryScopeService  $libraryScopeService,
-        private readonly LrAggregationService $aggregationService,  // add this
+        private readonly LrAggregationService $aggregationService,
     ) {}
 
     private function getPopulationColumn(string $grade): ?string
@@ -61,80 +61,22 @@ class LrAvailabilityService
             ->orderBy('subject_name')
             ->get();
         $subjectIds = $subjects->pluck('id')->toArray();
-        $useMaterializedView = in_array($userLevel, [2, 3, 4]);
+
+        // MODIFIED: Now all user levels use real-time queries directly from the schema
+        // Materialized views are no longer used for testing purposes
+        $useMaterializedView = false; // Force real-time queries for all levels
 
         if ($useMaterializedView) {
-            // ────────────────────────────────────────────────
-            // REGION / DIVISION / DISTRICT levels – keep original MV logic
-            // ────────────────────────────────────────────────
-            if ($userLevel === 4) {
-                $mvTable = 'mv_lr_charts_by_region';
-                $idColumn = 'region_id';
-            } elseif ($userLevel === 3) {
-                $mvTable = 'mv_lr_charts_by_division';
-                $idColumn = 'division_id';
-            } elseif ($userLevel === 2) {
-                $mvTable = 'mv_lr_charts_by_district';
-                $idColumn = 'district_id';
-            } else {
-                $mvTable = null;
-                $idColumn = null;
-            }
-
-            if ($mvTable && $idColumn && $stationId) {
-                $mvData = DB::table("lrmis.$mvTable")
-                    ->where($idColumn, $stationId)
-                    ->whereIn('subject_id', $subjectIds)
-                    ->whereIn('grade_level_id', $gradeIds)
-                    ->select([
-                        'subject_id',
-                        'grade_level_id',
-                        'total_lr_qty',
-                        'pop_total',
-                    ])
-                    ->get()
-                    ->keyBy(fn($row) => $row->subject_id . '_' . $row->grade_level_id);
-
-                Log::info('MV data rows fetched', ['count' => $mvData->count()]);
-
-                $series = $this->buildSeriesFromMv($subjects, $gradeLevels, $mvData);
-
-                $popData = [];
-                foreach ($gradeLevels as $gl) {
-                    $sample = $mvData->firstWhere('grade_level_id', $gl->id);
-                    $popData[] = $sample ? (int) $sample->pop_total : 0;
-                }
-
-                $series[] = [
-                    'name' => 'Population',
-                    'type' => 'line',
-                    'smooth' => true,
-                    'label' => ['position' => 'top'],
-                    'data' => $popData,
-                ];
-
-                $libraryScope = match ($userLevel) {
-                    4 => 'region',
-                    3 => 'division',
-                    2 => 'district',
-                    default => 'unknown',
-                };
-
-                return [
-                    'grade_level' => $gradeNames,
-                    'series' => $series,
-                    'library_scope' => $libraryScope,
-                    'source' => 'materialized_view',
-                    'user_level' => $userLevel,
-                ];
-            }
-
-            Log::warning('MV path selected but missing config', ['user_level' => $userLevel, 'station_id' => $stationId]);
+            // This block is now effectively disabled
+            // Kept for reference but won't execute
+            Log::info('Materialized view path is disabled - using real-time queries');
         }
 
         // ────────────────────────────────────────────────
-        // SCHOOL LEVEL (1) + single library – use denormalized field
+        // ALL USER LEVELS - use real-time queries directly from schema
+        // This includes: School (1), District (2), Division (3), Region (4)
         // ────────────────────────────────────────────────
+        
         $allowedLibraryIds = $this->libraryScopeService->getAllowedLibraryIds(
             $explicitLibraryId,
             $userLevel,
@@ -150,11 +92,10 @@ class LrAvailabilityService
         $aggregated = $this->aggregationService
             ->aggregateBySubjectGrade($libraryIds, $gradeIds, $subjectIds);
 
-
         $series = $this->buildSeriesFromData($subjects, $gradeLevels, $aggregated, 'total_qty');
 
         // Population
-        $popSeriesData = $this->getPopulationData($allowedLibraryIds, $gradeLevels);
+        $popSeriesData = $this->getPopulationData($allowedLibraryIds, $gradeLevels, $userLevel, $stationId);
 
         $series[] = [
             'name' => 'Population',
@@ -164,13 +105,23 @@ class LrAvailabilityService
             'data' => $popSeriesData,
         ];
 
+        // Determine library scope based on user level and parameters
+        $libraryScope = match ($userLevel) {
+            4 => 'region',
+            3 => 'division',
+            2 => 'district',
+            1 => 'school',
+            default => 'unknown',
+        };
+
         return [
             'grade_level' => $gradeNames,
             'series' => $series,
-            'library_scope' => $explicitLibraryId ? 'single_library' : 'auto_scoped',
+            'library_scope' => $explicitLibraryId ? 'single_library' : $libraryScope,
             'library_id' => $explicitLibraryId ?: 'auto',
-            'source' => 'live_query_denormalized',
+            'source' => 'live_query_direct_schema', // Changed to indicate direct schema access
             'user_level' => $userLevel,
+            'station_id' => $stationId,
         ];
     }
 
@@ -204,66 +155,46 @@ class LrAvailabilityService
         return $series;
     }
 
-    private function buildSeriesFromMv($subjects, $gradeLevels, Collection $mvData): array
-    {
-        $series = [];
-        $first = true;
-
-        foreach ($subjects as $subject) {
-            $data = [];
-            foreach ($gradeLevels as $gl) {
-                $key = $subject->id . '_' . $gl->id;
-                $qty = $mvData->get($key)?->total_lr_qty ?? 0;
-                $data[] = (int) $qty;
-            }
-
-            $serie = [
-                'name' => $subject->abbrv ?? $subject->subject_name,
-                'type' => 'bar',
-                'data' => $data
-            ];
-
-            if ($first) {
-                $serie['barGap'] = 0;
-                $first = false;
-            }
-
-            $series[] = $serie;
-        }
-
-        return $series;
-    }
-
-    private function getPopulationData(?Collection $allowedLibraryIds, $gradeLevels): array
+    private function getPopulationData(?Collection $allowedLibraryIds, $gradeLevels, int $userLevel, ?string $stationId): array
     {
         if ($allowedLibraryIds === null || $allowedLibraryIds->isEmpty()) {
             Log::debug('Population: no libraries → zeros');
             return array_fill(0, $gradeLevels->count(), 0);
         }
 
+        // Get school IDs from the libraries
         $schoolIds = DB::table('school_libraries')
             ->whereIn('id', $allowedLibraryIds->toArray())
             ->pluck('school_id')
             ->unique();
 
+        if ($schoolIds->isEmpty()) {
+            return array_fill(0, $gradeLevels->count(), 0);
+        }
+
+        // Get population data directly from populations table
+        $populationQuery = DB::table('populations')
+            ->whereIn('school_id', $schoolIds)
+            ->selectRaw(GradeColumnMap::sumSelectRaw());
+
+        // For higher levels (region/division/district), we need to aggregate across schools
+        // The GradeColumnMap::sumSelectRaw() already provides sum of all grade columns
+        
+        $row = $populationQuery->first();
+
+        // Build population data for each grade level
         $popData = [];
         foreach ($gradeLevels as $gl) {
-            $column = $this->getPopulationColumn($gl->grade);
-            if (!$column) {
-                $popData[] = 0;
-                continue;
-            }
-
-            $row = DB::table('populations')
-            ->whereIn('school_id', $schoolIds)
-            ->selectRaw(GradeColumnMap::sumSelectRaw())
-            ->first();
-
-            foreach ($gradeLevels as $gl) {
             $col = GradeColumnMap::column($gl->grade);
             $popData[] = $col ? (int)($row?->{$col} ?? 0) : 0;
-            }
         }
+
+        Log::info('Population data fetched', [
+            'user_level' => $userLevel,
+            'station_id' => $stationId,
+            'school_count' => $schoolIds->count(),
+            'pop_data' => $popData
+        ]);
 
         return $popData;
     }

@@ -13,7 +13,7 @@ class LrSufficiencyService
 {
     public function __construct(
         private readonly LibraryScopeService  $libraryScopeService,
-        private readonly LrAggregationService $aggregationService,  // ← injected
+        private readonly LrAggregationService $aggregationService,
     ) {}
 
     public function getSufficiencyData(
@@ -36,22 +36,22 @@ class LrSufficiencyService
             $explicitLibraryId, $userLevel, $stationId
         );
 
-        [$useMv, $mvTable, $mvIdColumn, $mvScope] = $this->resolveMvConfig($userLevel, $stationId);
+        // MODIFIED: Force use of live queries for ALL user levels
+        // Materialized views are no longer used for testing purposes
+        $useMv = false; // Force real-time queries for all levels
 
         Log::info('LR Sufficiency data source decision', [
             'user_level'    => $userLevel,
             'station_id'    => $stationId,
             'using_mv'      => $useMv,
-            'mv_scope'      => $mvScope,
             'library_count' => $allowedLibraryIds?->count() ?? 0,
+            'source'        => 'live_query_direct_schema'
         ]);
 
-        if ($useMv) {
-            return $this->buildFromMv(
-                $mvTable, $mvIdColumn, $mvScope,
-                $stationId, $subjects, $gradeLevels
-            );
-        }
+        // Removed MV path - now all levels use live queries
+        // if ($useMv) {
+        //     return $this->buildFromMv(...);
+        // }
 
         return $this->buildFromLiveQuery(
             $subjects, $gradeLevels, $allowedLibraryIds,
@@ -59,35 +59,7 @@ class LrSufficiencyService
         );
     }
 
-    // ── MV path ─────────────────────────────────────────────────────────────
-
-    private function buildFromMv(
-        string $mvTable, string $mvIdColumn, string $mvScope,
-        string $stationId, Collection $subjects, Collection $gradeLevels
-    ): array {
-        // One query to fetch the entire MV result set for this station.
-        // Previously this was one query PER subject PER grade inside the loops.
-        $mvRows = DB::table($mvTable)
-            ->where($mvIdColumn, $stationId)
-            ->select(['subject_id', 'grade_level_id', 'total_lr_qty', 'pop_total'])
-            ->get()
-            ->keyBy(fn($r) => $r->subject_id . '_' . $r->grade_level_id);
-
-        $tableData = [];
-
-        foreach ($subjects as $subject) {
-            foreach ($gradeLevels as $grade) {
-                $row = $mvRows->get($subject->id . '_' . $grade->id);
-                $lrQty      = (int) ($row?->total_lr_qty ?? 0);
-                $population = (int) ($row?->pop_total    ?? 0);
-                $tableData[] = $this->makeRow($subject, $grade, $lrQty, $population);
-            }
-        }
-
-        return $this->wrapResult($tableData, $gradeLevels, true, $mvScope, 4);
-    }
-
-    // ── Live query path ──────────────────────────────────────────────────────
+    // ── Live query path (now used for ALL user levels) ──────────────────────
 
     private function buildFromLiveQuery(
         Collection          $subjects,
@@ -102,17 +74,12 @@ class LrSufficiencyService
         $subjectIds = $subjects->pluck('id')->all();
 
         // ── OPTIMIZATION 1: Bulk-load ALL SubjectGradeLevels in ONE query ──
-        // Previously: SubjectGradeLevel::where(...)->first() called once per
-        // subject×grade pair = up to 130 queries for 10 subjects × 13 grades.
-        // Now: one query, keyed in PHP.
         $sgls = SubjectGradeLevel::whereIn('subject_id', $subjectIds)
             ->whereIn('grade_level_id', $gradeIds)
             ->get()
             ->keyBy(fn($s) => $s->subject_id . '_' . $s->grade_level_id);
 
         // ── OPTIMIZATION 2: Bulk-load ALL LR quantities in ONE query ──
-        // Previously: one aggregation query per SGL inside the loop.
-        // Now: one query returning all subject×grade combos at once.
         $lrData = empty($libraryIds)
             ? collect()
             : $this->aggregationService
@@ -120,9 +87,7 @@ class LrSufficiencyService
                 ->keyBy(fn($r) => $r->subject_id . '_' . $r->grade_level_id);
 
         // ── OPTIMIZATION 3: Bulk-load ALL population totals in ONE query ──
-        // Previously: one populations query per grade inside the loop.
-        // Now: one query for all grades at once.
-        $populationByGrade = $this->bulkPopulationByGrade($libraryIds, $gradeLevels);
+        $populationByGrade = $this->bulkPopulationByGrade($libraryIds, $gradeLevels, $userLevel, $stationId);
 
         // ── Assemble the matrix in PHP, zero DB calls ──
         $tableData = [];
@@ -143,9 +108,18 @@ class LrSufficiencyService
             }
         }
 
+        // Determine library scope based on user level
+        $libraryScope = match ($userLevel) {
+            4 => 'region',
+            3 => 'division',
+            2 => 'district',
+            1 => 'school',
+            default => 'aggregated',
+        };
+
         return $this->wrapResult(
-            $tableData, $gradeLevels, false, 'none', $userLevel,
-            $explicitLibraryId
+            $tableData, $gradeLevels, false, $libraryScope, $userLevel,
+            $explicitLibraryId, $stationId
         );
     }
 
@@ -157,9 +131,13 @@ class LrSufficiencyService
      *
      * Returns [ grade_level_id => total_population ]
      */
-    private function bulkPopulationByGrade(array $libraryIds, Collection $gradeLevels): array
+    private function bulkPopulationByGrade(array $libraryIds, Collection $gradeLevels, int $userLevel, ?string $stationId): array
     {
         if (empty($libraryIds)) {
+            Log::debug('No library IDs for population query', [
+                'user_level' => $userLevel,
+                'station_id' => $stationId
+            ]);
             return [];
         }
 
@@ -170,24 +148,33 @@ class LrSufficiencyService
             ->all();
 
         if (empty($schoolIds)) {
+            Log::debug('No schools found for population query', [
+                'user_level' => $userLevel,
+                'station_id' => $stationId,
+                'library_count' => count($libraryIds)
+            ]);
             return [];
         }
 
         $columnMap = $this->gradeColumnMap();
 
         // Build one SELECT with a SUM(CASE...) per grade column
-        $selects = ['school_id'];
-        foreach ($columnMap as $col) {
+        $selects = [];
+        foreach ($columnMap as $gradeName => $col) {
             $selects[] = DB::raw("SUM({$col}) AS {$col}");
         }
 
         $row = DB::table('populations')
             ->whereIn('school_id', $schoolIds)
             ->select($selects)
-            ->groupBy('school_id')
             ->first();
 
         if (!$row) {
+            Log::warning('No population data found for schools', [
+                'school_count' => count($schoolIds),
+                'user_level' => $userLevel,
+                'station_id' => $stationId
+            ]);
             return [];
         }
 
@@ -198,24 +185,17 @@ class LrSufficiencyService
             $result[$gl->id] = $col ? (int) ($row->{$col} ?? 0) : 0;
         }
 
+        Log::info('Population data retrieved', [
+            'user_level' => $userLevel,
+            'station_id' => $stationId,
+            'school_count' => count($schoolIds),
+            'population_totals' => $result
+        ]);
+
         return $result;
     }
 
     // ── Helpers ──────────────────────────────────────────────────────────────
-
-    private function resolveMvConfig(int $userLevel, ?string $stationId): array
-    {
-        if (!$stationId) {
-            return [false, null, null, 'none'];
-        }
-
-        return match ($userLevel) {
-            4 => [true, 'lrmis.mv_lr_charts_by_region',   'region_id',   'region'],
-            3 => [true, 'lrmis.mv_lr_charts_by_division', 'division_id', 'division'],
-            2 => [true, 'lrmis.mv_lr_charts_by_district', 'district_id', 'district'],
-            default => [false, null, null, 'none'],
-        };
-    }
 
     private function makeRow($subject, $grade, int $lrQty, int $population): array
     {
@@ -251,18 +231,20 @@ class LrSufficiencyService
         array      $tableData,
         Collection $gradeLevels,
         bool       $useMv,
-        string     $mvScope,
+        string     $libraryScope,
         int        $userLevel,
-        ?string    $explicitLibraryId = null
+        ?string    $explicitLibraryId = null,
+        ?string    $stationId = null
     ): array {
         return [
             'grade_levels'  => $gradeLevels->pluck('grade')->toArray(),
             'table_data'    => $tableData,
-            'library_scope' => $explicitLibraryId ? 'single' : 'aggregated',
+            'library_scope' => $explicitLibraryId ? 'single' : $libraryScope,
+            'library_id'    => $explicitLibraryId ?: 'auto',
             'using_mv'      => $useMv,
-            'mv_type'       => $mvScope,
             'user_level'    => $userLevel,
-            'source'        => $useMv ? 'materialized_view' : 'live_query',
+            'station_id'    => $stationId,
+            'source'        => 'live_query_direct_schema', // Changed from 'live_query'
         ];
     }
 
@@ -276,8 +258,6 @@ class LrSufficiencyService
 
     /**
      * Single source of truth for grade name → population column mapping.
-     * Shared by LrSufficiencyService, LrRatioService, LrAvailabilityService
-     * via GradeColumnMap helper (see suggestion below) or inline here.
      */
     private function gradeColumnMap(): array
     {
