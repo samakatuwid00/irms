@@ -51,9 +51,9 @@ class AddAcquisitionToExistingNonPrintResourceService
                 'nonprint_id'       => $nonprintResourceId,
                 'library_id'        => $acquisition['library_id']   ?? null,
                 'library_name'      => $acquisition['library_name'] ?? null,
+                'package_id'        => $acquisition['package_id']   ?? null,  // ← ADD THIS
                 'source'            => $acquisition['source'],
                 'date_acquired'     => $acquisition['date_acquired'],
-                // Coerce empty strings to 0 so the DB column doesn't reject them
                 'cost'              => $acquisition['cost'] !== '' ? $acquisition['cost'] : 0,
                 'iar'               => $acquisition['iar'] !== '' ? $acquisition['iar'] : null,
                 'usable'            => $acquisition['usable'] !== '' ? (int) $acquisition['usable'] : 0,

@@ -35,7 +35,7 @@ export default defineConfig({
                 'resources/js/charts/visualization.js',
                 'resources/js/privacy-modal.js',
                 'resources/css/bosy/bosy.css',
-
+                'resources/js/package.js',
             ],
             refresh: true,
         }),

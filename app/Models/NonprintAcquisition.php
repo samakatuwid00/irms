@@ -30,7 +30,8 @@ class NonprintAcquisition extends Model
         'created_at',
         'updated_at',
         'library_id',
-        'library_name'
+        'library_name',
+        'package_id'
 
     ];
 
@@ -54,5 +55,10 @@ class NonprintAcquisition extends Model
     public function nonprintMasterlists(): HasMany
     {
         return $this->hasMany(NonprintMasterlist::class, 'nonprint_acquisition_id');
+    }
+
+    public function package(): BelongsTo
+    {
+        return $this->belongsTo(Package::class, 'package_id');
     }
 }

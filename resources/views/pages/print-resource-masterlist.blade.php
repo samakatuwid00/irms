@@ -566,78 +566,80 @@
     <div id="viewResourceModal" class="fixed inset-0 z-50 hidden overflow-y-auto" role="dialog" aria-modal="true">
         <div id="viewModalBackdrop" class="fixed inset-0 bg-black/50 transition-opacity"></div>
 
-        <div class="relative min-h-screen flex items-start justify-center p-4 pt-10">
-            <div class="relative bg-white rounded-xl shadow-2xl w-full max-w-4xl z-10 mb-10">
+        <div class="relative min-h-screen flex items-center justify-center p-4 pt-10 pb-10">
+            <div class="relative bg-white rounded-2xl shadow-2xl w-full max-w-4xl mx-auto z-10 overflow-hidden">
 
                 {{-- Header --}}
-                <div class="flex items-center justify-between px-6 py-4 border-b border-gray-200">
-                    <h3 class="text-base font-semibold text-gray-800">Resource Details</h3>
+                <div class="flex items-center justify-between px-5 sm:px-6 py-4 border-b border-gray-200 bg-white sticky top-0 z-20">
+                    <h3 class="text-lg font-semibold text-gray-800">Resource Details</h3>
                     <button id="closeViewModal"
-                            class="text-gray-400 hover:text-gray-600 transition-colors rounded-full p-1 hover:bg-gray-100">
-                        <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            class="text-gray-400 hover:text-gray-600 transition-colors rounded-full p-2 hover:bg-gray-100">
+                        <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
                         </svg>
                     </button>
                 </div>
 
                 {{-- Body --}}
-                <div class="p-6">
-                    <div class="flex gap-8 items-start">
+                <div class="p-5 sm:p-6 max-h-[calc(100vh-140px)] overflow-y-auto">
+                    <div class="flex flex-col lg:flex-row gap-6 lg:gap-8 items-start">
 
                         {{-- LEFT SIDE (Image) --}}
-                        <div class="shrink-0 flex justify-center" style="width:290px;">
-                            <img id="vm-cover" src="" alt="Cover"
-                                class="w-full max-h-[460px] object-contain rounded-lg border border-gray-300 shadow-md bg-gray-100">
+                        <div class="w-full lg:w-auto lg:shrink-0 flex justify-center lg:justify-start">
+                            <div class="w-full max-w-[290px] lg:w-[290px]">
+                                <img id="vm-cover" src="" alt="Cover"
+                                    class="w-full max-h-[420px] lg:max-h-[460px] object-contain rounded-xl border border-gray-200 shadow-sm bg-gray-100">
+                            </div>
                         </div>
 
                         {{-- RIGHT SIDE (Details) --}}
-                        <div class="flex-1 min-w-0 flex flex-col gap-3">
+                        <div class="flex-1 min-w-0 flex flex-col gap-4 w-full">
 
                             {{-- Title & Authors --}}
-                            <div class="rounded-lg border border-dashed border-gray-300 bg-gray-50/50 px-4 py-3">
-                                <h4 id="vm-title" class="text-base font-bold text-gray-900 leading-snug"></h4>
-                                <p id="vm-authors" class="text-xs text-gray-400 mt-0.5 italic"></p>
+                            <div class="rounded-xl border border-dashed border-gray-300 bg-gray-50 px-5 py-4">
+                                <h4 id="vm-title" class="text-lg sm:text-xl font-bold text-gray-900 leading-tight"></h4>
+                                <p id="vm-authors" class="text-sm text-gray-500 mt-1"></p>
                             </div>
 
                             {{-- Type Badge --}}
-                            <div class="rounded-lg border border-dashed border-gray-300 bg-gray-50/50 px-4 py-2.5 flex items-center gap-2">
-                                <span class="text-[10px] font-semibold uppercase tracking-widest text-gray-400">Type</span>
+                            <div class="flex items-center gap-3">
+                                <span class="text-xs font-semibold uppercase tracking-widest text-gray-400">Type</span>
                                 <span id="vm-type-badge"
-                                    class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-blue-50 text-blue-700 border border-blue-100">
+                                    class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-50 text-blue-700 border border-blue-100">
                                 </span>
                             </div>
 
                             {{-- Metadata Grid --}}
-                            <div class="grid grid-cols-2 gap-3">
-                                <div class="rounded-lg border border-dashed border-gray-300 bg-gray-50/50 px-4 py-2.5">
-                                    <p class="text-[10px] font-semibold uppercase tracking-widest text-gray-400 mb-0.5">Publisher</p>
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                <div class="rounded-xl border border-dashed border-gray-300 bg-gray-50 px-4 py-3">
+                                    <p class="text-xs font-semibold uppercase tracking-widest text-gray-400 mb-1">Publisher</p>
                                     <p id="vm-publisher" class="text-sm font-medium text-gray-700"></p>
                                 </div>
-                                <div class="rounded-lg border border-dashed border-gray-300 bg-gray-50/50 px-4 py-2.5">
-                                    <p class="text-[10px] font-semibold uppercase tracking-widest text-gray-400 mb-0.5">Copyright</p>
+                                <div class="rounded-xl border border-dashed border-gray-300 bg-gray-50 px-4 py-3">
+                                    <p class="text-xs font-semibold uppercase tracking-widest text-gray-400 mb-1">Copyright</p>
                                     <p id="vm-copyright" class="text-sm font-medium text-gray-700"></p>
                                 </div>
-                                <div class="rounded-lg border border-dashed border-gray-300 bg-gray-50/50 px-4 py-2.5">
-                                    <p class="text-[10px] font-semibold uppercase tracking-widest text-gray-400 mb-0.5">Edition</p>
+                                <div class="rounded-xl border border-dashed border-gray-300 bg-gray-50 px-4 py-3">
+                                    <p class="text-xs font-semibold uppercase tracking-widest text-gray-400 mb-1">Edition</p>
                                     <p id="vm-edition" class="text-sm font-medium text-gray-700"></p>
                                 </div>
-                                <div class="rounded-lg border border-dashed border-gray-300 bg-gray-50/50 px-4 py-2.5">
-                                    <p class="text-[10px] font-semibold uppercase tracking-widest text-gray-400 mb-0.5">Volume</p>
+                                <div class="rounded-xl border border-dashed border-gray-300 bg-gray-50 px-4 py-3">
+                                    <p class="text-xs font-semibold uppercase tracking-widest text-gray-400 mb-1">Volume</p>
                                     <p id="vm-volume" class="text-sm font-medium text-gray-700"></p>
                                 </div>
-                                <div class="rounded-lg border border-dashed border-gray-300 bg-gray-50/50 px-4 py-2.5">
-                                    <p class="text-[10px] font-semibold uppercase tracking-widest text-gray-400 mb-0.5">ISBN</p>
-                                    <p id="vm-isbn" class="text-sm font-medium text-gray-700 font-mono tracking-wider"></p>
+                                <div class="rounded-xl border border-dashed border-gray-300 bg-gray-50 px-4 py-3">
+                                    <p class="text-xs font-semibold uppercase tracking-widest text-gray-400 mb-1">ISBN</p>
+                                    <p id="vm-isbn" class="text-sm font-medium text-gray-700 font-mono tracking-wider break-all"></p>
                                 </div>
-                                <div class="rounded-lg border border-dashed border-gray-300 bg-gray-50/50 px-4 py-2.5">
-                                    <p class="text-[10px] font-semibold uppercase tracking-widest text-gray-400 mb-0.5">Pages</p>
+                                <div class="rounded-xl border border-dashed border-gray-300 bg-gray-50 px-4 py-3">
+                                    <p class="text-xs font-semibold uppercase tracking-widest text-gray-400 mb-1">Pages</p>
                                     <p id="vm-pages" class="text-sm font-medium text-gray-700"></p>
                                 </div>
                             </div>
 
                             {{-- Subjects --}}
-                            <div class="rounded-lg border border-dashed border-gray-300 bg-gray-50/50 px-4 py-3">
-                                <p class="text-[10px] font-semibold uppercase tracking-widest text-gray-400 mb-1">Subjects / Grade Levels</p>
+                            <div class="rounded-xl border border-dashed border-gray-300 bg-gray-50 px-5 py-4">
+                                <p class="text-xs font-semibold uppercase tracking-widest text-gray-400 mb-2">Subjects / Grade Levels</p>
                                 <p id="vm-subjects" class="text-sm text-gray-600 leading-relaxed"></p>
                             </div>
                         </div>
@@ -645,9 +647,9 @@
                 </div>
 
                 {{-- Footer --}}
-                <div class="flex justify-end gap-3 px-6 py-4 border-t border-gray-100 bg-gray-50 rounded-b-xl">
+                <div class="flex justify-end gap-3 px-5 sm:px-6 py-4 border-t border-gray-100 bg-gray-50">
                     <button id="closeViewModalFooter"
-                            class="px-4 py-2 text-sm border border-gray-300 text-gray-600 rounded-lg hover:bg-gray-100 transition-colors">
+                            class="px-6 py-2.5 text-sm font-medium border border-gray-300 text-gray-700 rounded-xl hover:bg-gray-100 transition-colors">
                         Close
                     </button>
                 </div>

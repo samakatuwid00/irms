@@ -1,17 +1,18 @@
 <?php
 
-use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\PackageController;
+use App\Http\Controllers\Resource\AddNonPrintResourceController;
+use App\Http\Controllers\Resource\AddPrintResourceController;
 use App\Http\Controllers\Resource\AddResourceController;
 use App\Http\Controllers\Resource\EditResourceController;
-use App\Http\Controllers\Resource\PrintResourceController;
-use App\Http\Controllers\Resource\NonPrintResourceController;
 use App\Http\Controllers\Resource\ManageEstimatedResourceCountController;
-use App\Http\Controllers\Resource\SearchPrintResourceController;
-use App\Http\Controllers\Resource\AddPrintResourceController;
-use App\Http\Controllers\Resource\AddNonPrintResourceController;
-use App\Http\Controllers\Resource\SearchNonPrintResourceController;
 use App\Http\Controllers\Resource\MasterlistController;
 use App\Http\Controllers\Resource\NonPrintMasterlistController;
+use App\Http\Controllers\Resource\NonPrintResourceController;
+use App\Http\Controllers\Resource\PrintResourceController;
+use App\Http\Controllers\Resource\SearchNonPrintResourceController;
+use App\Http\Controllers\Resource\SearchPrintResourceController;
+use Illuminate\Support\Facades\Route;
 
 Route::middleware('auth')->group(function () {
 
@@ -108,6 +109,8 @@ Route::middleware('auth')->group(function () {
 
     Route::post('/search-nonprint/{id}/add', [SearchNonPrintResourceController::class, 'store'])
         ->name('search-nonprint-resource.store');
+
+    Route::get('/packages/search', [PackageController::class, 'search']); 
 
     // ============================================================
     // NON-PRINT RESOURCE MASTERLIST (division level 3, region level 4)

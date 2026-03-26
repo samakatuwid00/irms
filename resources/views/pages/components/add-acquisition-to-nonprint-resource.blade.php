@@ -159,32 +159,59 @@
                         placeholder="Any notes, condition details, or special remarks for this batch..."></textarea>
                 </div>
 
-                {{-- Source / Date / Cost / IAR --}}
-                <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
-                    <div>
-                        <label class="block text-sm font-medium mb-1">Source <span class="text-red-500">*</span></label>
-                        <select id="acqSource" class="w-full border border-gray-300 rounded px-3 py-2 text-sm">
-                            <option value="" disabled selected>Select source</option>
-                            <option value="CO">DepEd - Central Office</option>
-                            <option value="RO">Regional Office</option>
-                            <option value="SDO">Schools Division Office</option>
-                            <option value="LOCAL">Locally Developed</option>
-                            <option value="DONATED">DONATED</option>
-                        </select>
+                    <div class="grid grid-cols-1 md:grid-cols-5 gap-4">
+                    
+                        {{-- Source --}}
+                        <div>
+                            <label class="block text-sm font-medium mb-1">Source <span class="text-red-500">*</span></label>
+                            <select id="acqSource" class="w-full border border-gray-300 rounded px-3 py-2 text-sm">
+                                <option value="" disabled selected>Select source</option>
+                                <option value="CO">DepEd - Central Office</option>
+                                <option value="RO">Regional Office</option>
+                                <option value="SDO">Schools Division Office</option>
+                                <option value="LOCAL">Locally Developed</option>
+                                <option value="DONATED">DONATED</option>
+                            </select>
+                        </div>
+                    
+                        {{-- Date Acquired --}}
+                        <div>
+                            <label class="block text-sm font-medium mb-1">Date Acquired <span class="text-red-500">*</span></label>
+                            <input type="date" id="acqDate" class="w-full border border-gray-300 rounded px-3 py-2 text-sm">
+                        </div>
+
+                        {{-- Package Name with Search Bar --}}
+                        <div>
+                            <label class="block text-sm font-medium mb-1">Package Name</label>
+                            
+                            <div class="relative">
+                                <input 
+                                    type="text" 
+                                    id="acqPackageSearch" 
+                                    class="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:border-blue-500"
+                                    placeholder="Search package name..."
+                                    autocomplete="off">
+                                
+                                <input type="hidden" id="acqPackage" name="package_id">   <!-- This holds the ID or null -->
+                                
+                                <div id="packageSuggestions" 
+                                    class="absolute z-50 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-auto hidden">
+                                </div>
+                            </div>
+                        </div>
+                    
+                        {{-- Cost --}}
+                        <div>
+                            <label class="block text-sm font-medium mb-1">Cost</label>
+                            <input type="number" step="0.01" id="acqCost" class="w-full border border-gray-300 rounded px-3 py-2 text-sm">
+                        </div>
+                    
+                        {{-- IAR No. --}}
+                        <div>
+                            <label class="block text-sm font-medium mb-1">IAR No.</label>
+                            <input type="text" id="acqIar" class="w-full border border-gray-300 rounded px-3 py-2 text-sm">
+                        </div>
                     </div>
-                    <div>
-                        <label class="block text-sm font-medium mb-1">Date Acquired <span class="text-red-500">*</span></label>
-                        <input type="date" id="acqDate" class="w-full border border-gray-300 rounded px-3 py-2 text-sm">
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium mb-1">Cost</label>
-                        <input type="number" step="0.01" id="acqCost" class="w-full border border-gray-300 rounded px-3 py-2 text-sm">
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium mb-1">IAR No.</label>
-                        <input type="text" id="acqIar" class="w-full border border-gray-300 rounded px-3 py-2 text-sm">
-                    </div>
-                </div>
 
                 {{-- Condition & Quantity --}}
                 <div>
@@ -241,6 +268,7 @@
                         <thead class="bg-gray-100">
                             <tr>
                                 <th class="border border-gray-300 px-2 py-1 text-left">Library</th>
+                                <th class="border border-gray-300 px-2 py-1 text-left">Package</th>
                                 <th class="border border-gray-300 px-2 py-1">Source</th>
                                 <th class="border border-gray-300 px-2 py-1">Date</th>
                                 <th class="border border-gray-300 px-2 py-1">Cost</th>
@@ -293,5 +321,6 @@
 @endsection
 
 @push('scripts')
+    @vite('resources/js/package.js')
     @vite('resources/js/add-nonprint-acquisition.js')
 @endpush
