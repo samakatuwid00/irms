@@ -6,6 +6,7 @@ use App\Http\Controllers\Station\SchoolController;
 use App\Http\Controllers\Station\DistrictController;
 use App\Http\Controllers\Station\DivisionController;
 use App\Http\Controllers\Station\RegionController;
+use App\Http\Controllers\Station\ImportSF6Controller;
 
 Route::middleware('auth')->group(function () {
 
@@ -48,5 +49,9 @@ Route::middleware('auth')->group(function () {
     Route::post('/schools', [ManageStationController::class, 'addSchool'])->name('schools.store');
     Route::put('/schools/{school}', [ManageStationController::class, 'updateSchool'])->name('schools.update');
     Route::delete('/schools/{school}', [ManageStationController::class, 'destroySchool'])->name('schools.destroy');
+
+    Route::get('/import-sf6',            [ImportSF6Controller::class, 'index'])   ->name('import.sf6.index');
+    Route::post('/import-sf6/preview',   [ImportSF6Controller::class, 'preview']) ->name('import.sf6.preview');
+    Route::post('/import-sf6/store',     [ImportSF6Controller::class, 'store'])   ->name('import.sf6.store');
 
 });

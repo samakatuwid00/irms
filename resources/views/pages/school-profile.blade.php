@@ -222,8 +222,25 @@
 
         {{-- ================= STUDENT POPULATION ================= --}}
         <div class="bg-white rounded-xl shadow p-6">
-            <h3 class="text-lg font-semibold mb-4">Student Population</h3>
-            <p class="text-sm text-gray-600 mb-6">Manage student population data per school year</p>
+
+            {{-- Section header with Import SF6 button --}}
+            <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
+                <div>
+                    <h3 class="text-lg font-semibold">Student Population</h3>
+                    <p class="text-sm text-gray-600">Manage student population data per school year</p>
+                </div>
+                <a href="{{ route('import.sf6.index') }}"
+                   class="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-emerald-600
+                          text-white text-sm font-medium hover:bg-emerald-700 shadow transition
+                          whitespace-nowrap self-start sm:self-auto">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none"
+                         viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                              d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1M12 3v13m0 0l-4-4m4 4l4-4"/>
+                    </svg>
+                    Import SF6
+                </a>
+            </div>
 
             {{-- School Year Selection --}}
             <div class="mb-6">

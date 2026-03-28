@@ -36,6 +36,7 @@ export default defineConfig({
                 'resources/js/privacy-modal.js',
                 'resources/css/bosy/bosy.css',
                 'resources/js/package.js',
+                'resources/js/import-sf6.js',
             ],
             refresh: true,
         }),
