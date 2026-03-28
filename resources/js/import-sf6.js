@@ -1,36 +1,11 @@
-
 document.addEventListener('DOMContentLoaded', () => {
     const sf6Input    = document.getElementById('sf6_file');
-    const dropZone    = document.getElementById('dropZone');
     const fileName    = document.getElementById('fileName');
     const fileNameTxt = document.getElementById('fileNameText');
     const sf6Form     = document.getElementById('sf6Form');
     const previewBtn  = document.getElementById('previewBtn');
 
-    ['dragenter', 'dragover'].forEach(evt =>
-        dropZone.addEventListener(evt, e => {
-            e.preventDefault();
-            dropZone.classList.add('border-blue-500', 'bg-blue-50');
-        })
-    );
-
-    ['dragleave', 'drop'].forEach(evt =>
-        dropZone.addEventListener(evt, e => {
-            e.preventDefault();
-            dropZone.classList.remove('border-blue-500', 'bg-blue-50');
-        })
-    );
-
-    dropZone.addEventListener('drop', e => {
-        const files = e.dataTransfer.files;
-        if (files.length) {
-            const dt = new DataTransfer();
-            dt.items.add(files[0]);
-            sf6Input.files = dt.files;
-            showFileName(files[0].name);
-        }
-    });
-
+    // File input change only (no drag & drop)
     sf6Input.addEventListener('change', () => {
         if (sf6Input.files.length) showFileName(sf6Input.files[0].name);
     });
