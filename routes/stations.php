@@ -50,6 +50,9 @@ Route::middleware('auth')->group(function () {
     Route::put('/schools/{school}', [ManageStationController::class, 'updateSchool'])->name('schools.update');
     Route::delete('/schools/{school}', [ManageStationController::class, 'destroySchool'])->name('schools.destroy');
 
+    //AJAX endpoint for loading population data without page reload
+    Route::get('/school/population/{sy_id}', [SchoolController::class, 'getPopulationData'])->name('school.population.get');
+
     Route::get('/import-sf6',            [ImportSF6Controller::class, 'index'])   ->name('import.sf6.index');
     Route::post('/import-sf6/preview',   [ImportSF6Controller::class, 'preview']) ->name('import.sf6.preview');
     Route::post('/import-sf6/store',     [ImportSF6Controller::class, 'store'])   ->name('import.sf6.store');

@@ -50,6 +50,37 @@ class SchoolController extends BaseController
         return view('pages.school-profile', compact('school', 'gradeOffering', 'schoolYears', 'selectedSyId', 'population'));
     }
 
+    /**
+     * Get population data for a specific school year (AJAX endpoint)
+     */
+    public function getPopulationData($syId)
+    {
+        $schoolId = Auth::user()->station_id;
+        
+        // Validate school year exists
+        $schoolYear = SchoolYear::find($syId);
+        if (!$schoolYear) {
+            return response()->json([
+                'success' => false,
+                'message' => 'School year not found'
+            ], 404);
+        }
+        
+        // Get grade offerings
+        $gradeOffering = GradeOffering::where('school_id', $schoolId)->first();
+        
+        // Get population data
+        $population = Population::where('school_id', $schoolId)
+            ->where('sy_id', $syId)
+            ->first();
+        
+        return response()->json([
+            'success' => true,
+            'gradeOffering' => $gradeOffering,
+            'population' => $population,
+        ]);
+    }
+
     public function update(Request $request)
     {
         $school = School::where('id', Auth::user()->station_id)->firstOrFail();
