@@ -201,54 +201,6 @@
                         </ul>
                     </li>
 
-                    <!-- Masterlist Submenu (Mobile) -->
-                    @if (Auth::check() && in_array(Auth::user()?->userType?->level, [3, 4]))
-                        <li>
-                            <button type="button" id="mobile-masterlist-toggle"
-                                    class="w-full flex items-center justify-between px-3 py-2.5 text-sm rounded-lg transition-colors
-                                        {{ request()->routeIs('masterlist.*', 'nonprint-masterlist.*') ? 'bg-blue-100 text-blue-600' : 'text-gray-700 hover:bg-gray-100' }}">
-                                <span class="flex items-center gap-3">
-                                    <svg class="w-5 h-5" xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                                        <path d="M4 6h16M4 10h16M4 14h16M4 18h16"/>
-                                    </svg>
-                                    Masterlist
-                                </span>
-                                <svg id="mobile-masterlist-chevron"
-                                    class="w-4 h-4 transition-transform {{ request()->routeIs('masterlist.*', 'nonprint-masterlist.*') ? 'rotate-180' : '' }}"
-                                    xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                                    <path d="m6 9 6 6 6-6"/>
-                                </svg>
-                            </button>
-
-                            <ul id="mobile-masterlist-submenu"
-                                class="mt-1 ml-8 space-y-1 {{ request()->routeIs('masterlist.*', 'nonprint-masterlist.*') ? '' : 'hidden' }}">
-                                <li>
-                                    <a href="{{ route('masterlist.index') }}"
-                                    class="flex items-center gap-2 px-3 py-2 text-sm rounded-lg transition-colors
-                                            {{ request()->routeIs('masterlist.*') ? 'bg-blue-50 text-blue-600' : 'text-gray-600 hover:bg-gray-50' }}">
-                                        <svg class="w-4 h-4" xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                                            <path d="M6 9V2h12v7"/>
-                                            <path d="M6 18h12v4H6z"/>
-                                            <path d="M6 14h12"/>
-                                        </svg>
-                                        Print
-                                    </a>
-                                </li>
-                                <li>
-                                    <a href="{{ route('nonprint-masterlist.index') }}"
-                                    class="flex items-center gap-2 px-3 py-2 text-sm rounded-lg transition-colors
-                                            {{ request()->routeIs('nonprint-masterlist.*') ? 'bg-blue-50 text-blue-600' : 'text-gray-600 hover:bg-gray-50' }}">
-                                        <svg class="w-4 h-4" xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-                                            <path d="M14 2v6h6"/>
-                                        </svg>
-                                        Non-Print
-                                    </a>
-                                </li>
-                            </ul>
-                        </li>
-                    @endif
-
                     <!-- Users -->
                     @if (Auth::check() && in_array(Auth::user()?->userType?->level, [1, 2, 3, 4]))
                         @php
@@ -304,6 +256,54 @@
                     <li class="py-2">
                         <div class="border-t border-gray-200"></div>
                     </li>
+
+                    <!-- Masterlist Submenu (Mobile) -->
+                    @if (Auth::check() && in_array(Auth::user()?->userType?->level, [3, 4]))
+                        <li>
+                            <button type="button" id="mobile-masterlist-toggle"
+                                    class="w-full flex items-center justify-between px-3 py-2.5 text-sm rounded-lg transition-colors
+                                        {{ request()->routeIs('masterlist.*', 'nonprint-masterlist.*') ? 'bg-blue-100 text-blue-600' : 'text-gray-700 hover:bg-gray-100' }}">
+                                <span class="flex items-center gap-3">
+                                    <svg class="w-5 h-5" xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                        <path d="M4 6h16M4 10h16M4 14h16M4 18h16"/>
+                                    </svg>
+                                    Masterlist
+                                </span>
+                                <svg id="mobile-masterlist-chevron"
+                                    class="w-4 h-4 transition-transform {{ request()->routeIs('masterlist.*', 'nonprint-masterlist.*') ? 'rotate-180' : '' }}"
+                                    xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                    <path d="m6 9 6 6 6-6"/>
+                                </svg>
+                            </button>
+
+                            <ul id="mobile-masterlist-submenu"
+                                class="mt-1 ml-8 space-y-1 {{ request()->routeIs('masterlist.*', 'nonprint-masterlist.*') ? '' : 'hidden' }}">
+                                <li>
+                                    <a href="{{ route('masterlist.index') }}"
+                                    class="flex items-center gap-2 px-3 py-2 text-sm rounded-lg transition-colors
+                                            {{ request()->routeIs('masterlist.*') ? 'bg-blue-50 text-blue-600' : 'text-gray-600 hover:bg-gray-50' }}">
+                                        <svg class="w-4 h-4" xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                            <path d="M6 9V2h12v7"/>
+                                            <path d="M6 18h12v4H6z"/>
+                                            <path d="M6 14h12"/>
+                                        </svg>
+                                        Print
+                                    </a>
+                                </li>
+                                <li>
+                                    <a href="{{ route('nonprint-masterlist.index') }}"
+                                    class="flex items-center gap-2 px-3 py-2 text-sm rounded-lg transition-colors
+                                            {{ request()->routeIs('nonprint-masterlist.*') ? 'bg-blue-50 text-blue-600' : 'text-gray-600 hover:bg-gray-50' }}">
+                                        <svg class="w-4 h-4" xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                                            <path d="M14 2v6h6"/>
+                                        </svg>
+                                        Non-Print
+                                    </a>
+                                </li>
+                            </ul>
+                        </li>
+                    @endif
 
                     <!-- My Account -->
                     <li>
@@ -515,6 +515,66 @@
                         </div>
                     </li>
 
+                    <!-- Users -->
+                    @if (Auth::check() && in_array(Auth::user()?->userType?->level, [1, 2, 3, 4]))
+                        @php
+                            $level = Auth::user()->userType?->level;
+                            $routeName = 'users';
+                            $label = match ($level) {
+                                1 => 'School Users',
+                                2 => 'District Users',
+                                3 => 'Division Users',
+                                4 => 'Region Users',
+                            };
+                        @endphp
+                        <li class="rounded-lg transition-colors">
+                            <a href="{{ $routeName }}"
+                               class="flex items-center gap-x-3.5 py-2 px-2.5 text-sm text-gray-800 rounded-lg
+                                      {{ request()->routeIs('users') ? 'bg-blue-100 text-blue-600' : 'hover:bg-gray-100' }}">
+                                <svg class="size-4" xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                    <circle cx="9" cy="7" r="4"/>
+                                    <path d="M2 21v-2a4 4 0 0 1 4-4h6a4 4 0 0 1 4 4v2"/>
+                                    <circle cx="17" cy="7" r="3"/>
+                                    <path d="M22 21v-2a4 4 0 0 0-3-3.87"/>
+                                </svg>
+                                {{ $label }}
+                            </a>
+                        </li>
+                    @endif
+
+                    <!-- Stations -->
+                    @if (Auth::check() && in_array(Auth::user()?->userType?->level, [2, 3, 4]))
+                        @php
+                            $level = Auth::user()->userType?->level;
+                            $routeName = 'stations';
+                            $label = match ($level) {
+                                2 => 'Manage School',
+                                3 => 'Manage District and School',
+                                4 => 'Manage Division',
+                            };
+                        @endphp
+                        <li class="rounded-lg transition-colors">
+                            <a href="{{ $routeName }}"
+                               class="flex items-center gap-x-3.5 py-2 px-2.5 text-sm text-gray-800 rounded-lg
+                                      {{ request()->routeIs($routeName) ? 'bg-blue-100 text-blue-600' : 'hover:bg-gray-100' }}">
+                                <svg class="size-4" xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                    <path d="M12 3l9 6-9 6-9-6z"/>
+                                    <path d="M3 21h18"/>
+                                </svg>
+                                {{ $label }}
+                            </a>
+                        </li>
+                    @endif
+
+                    <!-- Divider Line -->
+                    @if (Auth::check() && 
+                         in_array(Auth::user()?->userType?->level, [2, 3, 4]) && 
+                         in_array(Auth::user()?->userType?->level, [3, 4]))
+                        <li class="px-2.5 py-2">
+                            <div class="h-px bg-gray-200"></div>
+                        </li>
+                    @endif
+
                     <!-- Masterlist Accordion (Desktop) -->
                     @if (Auth::check() && in_array(Auth::user()?->userType?->level, [3, 4]))
                         <li class="hs-accordion rounded-lg transition-colors"
@@ -572,58 +632,6 @@
                             </div>
                         </li>
                     @endif
-
-                    <!-- Users -->
-                    @if (Auth::check() && in_array(Auth::user()?->userType?->level, [1, 2, 3, 4]))
-                        @php
-                            $level = Auth::user()->userType?->level;
-                            $routeName = 'users';
-                            $label = match ($level) {
-                                1 => 'School Users',
-                                2 => 'District Users',
-                                3 => 'Division Users',
-                                4 => 'Region Users',
-                            };
-                        @endphp
-                        <li class="rounded-lg transition-colors">
-                            <a href="{{ $routeName }}"
-                               class="flex items-center gap-x-3.5 py-2 px-2.5 text-sm text-gray-800 rounded-lg
-                                      {{ request()->routeIs('users') ? 'bg-blue-100 text-blue-600' : 'hover:bg-gray-100' }}">
-                                <svg class="size-4" xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                                    <circle cx="9" cy="7" r="4"/>
-                                    <path d="M2 21v-2a4 4 0 0 1 4-4h6a4 4 0 0 1 4 4v2"/>
-                                    <circle cx="17" cy="7" r="3"/>
-                                    <path d="M22 21v-2a4 4 0 0 0-3-3.87"/>
-                                </svg>
-                                {{ $label }}
-                            </a>
-                        </li>
-                    @endif
-
-                    <!-- Stations -->
-                    @if (Auth::check() && in_array(Auth::user()?->userType?->level, [2, 3, 4]))
-                        @php
-                            $level = Auth::user()->userType?->level;
-                            $routeName = 'stations';
-                            $label = match ($level) {
-                                2 => 'Manage School',
-                                3 => 'Manage District and School',
-                                4 => 'Manage Division',
-                            };
-                        @endphp
-                        <li class="rounded-lg transition-colors">
-                            <a href="{{ $routeName }}"
-                               class="flex items-center gap-x-3.5 py-2 px-2.5 text-sm text-gray-800 rounded-lg
-                                      {{ request()->routeIs($routeName) ? 'bg-blue-100 text-blue-600' : 'hover:bg-gray-100' }}">
-                                <svg class="size-4" xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                                    <path d="M12 3l9 6-9 6-9-6z"/>
-                                    <path d="M3 21h18"/>
-                                </svg>
-                                {{ $label }}
-                            </a>
-                        </li>
-                    @endif
-
                 </ul>
             </nav>
 
