@@ -17,27 +17,7 @@ class LrAvailabilityService
         private readonly LrAggregationService $aggregationService,
     ) {}
 
-    private function getPopulationColumn(string $grade): ?string
-    {
-        return match (trim($grade)) {
-            'Kindergarten' => 'k_total',
-            'Grade 1' => 'g1_total',
-            'Grade 2' => 'g2_total',
-            'Grade 3' => 'g3_total',
-            'Grade 4' => 'g4_total',
-            'Grade 5' => 'g5_total',
-            'Grade 6' => 'g6_total',
-            'Grade 7' => 'g7_total',
-            'Grade 8' => 'g8_total',
-            'Grade 9' => 'g9_total',
-            'Grade 10' => 'g10_total',
-            'Grade 11' => 'g11_total',
-            'Grade 12' => 'g12_total',
-            default => null,
-        };
-    }
-
-    public function getChartData(?string $explicitLibraryId, int $userLevel, ?string $stationId): array
+    public function getChartData(?string $explicitLibraryId, int $userLevel, ?string $stationId, ?string $printTypeId = null): array
     {
         $gradeLevels = GradeLevel::query()
             ->select('id', 'grade', 'sort_order')
@@ -89,8 +69,9 @@ class LrAvailabilityService
 
         // Build aggregated LR qty per subject + grade
         $libraryIds = $allowedLibraryIds->values()->toArray();
+        $printTypeIds = $printTypeId ? [$printTypeId] : [];
         $aggregated = $this->aggregationService
-            ->aggregateBySubjectGrade($libraryIds, $gradeIds, $subjectIds);
+            ->aggregateBySubjectGrade($libraryIds, $gradeIds, $subjectIds, $printTypeIds);
 
         $series = $this->buildSeriesFromData($subjects, $gradeLevels, $aggregated, 'total_qty');
 
@@ -119,9 +100,10 @@ class LrAvailabilityService
             'series' => $series,
             'library_scope' => $explicitLibraryId ? 'single_library' : $libraryScope,
             'library_id' => $explicitLibraryId ?: 'auto',
-            'source' => 'live_query_direct_schema', // Changed to indicate direct schema access
+            'source' => 'live_query_direct_schema',
             'user_level' => $userLevel,
             'station_id' => $stationId,
+            'print_type_id' => $printTypeId ?: null,
         ];
     }
 

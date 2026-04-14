@@ -18,7 +18,6 @@ function filterAndRenderChart(keyStage) {
     const { grade_level, series } = _availabilityFullData;
     const allowedGrades = KEY_STAGE_RANGES[keyStage]?.grades ?? grade_level;
 
-    // Find indices of grades that belong to the selected key stage
     const indices = grade_level
         .map((g, i) => ({ grade: g, index: i }))
         .filter(({ grade }) => allowedGrades.includes(grade))
@@ -37,6 +36,139 @@ function filterAndRenderChart(keyStage) {
     }, /* notMerge: */ false);
 }
 
+async function fetchAvailabilityData() {
+    const printTypeSelect = document.getElementById('printTypeFilter');
+    const printTypeId = printTypeSelect ? printTypeSelect.value : '';
+
+    const url = new URL('/chart/lr-availability', window.location.origin);
+    if (printTypeId) url.searchParams.set('print_type_id', printTypeId);
+
+    const response = await fetch(url.toString(), {
+        headers: { 'Accept': 'application/json' },
+        credentials: 'same-origin'
+    });
+
+    if (!response.ok) throw new Error(`Failed to load chart data: ${response.status}`);
+    return await response.json();
+}
+
+/**
+ * Build the complete ECharts option object from fresh data.
+ * Both init and reload use this so setOption always receives a full
+ * option (yAxis, grid, toolbox included), preventing the
+ * "yAxis '0' not found" error that happens with partial notMerge updates.
+ */
+function buildChartOption(result, chartDom, myChart) {
+    const labelOption = {
+        show: false,
+        position: 'insideBottom',
+        distance: 15,
+        align: 'left',
+        verticalAlign: 'middle',
+        rotate: 90,
+        formatter: '{c} {name|{a}}',
+        fontSize: 16,
+        rich: { name: {} }
+    };
+
+    const finalSeries = result.series.map(s =>
+        s.type === 'bar' ? { ...s, label: labelOption } : s
+    );
+
+    const option = {
+        tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
+        legend: { data: finalSeries.map(s => s.name) },
+        toolbox: {
+            show: true,
+            orient: 'horizontal',
+            top: 5,
+            right: 10,
+            feature: {
+                mark: { show: true },
+                dataView: { show: true, readOnly: false },
+                magicType: { show: true, type: ['line', 'bar', 'stack'] },
+                restore: { show: true },
+                saveAsImage: { show: true },
+                myFullScreen: {
+                    show: true,
+                    title: 'Fullscreen',
+                    icon: 'path://M128 128h256v256H128z',
+                    onclick: function () {
+                        if (!document.fullscreenElement) {
+                            chartDom.dataset.originalBg = chartDom.style.backgroundColor || '';
+                            chartDom.style.backgroundColor = '#ffffff';
+                            chartDom.requestFullscreen()
+                                .then(() => myChart.resize())
+                                .catch(err => {
+                                    console.error('Fullscreen failed:', err);
+                                    chartDom.style.backgroundColor = chartDom.dataset.originalBg;
+                                });
+                        } else {
+                            document.exitFullscreen().then(() => {
+                                chartDom.style.backgroundColor = chartDom.dataset.originalBg || '';
+                                myChart.resize();
+                            });
+                        }
+                    }
+                }
+            }
+        },
+        grid: { left: '5%', right: '5%', containLabel: true },
+        xAxis: [{
+            type: 'category',
+            axisTick: { show: false },
+            data: result.grade_level,
+            axisLabel: {
+                interval: 0,
+                rotate: 60,
+                fontSize: 12,
+                margin: 14,
+                color: '#555',
+                align: 'right',
+                verticalAlign: 'middle',
+                overflow: 'truncate',
+                width: 90,
+                ellipsis: '...'
+            }
+        }],
+        yAxis: [{ type: 'value' }],
+        series: finalSeries
+    };
+
+    return { option, finalSeries };
+}
+
+async function reloadAvailabilityChart() {
+    if (!_availabilityChart) return;
+
+    // showLoading must be called before the async work — never mid-render.
+    _availabilityChart.showLoading({ text: 'Loading\u2026', maskColor: 'rgba(255,255,255,0.7)' });
+
+    try {
+        const result = await fetchAvailabilityData();
+        const chartDom = document.getElementById('chart');
+        const { option, finalSeries } = buildChartOption(result, chartDom, _availabilityChart);
+
+        _availabilityFullData = { ...result, series: finalSeries };
+
+        // Defer both setOption calls to the next task so they never run
+        // inside an ECharts render cycle ("setOption during main process").
+        setTimeout(() => {
+            // Full replace (notMerge:true) ensures yAxis/grid are always present.
+            _availabilityChart.setOption(option, /* notMerge */ true);
+            _availabilityChart.hideLoading();
+
+            // Re-apply the current key-stage slice on top of the fresh data.
+            const ksSelect = document.getElementById('schoolYearFilter');
+            if (ksSelect) filterAndRenderChart(ksSelect.value);
+        }, 0);
+
+    } catch (err) {
+        console.error('Failed to reload LR Availability chart:', err);
+        _availabilityChart.hideLoading();
+    }
+}
+
 async function initAvailabilityChart() {
     const chartDom = document.getElementById('chart');
     if (!chartDom) {
@@ -49,106 +181,29 @@ async function initAvailabilityChart() {
         const myChart = echarts.init(chartDom);
         _availabilityChart = myChart;
 
-        const response = await fetch('/chart/lr-availability', {
-            headers: { 'Accept': 'application/json' },
-            credentials: 'same-origin'
-        });
+        const result = await fetchAvailabilityData();
+        const { option, finalSeries } = buildChartOption(result, chartDom, myChart);
 
-        if (!response.ok) throw new Error(`Failed to load chart data: ${response.status}`);
-
-        const result = await response.json();
-        _availabilityFullData = result; // ← cache full data
-
-        const { grade_level, series } = result;
-
-        const labelOption = {
-            show: false,
-            position: 'insideBottom',
-            distance: 15,
-            align: 'left',
-            verticalAlign: 'middle',
-            rotate: 90,
-            formatter: '{c} {name|{a}}',
-            fontSize: 16,
-            rich: { name: {} }
-        };
-
-        const finalSeries = series.map(s =>
-            s.type === 'bar' ? { ...s, label: labelOption } : s
-        );
-
-        // Store labelled series back so filterAndRenderChart uses them too
+        // Cache full labelled data for key-stage slicing
         _availabilityFullData = { ...result, series: finalSeries };
-
-        const option = {
-            tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
-            legend: { data: finalSeries.map(s => s.name) },
-            toolbox: {
-                show: true,
-                orient: 'horizontal',
-                top: 5,
-                right: 10,
-                feature: {
-                    mark: { show: true },
-                    dataView: { show: true, readOnly: false },
-                    magicType: { show: true, type: ['line', 'bar', 'stack'] },
-                    restore: { show: true },
-                    saveAsImage: { show: true },
-                    myFullScreen: {
-                        show: true,
-                        title: 'Fullscreen',
-                        icon: 'path://M128 128h256v256H128z',
-                        onclick: function () {
-                            if (!document.fullscreenElement) {
-                                chartDom.dataset.originalBg = chartDom.style.backgroundColor || '';
-                                chartDom.style.backgroundColor = '#ffffff';
-                                chartDom.requestFullscreen()
-                                    .then(() => myChart.resize())
-                                    .catch(err => {
-                                        console.error('Fullscreen failed:', err);
-                                        chartDom.style.backgroundColor = chartDom.dataset.originalBg;
-                                    });
-                            } else {
-                                document.exitFullscreen().then(() => {
-                                    chartDom.style.backgroundColor = chartDom.dataset.originalBg || '';
-                                    myChart.resize();
-                                });
-                            }
-                        }
-                    }
-                }
-            },
-            grid: { left: '5%', right: '5%', containLabel: true },
-            xAxis: [{
-                type: 'category',
-                axisTick: { show: false },
-                data: grade_level,
-                axisLabel: {
-                    interval: 0,
-                    rotate: 60,
-                    fontSize: 12,
-                    margin: 14,
-                    color: '#555',
-                    align: 'right',
-                    verticalAlign: 'middle',
-                    overflow: 'truncate',
-                    width: 90,
-                    ellipsis: '...'
-                }
-            }],
-            yAxis: [{ type: 'value' }],
-            series: finalSeries
-        };
 
         myChart.setOption(option);
 
-        // ── Apply the currently selected key stage on first load ──
+        // Apply the currently selected key stage on first load
         const ksSelect = document.getElementById('schoolYearFilter');
         if (ksSelect) {
-            filterAndRenderChart(ksSelect.value); // K1 is selected by default
+            filterAndRenderChart(ksSelect.value);
 
             ksSelect.addEventListener('change', (e) => {
                 filterAndRenderChart(e.target.value);
+            });
+        }
+
+        // Re-fetch when print type filter changes
+        const printTypeSelect = document.getElementById('printTypeFilter');
+        if (printTypeSelect) {
+            printTypeSelect.addEventListener('change', () => {
+                reloadAvailabilityChart();
             });
         }
 
@@ -173,7 +228,7 @@ async function initAvailabilityChart() {
 function setupLazyAvailabilityChart() {
     const chartContainer = document.getElementById('chart');
     if (!chartContainer) {
-        console.warn('Chart container #chart not found — lazy loading skipped');
+        console.warn('Chart container #chart not found - lazy loading skipped');
         return;
     }
 

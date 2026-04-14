@@ -112,7 +112,7 @@
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
                 </svg>
                 <p class="font-medium">No titles found</p>
-                <p class="text-sm mt-1">Try a different keyword or <button type="button" class="trigger-tab-add text-blue-600 underline">submit a new request</button>.</p>
+                <p class="text-sm mt-1">Try a different keyword or <button type="button" class="trigger-tab-add text-blue-600 underline">Request Add to Masterlist</button>.</p>
             </div>
             <div id="initialHint" class="text-center py-16 text-gray-400">
                 <svg class="mx-auto mb-4 h-14 w-14 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">

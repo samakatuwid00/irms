@@ -19,7 +19,8 @@ class LrSufficiencyService
     public function getSufficiencyData(
         ?string $explicitLibraryId,
         int     $userLevel,
-        ?string $stationId
+        ?string $stationId,
+        ?string $printTypeId = null
     ): array {
         $gradeLevels = GradeLevel::query()
             ->select('id', 'grade', 'sort_order')
@@ -36,60 +37,53 @@ class LrSufficiencyService
             $explicitLibraryId, $userLevel, $stationId
         );
 
-        // MODIFIED: Force use of live queries for ALL user levels
-        // Materialized views are no longer used for testing purposes
-        $useMv = false; // Force real-time queries for all levels
-
         Log::info('LR Sufficiency data source decision', [
-            'user_level'    => $userLevel,
-            'station_id'    => $stationId,
-            'using_mv'      => $useMv,
-            'library_count' => $allowedLibraryIds?->count() ?? 0,
-            'source'        => 'live_query_direct_schema'
+            'user_level'     => $userLevel,
+            'station_id'     => $stationId,
+            'print_type_id'  => $printTypeId ?: 'all',
+            'library_count'  => $allowedLibraryIds?->count() ?? 0,
+            'source'         => 'live_query_direct_schema',
         ]);
-
-        // Removed MV path - now all levels use live queries
-        // if ($useMv) {
-        //     return $this->buildFromMv(...);
-        // }
 
         return $this->buildFromLiveQuery(
             $subjects, $gradeLevels, $allowedLibraryIds,
-            $userLevel, $stationId, $explicitLibraryId
+            $userLevel, $stationId, $explicitLibraryId, $printTypeId
         );
     }
 
-    // ── Live query path (now used for ALL user levels) ──────────────────────
+    // ── Live query path ──────────────────────────────────────────────────────
 
     private function buildFromLiveQuery(
-        Collection          $subjects,
-        Collection          $gradeLevels,
-        ?Collection         $allowedLibraryIds,
-        int                 $userLevel,
-        ?string             $stationId,
-        ?string             $explicitLibraryId
+        Collection  $subjects,
+        Collection  $gradeLevels,
+        ?Collection $allowedLibraryIds,
+        int         $userLevel,
+        ?string     $stationId,
+        ?string     $explicitLibraryId,
+        ?string     $printTypeId = null
     ): array {
-        $libraryIds = $this->normalizeLibraryIds($allowedLibraryIds);
-        $gradeIds   = $gradeLevels->pluck('id')->all();
-        $subjectIds = $subjects->pluck('id')->all();
+        $libraryIds  = $this->normalizeLibraryIds($allowedLibraryIds);
+        $gradeIds    = $gradeLevels->pluck('id')->all();
+        $subjectIds  = $subjects->pluck('id')->all();
+        $printTypeIds = $printTypeId ? [$printTypeId] : [];
 
-        // ── OPTIMIZATION 1: Bulk-load ALL SubjectGradeLevels in ONE query ──
+        // Bulk-load all SubjectGradeLevels in one query
         $sgls = SubjectGradeLevel::whereIn('subject_id', $subjectIds)
             ->whereIn('grade_level_id', $gradeIds)
             ->get()
             ->keyBy(fn($s) => $s->subject_id . '_' . $s->grade_level_id);
 
-        // ── OPTIMIZATION 2: Bulk-load ALL LR quantities in ONE query ──
+        // Bulk-load all LR quantities in one query, filtered by print type if set
         $lrData = empty($libraryIds)
             ? collect()
             : $this->aggregationService
-                ->aggregateBySubjectGrade($libraryIds, $gradeIds, $subjectIds)
+                ->aggregateBySubjectGrade($libraryIds, $gradeIds, $subjectIds, $printTypeIds)
                 ->keyBy(fn($r) => $r->subject_id . '_' . $r->grade_level_id);
 
-        // ── OPTIMIZATION 3: Bulk-load ALL population totals in ONE query ──
+        // Bulk-load all population totals in one query
         $populationByGrade = $this->bulkPopulationByGrade($libraryIds, $gradeLevels, $userLevel, $stationId);
 
-        // ── Assemble the matrix in PHP, zero DB calls ──
+        // Assemble the matrix in PHP — zero additional DB calls
         $tableData = [];
 
         foreach ($subjects as $subject) {
@@ -108,7 +102,6 @@ class LrSufficiencyService
             }
         }
 
-        // Determine library scope based on user level
         $libraryScope = match ($userLevel) {
             4 => 'region',
             3 => 'division',
@@ -119,16 +112,12 @@ class LrSufficiencyService
 
         return $this->wrapResult(
             $tableData, $gradeLevels, false, $libraryScope, $userLevel,
-            $explicitLibraryId, $stationId
+            $explicitLibraryId, $stationId, $printTypeId
         );
     }
 
     /**
-     * Fetch population totals for ALL grade levels in a SINGLE query.
-     *
-     * Uses a CASE-based SUM so the DB does one pass over populations
-     * instead of one query per grade.
-     *
+     * Fetch population totals for ALL grade levels in a single query.
      * Returns [ grade_level_id => total_population ]
      */
     private function bulkPopulationByGrade(array $libraryIds, Collection $gradeLevels, int $userLevel, ?string $stationId): array
@@ -136,7 +125,7 @@ class LrSufficiencyService
         if (empty($libraryIds)) {
             Log::debug('No library IDs for population query', [
                 'user_level' => $userLevel,
-                'station_id' => $stationId
+                'station_id' => $stationId,
             ]);
             return [];
         }
@@ -149,16 +138,15 @@ class LrSufficiencyService
 
         if (empty($schoolIds)) {
             Log::debug('No schools found for population query', [
-                'user_level' => $userLevel,
-                'station_id' => $stationId,
-                'library_count' => count($libraryIds)
+                'user_level'    => $userLevel,
+                'station_id'    => $stationId,
+                'library_count' => count($libraryIds),
             ]);
             return [];
         }
 
         $columnMap = $this->gradeColumnMap();
 
-        // Build one SELECT with a SUM(CASE...) per grade column
         $selects = [];
         foreach ($columnMap as $gradeName => $col) {
             $selects[] = DB::raw("SUM({$col}) AS {$col}");
@@ -172,13 +160,12 @@ class LrSufficiencyService
         if (!$row) {
             Log::warning('No population data found for schools', [
                 'school_count' => count($schoolIds),
-                'user_level' => $userLevel,
-                'station_id' => $stationId
+                'user_level'   => $userLevel,
+                'station_id'   => $stationId,
             ]);
             return [];
         }
 
-        // Map grade_level_id → population total
         $result = [];
         foreach ($gradeLevels as $gl) {
             $col = $columnMap[trim($gl->grade)] ?? null;
@@ -186,10 +173,10 @@ class LrSufficiencyService
         }
 
         Log::info('Population data retrieved', [
-            'user_level' => $userLevel,
-            'station_id' => $stationId,
-            'school_count' => count($schoolIds),
-            'population_totals' => $result
+            'user_level'        => $userLevel,
+            'station_id'        => $stationId,
+            'school_count'      => count($schoolIds),
+            'population_totals' => $result,
         ]);
 
         return $result;
@@ -234,7 +221,8 @@ class LrSufficiencyService
         string     $libraryScope,
         int        $userLevel,
         ?string    $explicitLibraryId = null,
-        ?string    $stationId = null
+        ?string    $stationId = null,
+        ?string    $printTypeId = null
     ): array {
         return [
             'grade_levels'  => $gradeLevels->pluck('grade')->toArray(),
@@ -244,7 +232,8 @@ class LrSufficiencyService
             'using_mv'      => $useMv,
             'user_level'    => $userLevel,
             'station_id'    => $stationId,
-            'source'        => 'live_query_direct_schema', // Changed from 'live_query'
+            'print_type_id' => $printTypeId ?: null,
+            'source'        => 'live_query_direct_schema',
         ];
     }
 
@@ -256,9 +245,6 @@ class LrSufficiencyService
         return array_values(array_filter(array_map('strval', $ids)));
     }
 
-    /**
-     * Single source of truth for grade name → population column mapping.
-     */
     private function gradeColumnMap(): array
     {
         return [

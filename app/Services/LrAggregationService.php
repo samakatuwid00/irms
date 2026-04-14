@@ -32,7 +32,8 @@ class LrAggregationService
     public function aggregateBySubjectGrade(
         array $libraryIds,
         array $gradeIds = [],
-        array $subjectIds = []
+        array $subjectIds = [],
+        array $printTypeIds = []
     ): Collection {
         if (empty($libraryIds)) {
             return collect();
@@ -56,6 +57,11 @@ class LrAggregationService
             ])
             ->whereNotNull('subject_grade_level_ids')
             ->where('subject_grade_level_ids', '<>', '');
+
+        // Optional: filter by print type(s)
+        if (!empty($printTypeIds)) {
+            $exploded->whereIn('print_resources.print_type_id', $printTypeIds);
+        }
 
         // Step 3: aggregate at subject + grade level.
         $query = DB::table(DB::raw("({$exploded->toSql()}) AS exploded"))
@@ -86,7 +92,7 @@ class LrAggregationService
      * @param  array  $gradeIds
      * @return array  [ grade_level_id => total_qty ]
      */
-    public function aggregateByGrade(array $libraryIds, array $gradeIds = []): array
+    public function aggregateByGrade(array $libraryIds, array $gradeIds = [], array $printTypeIds = []): array
     {
         if (empty($libraryIds)) {
             return [];
@@ -105,6 +111,11 @@ class LrAggregationService
             ])
             ->whereNotNull('subject_grade_level_ids')
             ->where('subject_grade_level_ids', '<>', '');
+
+        // Optional: filter by print type(s)
+        if (!empty($printTypeIds)) {
+            $exploded->whereIn('print_resources.print_type_id', $printTypeIds);
+        }
 
         $query = DB::table(DB::raw("({$exploded->toSql()}) AS exploded"))
             ->mergeBindings($exploded)

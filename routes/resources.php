@@ -153,4 +153,16 @@ Route::middleware('auth')->group(function () {
     Route::patch('/school-library/update-estimated-resource-np', [ManageEstimatedResourceCountController::class, 'updateEstimatedResourceNP'])
         ->name('school-library.update-estimated-resource-np');
 
+    // ============================================================
+    // PACKAGE
+    // ============================================================
+    Route::get(
+        '/search-nonprint-resource/package/{packageId}/add',
+        [SearchNonPrintResourceController::class, 'addPackageForm']
+    )->name('search-nonprint-resource.add-package-form');
+    
+    Route::post(
+        '/search-nonprint-resource/package/{packageId}/store',
+        [SearchNonPrintResourceController::class, 'storePackage']
+    )->name('search-nonprint-resource.store-package');
 });

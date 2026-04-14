@@ -123,8 +123,8 @@
                                                     tooltip.classList.remove('visible', 'opacity-100');
                                                 " @endif>
                                                 <span
-                                                    class="inline-block bg-blue-100 text-blue-800 font-medium px-2 py-1 rounded-full cursor-default">
-                                                    {{ $first->subject->subject_name }} -
+                                                    class="inline-block px-2 py-1 text-xs rounded-full bg-blue-100 text-blue-700 cursor-default">
+                                                    {{ $first->subject->abbrv }} -
                                                     {{ $first->gradeLevel->grade }}
                                                     @if ($count > 1)
                                                         <span class="ml-1 text-green-600">+{{ $count - 1 }}</span>
@@ -343,7 +343,7 @@
                                                     " @endif>
                                                     <span
                                                         class="inline-block bg-blue-100 text-blue-800 font-medium px-2 py-1 rounded-full cursor-default">
-                                                        {{ $first->subject->subject_name }} -
+                                                        {{ $first->subject->abbrv }} -
                                                         {{ $first->gradeLevel->grade }}
                                                         @if ($count > 1)
                                                             <span

@@ -180,32 +180,42 @@
 
         </div>
 
-        <div class="flex flex-wrap items-end gap-0 md:gap-6 mb-0">
-            <x-filter-select
-                id="globalFilter"
-                label="Visualization"
-                :options="[
-                    ['value' => 'lr-availability', 'label' => 'Subject Level LR Availability'],
-                    ['value' => 'lr-ratio',        'label' => 'Learning Resources to Learner Ratio'],
-                    ['value' => 'lr-exdef',        'label' => 'Excess / Deficiency'],
-                    ['value' => 'lr-heatmap',      'label' => 'Equitable Distribution'],
-                ]"
-                class="flex-1 min-w-[220px]"
-            />
+<div class="flex flex-col sm:flex-row flex-wrap items-stretch sm:items-end gap-4 md:gap-6 mb-0">
+    
+    <x-filter-select
+        id="globalFilter"
+        label="Visualization"
+        :options="[
+            ['value' => 'lr-availability', 'label' => 'Subject Level LR Availability'],
+            ['value' => 'lr-ratio',        'label' => 'Learning Resources to Learner Ratio'],
+            ['value' => 'lr-exdef',        'label' => 'Excess / Deficiency'],
+            ['value' => 'lr-heatmap',      'label' => 'Equitable Distribution'],
+        ]"
+        class="w-full sm:flex-1 min-w-0"
+    />
 
-            <x-filter-select
-                id="schoolYearFilter"
-                label="Key Stages"
-                :options="[
-                    ['value' => 'All', 'label' => 'All Key Stages', 'selected' => true],
-                    ['value' => 'K1', 'label' => 'Key Stage 1'],
-                    ['value' => 'K2', 'label' => 'Key Stage 2'],
-                    ['value' => 'JH', 'label' => 'Junior High'],
-                    ['value' => 'SH', 'label' => 'Senior High'],
-                ]"
-                class="flex-1 min-w-[180px] md:min-w-[160px]"
-            />
-        </div>
+    <x-filter-select
+        id="schoolYearFilter"
+        label="Key Stages"
+        :options="[
+            ['value' => 'All', 'label' => 'All Key Stages', 'selected' => true],
+            ['value' => 'K1', 'label' => 'Key Stage 1'],
+            ['value' => 'K2', 'label' => 'Key Stage 2'],
+            ['value' => 'JH', 'label' => 'Junior High'],
+            ['value' => 'SH', 'label' => 'Senior High'],
+        ]"
+        class="w-full sm:flex-1 min-w-0"
+    />
+
+    <!-- Print Type Filter -->
+    <x-filter-select
+        id="printTypeFilter"
+        label="Print Types"
+        :options="$printTypeOptions"
+        class="w-full sm:flex-1 min-w-0"
+    />
+
+</div>
   
         <!-- LR Availability -->
         <x-chart-card id="lr-availability" title="LR Availability" class="chart-container">
@@ -314,7 +324,7 @@
                     <span class="font-bold text-red-600">Note:</span>
                     <span class="font-semibold text-gray-800"> Status</span>
                     = Progress based on total LR vs estimated resources. BOSY / EOSY is set by the Regional Account.
-                    It automatically RESETS ALL to 0 when period changes. Finalized data from past periods becomes permanent
+                    It automatically RESETS ALL to 0 when period changes. Finalized data from past period becomes permanent
                 </p>
                 
             </div>

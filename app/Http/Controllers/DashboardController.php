@@ -138,22 +138,42 @@ class DashboardController extends BaseController
             'total_population' => $totalPop,
         ];
 
-        return view('pages.dashboard', compact(
-            'user',
-            'totalLrData',
-            'populationData',
-            'overallRatioData',
-            'lrNeedsData',
-            'regionOptions',
-            'userLevel',
-            'stationId',
-            'divisions',
-        ));
-    }
+        // Fetch Print Types for the filter
+            $printTypes = \App\Models\PrintType::select('id', 'type_name')
+                ->orderBy('type_name')
+                ->get()
+                ->map(function ($type) {
+                    return [
+                        'value' => $type->id,
+                        'label' => $type->type_name
+                    ];
+                })
+                ->toArray();
+
+            // Add "All" option at the top
+            $printTypeOptions = array_merge(
+                [['value' => '', 'label' => 'All Print Types']],
+                $printTypes
+            );
+
+            return view('pages.dashboard', compact(
+                'user',
+                'totalLrData',
+                'populationData',
+                'overallRatioData',
+                'lrNeedsData',
+                'regionOptions',
+                'userLevel',
+                'stationId',
+                'divisions',
+                'printTypeOptions'
+            ));
+        }
 
     public function getLrAvailabilityData(Request $request)
     {
         $explicitLibraryId = $request->query('library_id');
+        $printTypeId = $request->query('print_type_id') ?: null;
         $user = Auth::user();
 
         $userLevel = $this->determineUserLevel($user);
@@ -161,6 +181,7 @@ class DashboardController extends BaseController
 
         Log::info('LR Availability chart requested', [
             'explicit_library_id' => $explicitLibraryId ?: 'none (auto-scope)',
+            'print_type_id'       => $printTypeId ?: 'all',
             'user_level' => $userLevel,
             'station_id' => $stationId,
             'user_id' => Auth::id(),
@@ -171,7 +192,8 @@ class DashboardController extends BaseController
             $data = $this->lrAvailabilityService->getChartData(
                 $explicitLibraryId,
                 $userLevel,
-                $stationId
+                $stationId,
+                $printTypeId
             );
 
             return response()->json($data);
@@ -194,12 +216,14 @@ class DashboardController extends BaseController
     public function getLrRatioData(Request $request)
     {
         $explicitLibraryId = $request->query('library_id');
+        $printTypeId = $request->query('print_type_id') ?: null;
         $user = Auth::user();
         $userLevel = $this->determineUserLevel($user);
         $stationId = $this->determineStationId($user, $userLevel);
 
         Log::info('LR Ratio chart requested', [
             'explicit_library_id' => $explicitLibraryId ?: 'none (auto-scope)',
+            'print_type_id'       => $printTypeId ?: 'all',
             'user_level' => $userLevel,
             'station_id' => $stationId,
             'user_id' => Auth::id(),
@@ -210,7 +234,8 @@ class DashboardController extends BaseController
             $data = $this->lrRatioService->getChartDataCached(
                 $explicitLibraryId,
                 $userLevel,
-                $stationId
+                $stationId,
+                $printTypeId
             );
 
             return response()->json($data);
@@ -233,6 +258,7 @@ class DashboardController extends BaseController
     public function getLrSufficiencyData(Request $request)
     {
         $explicitLibraryId = $request->query('library_id');
+        $printTypeId = $request->query('print_type_id') ?: null;
         $user = Auth::user();
 
         $userLevel = $this->determineUserLevel($user);
@@ -242,15 +268,17 @@ class DashboardController extends BaseController
             $data = $this->lrSufficiencyService->getSufficiencyData(
                 $explicitLibraryId,
                 $userLevel,
-                $stationId
+                $stationId,
+                $printTypeId
             );
 
             return response()->json($data);
         } catch (\Exception $e) {
             Log::error('LR Sufficiency chart failed', [
-                'message' => $e->getMessage(),
-                'user_level' => $userLevel,
-                'station_id' => $stationId,
+                'message'       => $e->getMessage(),
+                'user_level'    => $userLevel,
+                'station_id'    => $stationId,
+                'print_type_id' => $printTypeId ?: 'all',
             ]);
 
             return response()->json(['error' => $e->getMessage()], 500);
@@ -260,16 +288,25 @@ class DashboardController extends BaseController
     public function getLrHeatmapData(Request $request)
     {
         $explicitLibraryId = $request->query('library_id');
+        $printTypeId = $request->query('print_type_id') ?: null;
         $user = Auth::user();
 
         $userLevel = $this->determineUserLevel($user);
         $stationId = $this->determineStationId($user, $userLevel);
 
+        Log::info('LR Heatmap data requested', [
+            'explicit_library_id' => $explicitLibraryId ?: 'none (auto-scope)',
+            'print_type_id'       => $printTypeId ?: 'all',
+            'user_level'          => $userLevel,
+            'station_id'          => $stationId,
+        ]);
+
         try {
             $data = $this->lrHeatmapService->getHeatmapData(
                 $explicitLibraryId,
                 $userLevel,
-                $stationId
+                $stationId,
+                $printTypeId
             );
 
             return response()->json($data);

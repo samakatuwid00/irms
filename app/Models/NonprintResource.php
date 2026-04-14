@@ -31,7 +31,7 @@ class NonprintResource extends Model
         'station_type',
         'station_id',
         'encoded_by',
-        'approver_station'
+        'approver_station',
     ];
     protected $table = 'nonprint_resources';
 
@@ -67,15 +67,24 @@ class NonprintResource extends Model
     // null  → sum all acquisitions (unfiltered)
     // []    → empty result (no matching library)
     // [ids] → sum only those libraries
-    public function scopedQuantities(?array $libraryIds): array
+    // $excludePackaged = true → skip acquisitions that belong to a package (package_id IS NOT NULL)
+    public function scopedQuantities(?array $libraryIds, bool $excludePackaged = false): array
     {
-        if ($libraryIds === null) {
-            $acqs = $this->nonprintAcquisitions;
-        } elseif (empty($libraryIds)) {
+        if (empty($libraryIds) && $libraryIds !== null) {
             return ['usable' => 0, 'partially_damaged' => 0, 'damaged' => 0, 'lost' => 0, 'condemnable' => 0];
-        } else {
-            $acqs = $this->nonprintAcquisitions->whereIn('library_id', $libraryIds);
         }
+
+        $query = $this->nonprintAcquisitions();
+
+        if ($libraryIds !== null) {
+            $query->whereIn('library_id', $libraryIds);
+        }
+
+        if ($excludePackaged) {
+            $query->whereNull('package_id');
+        }
+
+        $acqs = $query->get();
 
         return [
             'usable'            => $acqs->sum('usable'),
@@ -90,11 +99,12 @@ class NonprintResource extends Model
     public function subjects()
     {
         if (!$this->subject_grade_level_ids) return collect();
+
         $ids = explode(',', $this->subject_grade_level_ids);
 
-        return SubjectGradeLevel::with(['subject', 'gradeLevel'])
-            ->whereIn('id', $ids)
-            ->get();
+        return SubjectGradeLevel::whereIn('id', $ids)  // Query Builder
+            ->with(['subject', 'gradeLevel'])           // eager load BEFORE get()
+            ->get();                                     // NOW returns Collection
     }
 
     /**
@@ -116,74 +126,95 @@ class NonprintResource extends Model
         return asset('assets/images/def.jpg');
     }
 
-    public function showDetails(?array $libraryIds = null): array
+    /**
+     * Build the data array used by the view modal.
+     *
+     * Behaviour:
+     *  - $packageId supplied  → show ONLY acquisitions belonging to that package
+     *  - $packageId null      → show ONLY non-packaged acquisitions (package_id IS NULL)
+     *
+     * In both cases the returned acquisition rows include a `package_id` field so
+     * the JS layer always has the raw value available if needed.
+     *
+     * @param  array|null  $libraryIds  Filter to specific library IDs (null = all libraries)
+     * @param  string|null $packageId   If set, show acquisitions for this package only
+     */
+    public function showDetails(?array $libraryIds = null, ?string $packageId = null): array
     {
-        // Scope quantities to the relevant library IDs so the modal summary
-        // reflects the same filter as the table row that opened it.
         $quantities = $this->scopedQuantities($libraryIds);
 
-        // Format subjects
         $subjects = [];
         if (method_exists($this, 'subjects')) {
             foreach ($this->subjects() as $subjectGradeLevel) {
                 $subjects[] = [
                     'subject' => $subjectGradeLevel->subject->subject_name ?? 'N/A',
-                    'grade' => $subjectGradeLevel->gradeLevel->grade ?? 'N/A'
+                    'grade'   => $subjectGradeLevel->gradeLevel->grade ?? 'N/A',
                 ];
             }
         }
 
-        // Format acquisitions — optionally scoped to specific library IDs
+        // ── Build acquisition query ────────────────────────────────────────
+        $acqQuery = $this->nonprintAcquisitions();
+
+        if ($packageId !== null) {
+            // Opened from the Package modal → show only this package's acquisitions
+            $acqQuery->where('package_id', $packageId);
+        } else {
+            // Opened as a standalone resource → exclude any packaged acquisitions
+            $acqQuery->whereNull('package_id');
+        }
+
+        if ($libraryIds !== null) {
+            if (empty($libraryIds)) {
+                $acqQuery->whereRaw('1 = 0'); // no results
+            } else {
+                $acqQuery->whereIn('library_id', $libraryIds);
+            }
+        }
+
         $acquisitions = [];
-        if ($this->relationLoaded('nonprintAcquisitions')) {
-            $rows = $this->nonprintAcquisitions;
-
-            if ($libraryIds !== null) {
-                $rows = $rows->whereIn('library_id', $libraryIds);
-            }
-
-            foreach ($rows as $acquisition) {
-                $acquisitions[] = [
-                    'library_name' => $acquisition->library_name ?? '-',
-                    'source' => $acquisition->source ?? '-',
-                    'date_acquired' => $acquisition->date_acquired
-                        ? date('M d, Y', strtotime($acquisition->date_acquired))
-                        : '-',
-                    'cost' => $acquisition->cost ?? null,
-                    'iar' => $acquisition->iar ?? '-',
-                    'remarks' => $acquisition->remarks ?? '-',
-                    'usable' => $acquisition->usable ?? 0,
-                    'partially_damaged' => $acquisition->partially_damaged ?? 0,
-                    'damaged' => $acquisition->damaged ?? 0,
-                    'lost' => $acquisition->lost ?? 0,
-                    'condemnable' => $acquisition->condemnable ?? 0,
-                    'total_quantity' => ($acquisition->usable ?? 0) +
-                                      ($acquisition->partially_damaged ?? 0) +
-                                      ($acquisition->damaged ?? 0) +
-                                      ($acquisition->lost ?? 0) +
-                                      ($acquisition->condemnable ?? 0)
-                ];
-            }
+        foreach ($acqQuery->get() as $acquisition) {
+            $acquisitions[] = [
+                'package_id'        => $acquisition->package_id ?? null, // always expose for JS
+                'library_name'      => $acquisition->library_name ?? '-',
+                'division_name'     => $acquisition->division_name ?? '-',
+                'source'            => $acquisition->source ?? '-',
+                'date_acquired'     => $acquisition->date_acquired
+                                        ? date('M d, Y', strtotime($acquisition->date_acquired))
+                                        : '-',
+                'cost'              => $acquisition->cost ?? null,
+                'iar'               => $acquisition->iar ?? '-',
+                'remarks'           => $acquisition->remarks ?? '-',
+                'usable'            => $acquisition->usable ?? 0,
+                'partially_damaged' => $acquisition->partially_damaged ?? 0,
+                'damaged'           => $acquisition->damaged ?? 0,
+                'lost'              => $acquisition->lost ?? 0,
+                'condemnable'       => $acquisition->condemnable ?? 0,
+                'total_quantity'    => ($acquisition->usable ?? 0)
+                                     + ($acquisition->partially_damaged ?? 0)
+                                     + ($acquisition->damaged ?? 0)
+                                     + ($acquisition->lost ?? 0)
+                                     + ($acquisition->condemnable ?? 0),
+            ];
         }
 
         return [
-            'id' => $this->id,
-            'image' => $this->cover
-                ? asset('storage/' . $this->cover)
-                : asset('assets/images/default.jpg'),
-            'title' => $this->nonprintTitle->title ?? 'N/A',
-            'type' => $this->type->type_name ?? '-',
-            'brand' => $this->brand ?? '-',
-            'code' => $this->code ?? 'N/A',
-            'version' => $this->version ?? '-',
-            'url' => $this->url ?? '-',
-            'size' => $this->size ?? '-',
-            'model' => $this->model ?? '-',
-            'subjects' => $subjects,
+            'id'           => $this->id,
+            'image'        => $this->cover
+                                ? asset('storage/' . $this->cover)
+                                : asset('assets/images/default.jpg'),
+            'title'        => $this->nonprintTitle->title ?? 'N/A',
+            'type'         => $this->type->type_name ?? '-',
+            'brand'        => $this->brand ?? '-',
+            'code'         => $this->code ?? 'N/A',
+            'version'      => $this->version ?? '-',
+            'url'          => $this->url ?? '-',
+            'size'         => $this->size ?? '-',
+            'model'        => $this->model ?? '-',
+            'subjects'     => $subjects,
             'acquisitions' => $acquisitions,
-            'quantities' => $quantities,
+            'quantities'   => $quantities,
             'library_name' => $this->library_name ?? 'No Library Assigned',
-            // 'edit_url' => route('update-nonprint-resource', $this->id)
         ];
     }
 }

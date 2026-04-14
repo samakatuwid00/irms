@@ -3,6 +3,7 @@
 namespace App\Services\Resource\Tables;
 
 use App\Models\NonprintResource;
+use App\Models\Package;               // ← NEW
 use App\Models\School;
 use App\Models\District;
 use App\Models\Division;
@@ -35,6 +36,12 @@ class NonPrintResourceService
         $resources         = $this->getResources($request, $level, $libraryIds['main']);
         $filteredResources = $this->getFilteredResources($request, $level, $libraryIds['filtered']);
 
+        // ── Packages: fetch alongside resources using the same library ID scopes ──
+        // Packages are matched via nonprint_acquisitions.package_id, so we check
+        // which packages have at least one acquisition in the relevant library set.
+        $packageResources         = $this->getPackageResources($request, $level, $libraryIds['main']);
+        $filteredPackageResources = $this->getFilteredPackageResources($request, $level, $libraryIds['filtered']);
+
         // School users also see a read-only division tab showing their parent division's resources
         $divisionResources  = null;
         $divisionLibraryIds = [];
@@ -43,14 +50,70 @@ class NonPrintResourceService
         }
 
         return array_merge([
-            'level'              => $level,
-            'resources'          => $resources,
-            'filteredResources'  => $filteredResources,
-            'divisionResources'  => $divisionResources,
-            'mainLibraryIds'     => $libraryIds['main']->values()->all(),
-            'filteredLibraryIds' => $libraryIds['filtered']->values()->all(),
-            'divisionLibraryIds' => $divisionLibraryIds,
+            'level'                    => $level,
+            'resources'                => $resources,
+            'filteredResources'        => $filteredResources,
+            'packageResources'         => $packageResources,          // ← NEW
+            'filteredPackageResources' => $filteredPackageResources,  // ← NEW
+            'divisionResources'        => $divisionResources,
+            'mainLibraryIds'           => $libraryIds['main']->values()->all(),
+            'filteredLibraryIds'       => $libraryIds['filtered']->values()->all(),
+            'divisionLibraryIds'       => $divisionLibraryIds,
         ], $dropdownData);
+    }
+
+    // ── Package queries ───────────────────────────────────────────────────────
+    // Returns packages that have at least one acquisition linked to a library in
+    // the given set. Mirrors the pattern of getResources / getFilteredResources.
+
+    private function getPackageResources(Request $request, int $level, Collection $libraryIds): Collection
+    {
+        if ($libraryIds->isEmpty()) {
+            return collect();
+        }
+
+        // Division tab uses a different search param to avoid collision
+        $searchParam = $level === self::LEVEL_DIVISION ? 'division_search' : 'search';
+
+        return $this->buildPackageQuery(
+            $libraryIds,
+            (string) $request->input($searchParam, '')
+        );
+    }
+
+    private function getFilteredPackageResources(Request $request, int $level, Collection $libraryIds): Collection
+    {
+        if (!$this->shouldShowFilteredResources($request, $level) || $libraryIds->isEmpty()) {
+            return collect();
+        }
+
+        $searchParam = $level === self::LEVEL_DIVISION ? 'school_search' : 'search';
+
+        return $this->buildPackageQuery(
+            $libraryIds,
+            (string) $request->input($searchParam, '')
+        );
+    }
+
+    // Finds packages that have an acquisition row linked to one of the given
+    // library IDs, then optionally filters by the search term against package.name.
+    // Returns a plain Collection (not paginated) — packages are typically few
+    // in number and are appended to the resource paginator in the blade.
+    private function buildPackageQuery(Collection $libraryIds, string $search): Collection
+    {
+        $query = Package::whereExists(function ($sub) use ($libraryIds) {
+            $sub->select(DB::raw(1))
+                ->from('nonprint_acquisitions')
+                ->whereColumn('nonprint_acquisitions.package_id', 'package.id')
+                ->whereIn('nonprint_acquisitions.library_id', $libraryIds->toArray());
+        });
+
+        $search = trim($search);
+        if ($search !== '') {
+            $query->where('name', 'ILIKE', '%' . $search . '%');
+        }
+
+        return $query->orderBy('name')->get();
     }
 
     // Walk school → district → division to find which division libraries to show
@@ -480,28 +543,28 @@ class NonPrintResourceService
 
         return $query->where(function ($q) use ($searchLower) {
             $q->whereHas('nonprintAcquisitions', function ($aq) use ($searchLower) {
-                    $aq->where('brand',        'ILIKE', $searchLower)
-                       ->orWhere('code',        'ILIKE', $searchLower)
-                       ->orWhere('version',     'ILIKE', $searchLower)
-                       ->orWhere('url',         'ILIKE', $searchLower)
-                       ->orWhere('size',        'ILIKE', $searchLower)
-                       ->orWhere('model',       'ILIKE', $searchLower)
-                       ->orWhere('library_name','ILIKE', $searchLower);
-                })
-                ->orWhereHas('nonprintTitle', fn($qt) =>
-                    $qt->where('title', 'ILIKE', $searchLower)
-                )
-                ->orWhereExists(function ($exists) use ($searchLower) {
-                    $exists->select(DB::raw(1))
-                        ->from('subject_grade_levels as sgl')
-                        ->join('subjects as subj', 'sgl.subject_id', '=', 'subj.id')
-                        ->join('grade_levels as gl', 'sgl.grade_level_id', '=', 'gl.id')
-                        ->whereRaw("sgl.id::text = ANY(string_to_array(nonprint_resources.subject_grade_level_ids, ','))")
-                        ->where(function ($match) use ($searchLower) {
-                            $match->where('subj.subject_name', 'ILIKE', $searchLower)
-                                  ->orWhere('gl.grade',        'ILIKE', $searchLower);
-                        });
-                });
+                $aq->where('brand', 'ILIKE', $searchLower)
+                ->orWhere('code', 'ILIKE', $searchLower)
+                ->orWhere('version', 'ILIKE', $searchLower)
+                ->orWhere('url', 'ILIKE', $searchLower)
+                ->orWhere('size', 'ILIKE', $searchLower)
+                ->orWhere('model', 'ILIKE', $searchLower)
+                ->orWhere('library_name', 'ILIKE', $searchLower);
+            })
+            ->orWhereHas('nonprintTitle', function ($qt) use ($searchLower) {
+                $qt->where('title', 'ILIKE', $searchLower);
+            })
+            ->orWhereExists(function ($exists) use ($searchLower) {
+                $exists->select(DB::raw(1))
+                    ->from('subject_grade_levels as sgl')
+                    ->join('subjects as subj', 'sgl.subject_id', '=', 'subj.id')
+                    ->join('grade_levels as gl', 'sgl.grade_level_id', '=', 'gl.id')
+                    ->whereRaw("sgl.id::text = ANY(string_to_array(nonprint_resources.subject_grade_level_ids, ','))")
+                    ->where(function ($match) use ($searchLower) {
+                        $match->where('subj.subject_name', 'ILIKE', $searchLower)
+                            ->orWhere('gl.grade', 'ILIKE', $searchLower);
+                    });
+            });
         });
     }
 

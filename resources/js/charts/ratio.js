@@ -16,7 +16,6 @@ function filterAndRenderRatioChart(keyStage) {
     const { grades, population, directData, mailData } = _ratioFullData;
     const allowedGrades = KEY_STAGE_RANGES[keyStage] ?? grades;
 
-    // Find indices of grades in the selected key stage
     const indices = grades
         .map((g, i) => ({ g, i }))
         .filter(({ g }) => allowedGrades.includes(g))
@@ -70,6 +69,179 @@ function filterAndRenderRatioChart(keyStage) {
     });
 }
 
+async function fetchRatioData() {
+    const printTypeSelect = document.getElementById('printTypeFilter');
+    const printTypeId = printTypeSelect ? printTypeSelect.value : '';
+
+    const url = new URL('/chart/lr-ratio', window.location.origin);
+    if (printTypeId) url.searchParams.set('print_type_id', printTypeId);
+
+    const response = await fetch(url.toString(), {
+        headers: { 'Accept': 'application/json' },
+        credentials: 'same-origin'
+    });
+
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    return await response.json();
+}
+
+function buildRatioOption(chartData, chartDom, myChart) {
+    const grades     = chartData.grades     || [];
+    const population = chartData.population || {};
+    const directData = chartData.directData || [];
+    const mailData   = chartData.mailData   || [];
+
+    const option = {
+        tooltip: {
+            trigger: 'axis',
+            axisPointer: { type: 'shadow' },
+            formatter: function (params) {
+                let txt = params[0].name + '<br/>';
+                params.forEach(p => {
+                    if (p.seriesName === 'Total Ratio') return;
+                    txt += `${p.marker} ${p.seriesName}: ${(p.value || 0).toLocaleString()}<br/>`;
+                });
+                return txt;
+            }
+        },
+
+        toolbox: {
+            show: true,
+            orient: 'horizontal',
+            top: 5,
+            right: 10,
+            feature: {
+                mark: { show: true },
+                dataView: { show: true, readOnly: false },
+                magicType: { show: true, type: ['line', 'bar', 'stack'] },
+                restore: { show: true },
+                saveAsImage: { show: true },
+                myFullScreen: {
+                    show: true,
+                    title: 'Fullscreen',
+                    icon: 'path://M128 128h256v256H128z',
+                    onclick: function () {
+                        if (!document.fullscreenElement) {
+                            chartDom.dataset.originalBg = chartDom.style.backgroundColor || '';
+                            chartDom.style.backgroundColor = '#ffffff';
+                            chartDom.requestFullscreen()
+                                .then(() => myChart.resize())
+                                .catch(err => {
+                                    console.error('Fullscreen failed:', err);
+                                    chartDom.style.backgroundColor = chartDom.dataset.originalBg;
+                                });
+                        } else {
+                            document.exitFullscreen().then(() => {
+                                chartDom.style.backgroundColor = chartDom.dataset.originalBg || '';
+                                myChart.resize();
+                            });
+                        }
+                    }
+                }
+            }
+        },
+
+        legend: { data: ['Total LR', 'Population'] },
+
+        xAxis: { type: 'value' },
+
+        yAxis: {
+            type: 'category',
+            data: grades
+        },
+
+        series: [
+            {
+                name: 'Total LR',
+                type: 'bar',
+                stack: 'total',
+                label: {
+                    show: true,
+                    position: 'inside',
+                    formatter: p => (p.value || 0).toLocaleString(),
+                    color: '#fff'
+                },
+                data: directData,
+                itemStyle: { color: '#5470c6' }
+            },
+            {
+                name: 'Population',
+                type: 'bar',
+                stack: 'total',
+                barMinWidth: 10,
+                label: {
+                    show: true,
+                    position: 'inside',
+                    formatter: p => (p.value || 0).toLocaleString(),
+                    color: '#fff'
+                },
+                data: grades.map(g => population[g] || 0),
+                itemStyle: { color: '#91cc75' }
+            },
+            {
+                name: 'Total Ratio',
+                type: 'bar',
+                stack: 'total',
+                silent: true,
+                label: {
+                    show: true,
+                    position: 'right',
+                    distance: 8,
+                    formatter: function (params) {
+                        const idx     = params.dataIndex;
+                        const grade   = grades[idx];
+                        const lrCount = (directData[idx] || 0) + (mailData[idx] || 0);
+                        const pop     = population[grade] || 0;
+
+                        if (lrCount <= 0 || pop <= 0) return 'N/A';
+                        const ppl = pop / lrCount;
+                        return ppl >= 1
+                            ? `${Math.round(ppl).toLocaleString()} : 1`
+                            : `${Math.round(lrCount / pop).toLocaleString()} : 1`;
+                    },
+                    color: '#333',
+                    fontSize: 13,
+                    fontWeight: 'bold'
+                },
+                itemStyle: { color: 'transparent' },
+                data: new Array(grades.length).fill(0)
+            }
+        ]
+    };
+
+    return { option, grades, population, directData, mailData };
+}
+
+async function reloadRatioChart() {
+    if (!_ratioChart) return;
+
+    // showLoading before async work — never mid-render
+    _ratioChart.showLoading({ text: 'Loading\u2026', maskColor: 'rgba(255,255,255,0.7)' });
+
+    try {
+        const chartData = await fetchRatioData();
+        if (chartData.message) console.warn(chartData.message);
+
+        const chartDom = document.getElementById('main');
+        const { option, grades, population, directData, mailData } = buildRatioOption(chartData, chartDom, _ratioChart);
+
+        _ratioFullData = { grades, population, directData, mailData };
+
+        // Defer setOption to next task — avoids "setOption during main process"
+        setTimeout(() => {
+            _ratioChart.setOption(option, /* notMerge */ true);
+            _ratioChart.hideLoading();
+
+            const ksSelect = document.getElementById('schoolYearFilter');
+            if (ksSelect) filterAndRenderRatioChart(ksSelect.value);
+        }, 0);
+
+    } catch (err) {
+        console.error('Failed to reload LR Ratio chart:', err);
+        _ratioChart.hideLoading();
+    }
+}
+
 async function initRatioChart() {
     const chartDom = document.getElementById('main');
     if (!chartDom) {
@@ -78,152 +250,36 @@ async function initRatioChart() {
     }
 
     try {
-        const response = await fetch('/chart/lr-ratio');
-        if (!response.ok) throw new Error(`HTTP ${response.status}`);
-        const chartData = await response.json();
-
+        const chartData = await fetchRatioData();
         if (chartData.message) console.warn(chartData.message);
-
-        const grades     = chartData.grades     || [];
-        const population = chartData.population || {};
-        const directData = chartData.directData || [];
-        const mailData   = chartData.mailData   || [];
-
-        // Cache full dataset
-        _ratioFullData = { grades, population, directData, mailData };
 
         const echarts = await import('echarts');
         const myChart = echarts.init(chartDom);
         _ratioChart = myChart;
 
-        const option = {
-            tooltip: {
-                trigger: 'axis',
-                axisPointer: { type: 'shadow' },
-                formatter: function (params) {
-                    let txt = params[0].name + '<br/>';
-                    params.forEach(p => {
-                        if (p.seriesName === 'Total Ratio') return;
-                        txt += `${p.marker} ${p.seriesName}: ${(p.value || 0).toLocaleString()}<br/>`;
-                    });
-                    return txt;
-                }
-            },
+        const { option, grades, population, directData, mailData } = buildRatioOption(chartData, chartDom, myChart);
 
-            toolbox: {
-                show: true,
-                orient: 'horizontal',
-                top: 5,
-                right: 10,
-                feature: {
-                    mark: { show: true },
-                    dataView: { show: true, readOnly: false },
-                    magicType: { show: true, type: ['line', 'bar', 'stack'] },
-                    restore: { show: true },
-                    saveAsImage: { show: true },
-                    myFullScreen: {
-                        show: true,
-                        title: 'Fullscreen',
-                        icon: 'path://M128 128h256v256H128z',
-                        onclick: function () {
-                            if (!document.fullscreenElement) {
-                                chartDom.dataset.originalBg = chartDom.style.backgroundColor || '';
-                                chartDom.style.backgroundColor = '#ffffff';
-                                chartDom.requestFullscreen()
-                                    .then(() => myChart.resize())
-                                    .catch(err => {
-                                        console.error('Fullscreen failed:', err);
-                                        chartDom.style.backgroundColor = chartDom.dataset.originalBg;
-                                    });
-                            } else {
-                                document.exitFullscreen().then(() => {
-                                    chartDom.style.backgroundColor = chartDom.dataset.originalBg || '';
-                                    myChart.resize();
-                                });
-                            }
-                        }
-                    }
-                }
-            },
-
-            legend: { data: ['Total LR', 'Population'] },
-
-            xAxis: { type: 'value' },
-
-            yAxis: {
-                type: 'category',
-                data: grades
-            },
-
-            series: [
-                {
-                    name: 'Total LR',
-                    type: 'bar',
-                    stack: 'total',
-                    label: {
-                        show: true,
-                        position: 'inside',
-                        formatter: p => (p.value || 0).toLocaleString(),
-                        color: '#fff'
-                    },
-                    data: directData,
-                    itemStyle: { color: '#5470c6' }
-                },
-                {
-                    name: 'Population',
-                    type: 'bar',
-                    stack: 'total',
-                    barMinWidth: 10,
-                    label: {
-                        show: true,
-                        position: 'inside',
-                        formatter: p => (p.value || 0).toLocaleString(),
-                        color: '#fff'
-                    },
-                    data: grades.map(g => population[g] || 0),
-                    itemStyle: { color: '#91cc75' }
-                },
-                {
-                    name: 'Total Ratio',
-                    type: 'bar',
-                    stack: 'total',
-                    silent: true,
-                    label: {
-                        show: true,
-                        position: 'right',
-                        distance: 8,
-                        formatter: function (params) {
-                            const idx     = params.dataIndex;
-                            const grade   = grades[idx];
-                            const lrCount = (directData[idx] || 0) + (mailData[idx] || 0);
-                            const pop     = population[grade] || 0;
-
-                            if (lrCount <= 0 || pop <= 0) return 'N/A';
-                            const ppl = pop / lrCount;
-                            return ppl >= 1
-                                ? `${Math.round(ppl).toLocaleString()} : 1`
-                                : `${Math.round(lrCount / pop).toLocaleString()} : 1`;
-                        },
-                        color: '#333',
-                        fontSize: 13,
-                        fontWeight: 'bold'
-                    },
-                    itemStyle: { color: 'transparent' },
-                    data: new Array(grades.length).fill(0)
-                }
-            ]
-        };
+        // Cache full dataset for key-stage slicing
+        _ratioFullData = { grades, population, directData, mailData };
 
         myChart.setOption(option);
         window.ratioChart = myChart;
 
-        // ── Apply default key stage filter on first load ──
+        // Apply default key stage filter on first load
         const ksSelect = document.getElementById('schoolYearFilter');
         if (ksSelect) {
             filterAndRenderRatioChart(ksSelect.value);
 
             ksSelect.addEventListener('change', (e) => {
                 filterAndRenderRatioChart(e.target.value);
+            });
+        }
+
+        // Re-fetch when print type filter changes
+        const printTypeSelect = document.getElementById('printTypeFilter');
+        if (printTypeSelect) {
+            printTypeSelect.addEventListener('change', () => {
+                reloadRatioChart();
             });
         }
 

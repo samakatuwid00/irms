@@ -133,6 +133,8 @@ class NonPrintResourceExportController extends BaseController
                 }
             }
             $subjectsText = $subjects ? implode(', ', $subjects) : 'No assignment';
+            $qty   = $resource->quantities;
+            $total = array_sum($qty);
 
             $sheet->setCellValue('A' . $row, $resource->nonprintTitle->title);
             $sheet->setCellValue('B' . $row, $resource->type->type_name);

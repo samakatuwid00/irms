@@ -41,6 +41,170 @@ function filterAndRenderExdefChart(keyStage) {
     });
 }
 
+async function fetchExdefData() {
+    const printTypeSelect = document.getElementById('printTypeFilter');
+    const printTypeId = printTypeSelect ? printTypeSelect.value : '';
+
+    const url = new URL('/chart/exdef', window.location.origin);
+    if (printTypeId) url.searchParams.set('print_type_id', printTypeId);
+
+    const response = await fetch(url.toString(), {
+        headers: { 'Accept': 'application/json' },
+        credentials: 'same-origin'
+    });
+
+    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+    return await response.json();
+}
+
+function buildExdefOption(result, chartDom, myChart) {
+    const fullData = (result.table_data || [])
+        .map(item => ({
+            subject: item.subject,
+            grade:   item.grade,
+            exdef:   item.difference ?? 0
+        }))
+        .sort((a, b) => b.exdef - a.exdef);
+
+    const totalItems   = fullData.length;
+    const visibleRatio = totalItems > 20 ? 0.20 : 0.35;
+    const startPercent = Math.max(0, 100 - (visibleRatio * 100));
+
+    const option = {
+        tooltip: {
+            trigger: 'axis',
+            axisPointer: { type: 'shadow' },
+            confine: true
+        },
+        toolbox: {
+            show: true,
+            orient: 'horizontal',
+            top: 5,
+            right: 10,
+            feature: {
+                mark: { show: true },
+                dataView: { show: true, readOnly: false },
+                magicType: { show: true, type: ['line', 'bar', 'stack'] },
+                restore: { show: true },
+                saveAsImage: { show: true },
+                myFullScreen: {
+                    show: true,
+                    title: 'Fullscreen',
+                    icon: 'path://M128 128h256v256H128z',
+                    onclick: function () {
+                        if (!document.fullscreenElement) {
+                            chartDom.dataset.originalBg = chartDom.style.backgroundColor || '';
+                            chartDom.style.backgroundColor = '#ffffff';
+                            chartDom.requestFullscreen()
+                                .then(() => myChart.resize())
+                                .catch(err => {
+                                    console.error('Fullscreen failed:', err);
+                                    chartDom.style.backgroundColor = chartDom.dataset.originalBg;
+                                });
+                        } else {
+                            document.exitFullscreen().then(() => {
+                                chartDom.style.backgroundColor = chartDom.dataset.originalBg || '';
+                                myChart.resize();
+                            });
+                        }
+                    }
+                }
+            }
+        },
+        grid: {
+            left: '4%',
+            right: '5%',
+            bottom: '18%',
+            top: '12%',
+            containLabel: true
+        },
+        xAxis: {
+            type: 'category',
+            data: fullData.map(item => `${item.subject} - ${item.grade}`),
+            axisTick: { show: false },
+            axisLabel: {
+                interval: 0,
+                rotate: 55,
+                fontSize: 11,
+                margin: 12,
+                color: '#555',
+                align: 'right',
+                verticalAlign: 'middle',
+                overflow: 'truncate',
+                width: 120
+            }
+        },
+        yAxis: {
+            type: 'value',
+            name: 'Difference (LR \u2013 Population)',
+            nameLocation: 'middle',
+            nameGap: 50,
+            nameTextStyle: { color: '#666', fontWeight: 'bold' }
+        },
+        dataZoom: [
+            { type: 'inside', start: startPercent, end: 100 },
+            {
+                type: 'slider',
+                start: startPercent,
+                end: 100,
+                height: 26,
+                bottom: 'auto',
+                fillerColor: 'rgba(76, 175, 80, 0.18)',
+                borderColor: 'transparent',
+                handleStyle: { color: '#4CAF50' },
+                textStyle: { color: '#444', fontSize: 11 }
+            }
+        ],
+        series: [{
+            name: 'ExDef',
+            type: 'bar',
+            data: fullData.map(item => ({
+                value: item.exdef,
+                itemStyle: { color: item.exdef >= 0 ? '#4CAF50' : '#F44336' }
+            })),
+            barWidth: '58%',
+            itemStyle: { borderRadius: [4, 4, 0, 0] }
+        }]
+    };
+
+    return { option, fullData };
+}
+
+async function reloadExdefChart() {
+    if (!_exdefChart) return;
+
+    // showLoading before async work — never mid-render
+    _exdefChart.showLoading({ text: 'Loading\u2026', maskColor: 'rgba(255,255,255,0.7)' });
+
+    try {
+        const result = await fetchExdefData();
+
+        if (result.error) {
+            console.error('Backend error:', result.error);
+            _exdefChart.hideLoading();
+            return;
+        }
+
+        const chartDom = document.getElementById('exdef');
+        const { option, fullData } = buildExdefOption(result, chartDom, _exdefChart);
+
+        _exdefFullData = fullData;
+
+        // Defer setOption to next task — avoids "setOption during main process"
+        setTimeout(() => {
+            _exdefChart.setOption(option, /* notMerge */ true);
+            _exdefChart.hideLoading();
+
+            const ksSelect = document.getElementById('schoolYearFilter');
+            if (ksSelect) filterAndRenderExdefChart(ksSelect.value);
+        }, 0);
+
+    } catch (err) {
+        console.error('Failed to reload ExDef chart:', err);
+        _exdefChart.hideLoading();
+    }
+}
+
 async function initExdefChart() {
     const chartDom = document.getElementById('exdef');
     if (!chartDom) {
@@ -53,10 +217,7 @@ async function initExdefChart() {
         const myChart = echarts.init(chartDom, null, { renderer: 'canvas' });
         _exdefChart = myChart;
 
-        const response = await fetch('/chart/exdef');
-        if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-
-        const result = await response.json();
+        const result = await fetchExdefData();
 
         if (result.error) {
             console.error('Backend error:', result.error);
@@ -71,125 +232,28 @@ async function initExdefChart() {
             return;
         }
 
-        // Cache full sorted dataset
-        _exdefFullData = (result.table_data || [])
-            .map(item => ({
-                subject: item.subject,
-                grade:   item.grade,
-                exdef:   item.difference ?? 0
-            }))
-            .sort((a, b) => b.exdef - a.exdef);
+        const { option, fullData } = buildExdefOption(result, chartDom, myChart);
 
-        const totalItems   = _exdefFullData.length;
-        const visibleRatio = totalItems > 20 ? 0.20 : 0.35;
-        const startPercent = Math.max(0, 100 - (visibleRatio * 100));
-
-        const option = {
-            tooltip: {
-                trigger: 'axis',
-                axisPointer: { type: 'shadow' },
-                confine: true
-            },
-            toolbox: {
-                show: true,
-                orient: 'horizontal',
-                top: 5,
-                right: 10,
-                feature: {
-                    mark: { show: true },
-                    dataView: { show: true, readOnly: false },
-                    magicType: { show: true, type: ['line', 'bar', 'stack'] },
-                    restore: { show: true },
-                    saveAsImage: { show: true },
-                    myFullScreen: {
-                        show: true,
-                        title: 'Fullscreen',
-                        icon: 'path://M128 128h256v256H128z',
-                        onclick: function () {
-                            if (!document.fullscreenElement) {
-                                chartDom.dataset.originalBg = chartDom.style.backgroundColor || '';
-                                chartDom.style.backgroundColor = '#ffffff';
-                                chartDom.requestFullscreen()
-                                    .then(() => myChart.resize())
-                                    .catch(err => {
-                                        console.error('Fullscreen failed:', err);
-                                        chartDom.style.backgroundColor = chartDom.dataset.originalBg;
-                                    });
-                            } else {
-                                document.exitFullscreen().then(() => {
-                                    chartDom.style.backgroundColor = chartDom.dataset.originalBg || '';
-                                    myChart.resize();
-                                });
-                            }
-                        }
-                    }
-                }
-            },
-            grid: {
-                left: '4%',
-                right: '5%',
-                bottom: '18%',
-                top: '12%',
-                containLabel: true
-            },
-            xAxis: {
-                type: 'category',
-                data: _exdefFullData.map(item => `${item.subject} - ${item.grade}`),
-                axisTick: { show: false },
-                axisLabel: {
-                    interval: 0,
-                    rotate: 55,
-                    fontSize: 11,
-                    margin: 12,
-                    color: '#555',
-                    align: 'right',
-                    verticalAlign: 'middle',
-                    overflow: 'truncate',
-                    width: 120
-                }
-            },
-            yAxis: {
-                type: 'value',
-                name: 'Difference (LR – Population)',
-                nameLocation: 'middle',
-                nameGap: 50,
-                nameTextStyle: { color: '#666', fontWeight: 'bold' }
-            },
-            dataZoom: [
-                { type: 'inside', start: startPercent, end: 100 },
-                {
-                    type: 'slider',
-                    start: startPercent,
-                    end: 100,
-                    height: 26,
-                    bottom: 'auto',
-                    fillerColor: 'rgba(76, 175, 80, 0.18)',
-                    borderColor: 'transparent',
-                    handleStyle: { color: '#4CAF50' },
-                    textStyle: { color: '#444', fontSize: 11 }
-                }
-            ],
-            series: [{
-                name: 'ExDef',
-                type: 'bar',
-                data: _exdefFullData.map(item => ({
-                    value: item.exdef,
-                    itemStyle: { color: item.exdef >= 0 ? '#4CAF50' : '#F44336' }
-                })),
-                barWidth: '58%',
-                itemStyle: { borderRadius: [4, 4, 0, 0] }
-            }]
-        };
+        // Cache full sorted dataset for key-stage slicing
+        _exdefFullData = fullData;
 
         myChart.setOption(option, true);
 
-        // ── Apply default key stage filter on first load ──
+        // Apply default key stage filter on first load
         const ksSelect = document.getElementById('schoolYearFilter');
         if (ksSelect) {
             filterAndRenderExdefChart(ksSelect.value);
 
             ksSelect.addEventListener('change', (e) => {
                 filterAndRenderExdefChart(e.target.value);
+            });
+        }
+
+        // Re-fetch when print type filter changes
+        const printTypeSelect = document.getElementById('printTypeFilter');
+        if (printTypeSelect) {
+            printTypeSelect.addEventListener('change', () => {
+                reloadExdefChart();
             });
         }
 

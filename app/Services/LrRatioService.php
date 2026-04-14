@@ -14,12 +14,12 @@ class LrRatioService
         private readonly LrAggregationService $aggregationService,
     ) {}
 
-    public function getChartDataCached($explicitLibraryId, $userLevel, $stationId)
+    public function getChartDataCached($explicitLibraryId, $userLevel, $stationId, ?string $printTypeId = null)
     {
-        return $this->getChartData($explicitLibraryId, $userLevel, $stationId);
+        return $this->getChartData($explicitLibraryId, $userLevel, $stationId, $printTypeId);
     }
 
-    private function getChartData($explicitLibraryId, $userLevel, $stationId)
+    private function getChartData($explicitLibraryId, $userLevel, $stationId, ?string $printTypeId = null)
     {
         $gradeLevels = GradeLevel::query()
             ->select('id', 'grade', 'sort_order')
@@ -33,13 +33,11 @@ class LrRatioService
         $gradeNames = $gradeLevels->pluck('grade')->toArray();
         $gradeIds   = $gradeLevels->pluck('id')->toArray();
 
-        // MODIFIED: Removed materialized view path - now all user levels use real-time queries
-        // All user levels (1-4) now connect directly to the schema
-        
         Log::info('Using real-time direct schema query for LR Ratio', [
             'explicit_library' => $explicitLibraryId,
-            'user_level' => $userLevel,
-            'station_id' => $stationId,
+            'user_level'       => $userLevel,
+            'station_id'       => $stationId,
+            'print_type_id'    => $printTypeId ?: 'all',
         ]);
 
         $allowedLibraryIds = $this->libraryScopeService->getAllowedLibraryIds(
@@ -56,17 +54,14 @@ class LrRatioService
             return $this->buildZeroedResult($gradeNames);
         }
 
-        // ── Optimized LR aggregation (same pattern as LrAvailabilityService) ──
-        $libraryIds = $allowedLibraryIds->values()->toArray();
-        
-        // Aggregate LR quantities by grade level
-        $lrTotals = $this->aggregationService
-            ->aggregateByGrade($libraryIds, $gradeIds);
+        $libraryIds  = $allowedLibraryIds->values()->toArray();
+        $printTypeIds = $printTypeId ? [$printTypeId] : [];
 
-        // Get population data for the scope
+        $lrTotals = $this->aggregationService
+            ->aggregateByGrade($libraryIds, $gradeIds, $printTypeIds);
+
         $populationAssoc = $this->getPopulationPerGrade($allowedLibraryIds, $gradeLevels, $userLevel, $stationId);
 
-        // Determine library scope based on user level
         $libraryScope = match ($userLevel) {
             4 => 'region',
             3 => 'division',
@@ -83,13 +78,13 @@ class LrRatioService
             $explicitLibraryId,
             $libraryScope,
             $userLevel,
-            $stationId
+            $stationId,
+            $printTypeId
         );
     }
 
     private function getPopulationPerGrade($allowedLibraryIds, $gradeLevels, int $userLevel, ?string $stationId): array
     {
-        // Get school IDs from the allowed libraries
         $schoolIds = DB::table('school_libraries')
             ->whereIn('id', is_array($allowedLibraryIds) ? $allowedLibraryIds : $allowedLibraryIds->toArray())
             ->pluck('school_id')
@@ -106,7 +101,6 @@ class LrRatioService
 
         $popAssoc = [];
 
-        // For each grade level, sum the population across all schools in scope
         foreach ($gradeLevels as $gl) {
             $col = match (trim($gl->grade)) {
                 'Kindergarten' => 'k_total',
@@ -135,9 +129,9 @@ class LrRatioService
         }
 
         Log::info('Population data retrieved', [
-            'user_level' => $userLevel,
-            'station_id' => $stationId,
-            'school_count' => count($schoolIds),
+            'user_level'         => $userLevel,
+            'station_id'         => $stationId,
+            'school_count'       => count($schoolIds),
             'population_summary' => $popAssoc
         ]);
 
@@ -145,23 +139,24 @@ class LrRatioService
     }
 
     private function buildFromLiveData(
-        $lrTotals, 
-        $populationAssoc, 
-        $gradeLevels, 
-        $gradeNames, 
+        $lrTotals,
+        $populationAssoc,
+        $gradeLevels,
+        $gradeNames,
         $explicitLibraryId,
         string $libraryScope,
         int $userLevel,
-        ?string $stationId
+        ?string $stationId,
+        ?string $printTypeId = null
     ): array {
-        $directData = [];
+        $directData  = [];
         $ratioLabels = [];
 
         foreach ($gradeLevels as $gl) {
             $lr  = $lrTotals[$gl->id] ?? 0;
             $pop = $populationAssoc[$gl->grade] ?? 0;
 
-            $directData[] = (int) $lr;
+            $directData[]  = (int) $lr;
             $ratioLabels[] = $this->computeRatioLabel($lr, $pop);
         }
 
@@ -176,6 +171,7 @@ class LrRatioService
             'source'        => 'live_query_direct_schema',
             'user_level'    => $userLevel,
             'station_id'    => $stationId,
+            'print_type_id' => $printTypeId ?: null,
         ];
     }
 
@@ -217,7 +213,6 @@ class LrRatioService
             return round($peoplePerBook) . ' : 1';
         }
 
-        // More resources than learners - show as "X : 1"
         return round($totalLR / $pop, 1) . ' : 1';
     }
 }

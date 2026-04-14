@@ -16,6 +16,7 @@
     @vite(['resources/js/charts/visualization.js'])
     @vite(['resources/js/charts/bosy.js'])
     @vite(['resources/css/bosy/bosy.css'])
+    @vite(['resources/js/charts/lr-types.js'])
 
     <!-- htmx -->
     <script src="https://unpkg.com/htmx.org@1.9.12"></script>

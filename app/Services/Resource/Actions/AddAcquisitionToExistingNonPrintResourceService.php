@@ -5,6 +5,7 @@ namespace App\Services\Resource\Actions;
 use App\Models\NonprintAcquisition;
 use App\Models\NonprintMasterlist;
 use App\Models\NonprintResource;
+use App\Models\Package;               // ← NEW
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -12,19 +13,39 @@ use Illuminate\Support\Str;
 class AddAcquisitionToExistingNonPrintResourceService
 {
     // library_id/library_name are embedded per-acquisition entry, not top-level fields —
-    // one submission can add acquisitions across multiple libraries at once
+    // one submission can add acquisitions across multiple libraries at once.
     public function addAcquisitions(NonprintResource $resource, string $acquisitionsJson): void
     {
         DB::transaction(function () use ($resource, $acquisitionsJson) {
-            $this->handleAcquisitions($acquisitionsJson, $resource->id);
+            $this->handleAcquisitions($acquisitionsJson, $resource->id, null);
         });
 
         // Rebuild outside the transaction so the committed rows are visible to the index
         $this->updateSearchVector($resource->id);
     }
 
-    private function handleAcquisitions(string $acquisitionsJson, string $nonprintResourceId): void
+    // ── Package variant ───────────────────────────────────────────────────────
+    // Packages have no nonprint_resource_id of their own. The acquisition rows
+    // are created with nonprint_id = null and package_id = $package->id so
+    // they stay linked to the correct package without a resource scaffold.
+    public function addAcquisitionsForPackage(Package $package, string $acquisitionsJson): void
     {
+        DB::transaction(function () use ($package, $acquisitionsJson) {
+            $this->handleAcquisitions($acquisitionsJson, null, $package->id);
+        });
+
+        // No search-vector rebuild needed — packages are searched by name directly
+        // via ILIKE on the packages table, not through tsvector on nonprint_resources.
+    }
+
+    // ── Core insertion logic ──────────────────────────────────────────────────
+    // $nonprintResourceId and $packageId are mutually exclusive: exactly one will
+    // be non-null depending on which entry point called this method.
+    private function handleAcquisitions(
+        string $acquisitionsJson,
+        ?string $nonprintResourceId,
+        ?string $packageId
+    ): void {
         $acquisitions = json_decode($acquisitionsJson, true);
 
         if (empty($acquisitions)) {
@@ -48,10 +69,11 @@ class AddAcquisitionToExistingNonPrintResourceService
 
             NonprintAcquisition::create([
                 'id'                => $acquisitionId,
+                // One of these two will be null — both columns must be nullable in the DB
                 'nonprint_id'       => $nonprintResourceId,
+                'package_id'        => $packageId ?? ($acquisition['package_id'] ?? null),
                 'library_id'        => $acquisition['library_id']   ?? null,
                 'library_name'      => $acquisition['library_name'] ?? null,
-                'package_id'        => $acquisition['package_id']   ?? null,  // ← ADD THIS
                 'source'            => $acquisition['source'],
                 'date_acquired'     => $acquisition['date_acquired'],
                 'cost'              => $acquisition['cost'] !== '' ? $acquisition['cost'] : 0,
