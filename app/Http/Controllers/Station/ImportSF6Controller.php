@@ -139,8 +139,7 @@ class ImportSF6Controller extends BaseController
         $filePath = $file->getRealPath();
 
         $reader = IOFactory::createReaderForFile($filePath);
-        $reader->setReadDataOnly(true);
-        
+
         $spreadsheet = $reader->load($filePath);
         $sheet       = $spreadsheet->getActiveSheet();
 
@@ -148,13 +147,12 @@ class ImportSF6Controller extends BaseController
         foreach ($sheet->getRowIterator() as $row) {
             $cells = [];
             $cellIterator = $row->getCellIterator();
-            $cellIterator->setIterateOnlyExistingCells(false); 
+            $cellIterator->setIterateOnlyExistingCells(false);
             foreach ($cellIterator as $cell) {
-                $cells[] = $cell->getValue();
+                $cells[] = $cell->getCalculatedValue();
             }
             $rows[] = $cells;
         }
-
         $gradeHeaderRowIndex = null;
         $gradeCols           = [];
 
@@ -165,7 +163,10 @@ class ImportSF6Controller extends BaseController
                 $normalized = preg_replace('/\s+/', ' ', $normalized);
 
                 if (isset(self::GRADE_LABEL_MAP[$normalized])) {
-                    $found[self::GRADE_LABEL_MAP[$normalized]] = $colIdx;
+                    $gradeKey = self::GRADE_LABEL_MAP[$normalized];
+                    if (!isset($found[$gradeKey])) {
+                        $found[$gradeKey] = $colIdx;
+                    }
                 }
             }
             if (count($found) >= 1) {
