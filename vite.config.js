@@ -37,7 +37,6 @@ export default defineConfig({
                 'resources/css/bosy/bosy.css',
                 'resources/js/package.js',
                 'resources/js/import-sf6.js',
-                'resources/js/charts/lr-types.js',
             ],
             refresh: true,
         }),

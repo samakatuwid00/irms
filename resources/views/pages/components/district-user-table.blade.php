@@ -91,13 +91,13 @@
                         <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"></path>
                     </svg>
                 </div>
-
                 <div id="main-table-container">
                     @include('pages.partials.users-table', [
                         'users' => $mainUsers,
                         'pageName' => 'main_page',
                         'emptyMessage' => 'No district users found.',
-                        'activeTab' => 'main'
+                        'activeTab' => 'main',
+                        'allowStationEdit' => false   
                     ])
                 </div>
             </div>
@@ -109,7 +109,7 @@
         <div class="bg-white rounded-xl shadow p-4">
             <form
                 hx-get="{{ route('users') }}"
-                hx-target="#sub-table-container"
+                hx-target="#school-table-container"
                 hx-swap="innerHTML"
                 hx-push-url="true"
                 hx-indicator="#sub-spinner"
@@ -122,7 +122,7 @@
                         placeholder="Search by name, username, or email..."
                         class="w-full pl-3 pr-3 py-2 border rounded-lg text-sm"
                         hx-get="{{ route('users') }}"
-                        hx-target="#sub-table-container"
+                        hx-target="#school-table-container"
                         hx-swap="innerHTML"
                         hx-trigger="keyup changed delay:400ms"
                         hx-include="closest form"
@@ -133,7 +133,7 @@
                     <select name="usertype_sub"
                         class="w-full mt-1 px-3 py-2 border rounded-lg text-sm"
                         hx-get="{{ route('users') }}"
-                        hx-target="#sub-table-container"
+                        hx-target="#school-table-container"
                         hx-swap="innerHTML"
                         hx-trigger="change"
                         hx-include="closest form"
@@ -151,7 +151,7 @@
                     <select name="status_sub"
                         class="w-full mt-1 px-3 py-2 border rounded-lg text-sm"
                         hx-get="{{ route('users') }}"
-                        hx-target="#sub-table-container"
+                        hx-target="#school-table-container"
                         hx-swap="innerHTML"
                         hx-trigger="change"
                         hx-include="closest form"
@@ -163,9 +163,9 @@
                     </select>
                 </div>
                 <div class="md:col-span-4 flex justify-end gap-2">
-                    <a href="{{ route('users') }}?active_tab=sub"
-                        hx-get="{{ route('users') }}?active_tab=sub"
-                        hx-target="#sub-table-container"
+                    <a href="{{ route('users') }}?active_tab=school"
+                        hx-get="{{ route('users') }}?active_tab=school"
+                        hx-target="#school-table-container"
                         hx-swap="innerHTML"
                         hx-push-url="true"
                         class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 text-sm">Reset</a>
@@ -181,12 +181,13 @@
                     </svg>
                 </div>
 
-                <div id="sub-table-container">
+                <div id="school-table-container">
                     @include('pages.partials.users-table', [
                         'users' => $subUsers,
                         'pageName' => 'sub_page',
                         'emptyMessage' => 'No school users found under this district.',
-                        'activeTab' => 'sub'
+                        'activeTab' => 'school',
+                        'allowStationEdit' => false
                     ])
                 </div>
             </div>

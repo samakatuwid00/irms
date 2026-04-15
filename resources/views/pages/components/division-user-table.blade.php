@@ -188,10 +188,11 @@
                 </div>
                 <div id="sub-table-container">
                     @include('pages.partials.users-table', [
-                        'users' => $subUsers,
-                        'pageName' => 'sub_page',
-                        'emptyMessage' => 'No district users found under this division.',
-                        'activeTab' => 'sub'
+                        'users'            => $subUsers,
+                        'emptyMessage'     => 'No district users found.',
+                        'activeTab'        => 'sub',
+                        'allowStationEdit' => true,
+                        'divisionId'       => Auth::user()->station_id, // ← ADD
                     ])
                 </div>
             </div>

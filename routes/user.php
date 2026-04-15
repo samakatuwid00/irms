@@ -17,4 +17,12 @@ Route::middleware('auth')->group(function () {
     Route::put('/profile/photo', [ProfileController::class, 'updatePhoto'])->name('profile.photo');
     Route::put('/users/{user}/change-password', [ManageUserController::class, 'changePassword'])
     ->name('users.changePassword');
+
+    Route::patch('/users/{user}/station', [ManageUserController::class, 'updateStation'])
+     ->name('users.updateStation')
+     ->middleware(['auth']);
+    
+    // Scoped districts for inline station edit
+    Route::get('/divisions/{division}/districts', [ManageUserController::class, 'districtsByDivision'])
+         ->name('divisions.districts');
 });
