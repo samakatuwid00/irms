@@ -61,6 +61,7 @@ document.addEventListener('DOMContentLoaded', () => {
         g10: 'Grade 10',
         g11: 'Grade 11',
         g12: 'Grade 12',
+        ng:  'Non-Graded',
     };
 
     function renderPreview(data, syId, file) {

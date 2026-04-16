@@ -97,6 +97,7 @@ class ImportSF6Controller extends BaseController
             'g10' => ['g10_m', 'g10_f', 'g10_total'],
             'g11' => ['g11_m', 'g11_f', 'g11_total'],
             'g12' => ['g12_m', 'g12_f', 'g12_total'],
+            'ng'  => ['ng_m',  'ng_f',  'ng_total'],
         ];
 
         foreach ($gradeMap as $gradeKey => [$mField, $fField, $tField]) {
@@ -131,6 +132,10 @@ class ImportSF6Controller extends BaseController
         'GRADE1' => 'g1', 'GRADE2' => 'g2', 'GRADE3' => 'g3', 'GRADE4' => 'g4',
         'GRADE5' => 'g5', 'GRADE6' => 'g6', 'GRADE7' => 'g7', 'GRADE8' => 'g8',
         'GRADE9' => 'g9', 'GRADE10' => 'g10', 'GRADE11' => 'g11', 'GRADE12' => 'g12',
+        // Non-Graded — flexible: any of these labels found in any column position will be mapped
+        'NON-GRADED' => 'ng', 'NON GRADED' => 'ng', 'NONGRADED' => 'ng',
+        'NON-GRADE' => 'ng', 'NON GRADE' => 'ng', 'NG' => 'ng',
+        'SPED' => 'ng', 'SPECIAL' => 'ng',
     ];
 
 

@@ -197,6 +197,19 @@
                             </label>
                         </div>
                     @endfor
+
+                    {{-- Non-Graded (flexible — only shown/saved if school has it) --}}
+                    <div class="flex flex-col items-center">
+                        <label class="flex flex-col items-center cursor-pointer group">
+                            <input type="checkbox" name="ng" value="yes"
+                                {{ old('ng', $gradeOffering?->ng ?? 'no') === 'yes' ? 'checked' : '' }}
+                                class="grade-checkbox w-5 h-5 rounded border-2 border-gray-300 text-blue-600
+                                       focus:ring-2 focus:ring-blue-500 transition">
+                            <span class="mt-2 text-sm font-medium text-gray-700 group-hover:text-blue-600 transition text-center leading-tight">
+                                Non-Graded
+                            </span>
+                        </label>
+                    </div>
                 </div>
 
                 <div class="flex justify-between items-center">
@@ -289,22 +302,40 @@
                                 'g10' => 'Grade 10',
                                 'g11' => 'Grade 11',
                                 'g12' => 'Grade 12',
+                                'ng'  => 'Non-Graded',
                             ];
                         @endphp
 
                         @foreach($grades as $key => $label)
                             @php
                                 $isOffered = $gradeOffering && $gradeOffering->{$key} === 'yes';
-                                $maleField = $key === 'K' ? 'k_m' : strtolower($key) . '_m';
-                                $femaleField = $key === 'K' ? 'k_f' : strtolower($key) . '_f';
-                                $totalField = $key === 'K' ? 'k_total' : strtolower($key) . '_total';
+                                if ($key === 'K') {
+                                    $maleField   = 'k_m';
+                                    $femaleField = 'k_f';
+                                    $totalField  = 'k_total';
+                                } elseif ($key === 'ng') {
+                                    $maleField   = 'ng_m';
+                                    $femaleField = 'ng_f';
+                                    $totalField  = 'ng_total';
+                                } else {
+                                    $maleField   = strtolower($key) . '_m';
+                                    $femaleField = strtolower($key) . '_f';
+                                    $totalField  = strtolower($key) . '_total';
+                                }
+                                // Non-Graded row gets a distinct amber background to stand out
+                                $rowBg = $key === 'ng' ? 'bg-amber-50 border border-amber-200' : 'bg-gray-50';
                             @endphp
 
                             @if($isOffered)
-                                <div class="population-row grid grid-cols-1 md:grid-cols-12 gap-4 items-center p-4 bg-gray-50 rounded-lg">
+                                <div class="population-row grid grid-cols-1 md:grid-cols-12 gap-4 items-center p-4 {{ $rowBg }} rounded-lg">
                                     {{-- Grade Label --}}
                                     <div class="md:col-span-3">
-                                        <label class="text-sm font-semibold text-gray-700">{{ $label }}</label>
+                                        <label class="text-sm font-semibold {{ $key === 'ng' ? 'text-amber-700' : 'text-gray-700' }}">
+                                            {{ $label }}
+                                            @if($key === 'ng')
+                                                <span class="ml-1 text-xs font-normal text-amber-500">(Non-Graded)</span>
+                                            @endif
+                                        </label>
                                     </div>
 
                                     {{-- Male Input --}}

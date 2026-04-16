@@ -46,6 +46,7 @@ export function initGradeOfferings() {
             .filter(cb => cb.checked)
             .map(cb => {
                 if (cb.name === 'K') return 'Kindergarten';
+                if (cb.name === 'ng') return 'Non-Graded';
                 return `Grade ${cb.name.substring(1)}`;
             });
 

@@ -169,6 +169,7 @@ class SchoolController extends BaseController
             'g10' => 'nullable|in:yes',
             'g11' => 'nullable|in:yes',
             'g12' => 'nullable|in:yes',
+            'ng' => 'nullable|in:yes',
         ]);
 
         // Prepare data (unchecked checkboxes won't be in request, so default to 'no')
@@ -186,6 +187,7 @@ class SchoolController extends BaseController
             'g10' => $request->has('g10') ? 'yes' : 'no',
             'g11' => $request->has('g11') ? 'yes' : 'no',
             'g12' => $request->has('g12') ? 'yes' : 'no',
+            'ng' => $request->has('ng') ? 'yes' : 'no',
         ];
 
         // Update or create grade offering
@@ -243,6 +245,7 @@ class SchoolController extends BaseController
             'g10' => ['g10_m', 'g10_f', 'g10_total'],
             'g11' => ['g11_m', 'g11_f', 'g11_total'],
             'g12' => ['g12_m', 'g12_f', 'g12_total'],
+            'ng'  => ['ng_m',  'ng_f',  'ng_total'],
         ];
 
         foreach ($grades as $gradeKey => $fields) {

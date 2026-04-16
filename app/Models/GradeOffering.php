@@ -28,7 +28,8 @@ class GradeOffering extends Model
         'g9',
         'g10',
         'g11',
-        'g12'
+        'g12',
+        'ng',
     ];
 
     public function school(): BelongsTo

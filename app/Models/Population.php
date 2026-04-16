@@ -28,6 +28,8 @@ class Population extends Model
         'g10_m','g10_f','g10_total',
         'g11_m','g11_f','g11_total',
         'g12_m','g12_f','g12_total',
+        'ng_m','ng_f','ng_total',
+
 
         'encoded_by'
     ];

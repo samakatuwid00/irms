@@ -85,11 +85,11 @@ export function initPopulation() {
         Object.keys(originalPopulation).forEach(key => delete originalPopulation[key]);
         
         // Update all population inputs
-        const grades = ['K', 'g1', 'g2', 'g3', 'g4', 'g5', 'g6', 'g7', 'g8', 'g9', 'g10', 'g11', 'g12'];
+        const grades = ['K', 'g1', 'g2', 'g3', 'g4', 'g5', 'g6', 'g7', 'g8', 'g9', 'g10', 'g11', 'g12', 'ng'];
         
         grades.forEach(grade => {
-            const maleField = grade === 'K' ? 'k_m' : grade.toLowerCase() + '_m';
-            const femaleField = grade === 'K' ? 'k_f' : grade.toLowerCase() + '_f';
+            const maleField   = grade === 'K' ? 'k_m'  : grade === 'ng' ? 'ng_m'  : grade.toLowerCase() + '_m';
+            const femaleField = grade === 'K' ? 'k_f'  : grade === 'ng' ? 'ng_f'  : grade.toLowerCase() + '_f';
             
             const maleInput = document.querySelector(`input[name="${maleField}"]`);
             const femaleInput = document.querySelector(`input[name="${femaleField}"]`);
@@ -209,7 +209,7 @@ export function initPopulation() {
     };
 
     // Initialize totals on page load
-    const grades = ['K', 'g1', 'g2', 'g3', 'g4', 'g5', 'g6', 'g7', 'g8', 'g9', 'g10', 'g11', 'g12'];
+    const grades = ['K', 'g1', 'g2', 'g3', 'g4', 'g5', 'g6', 'g7', 'g8', 'g9', 'g10', 'g11', 'g12', 'ng'];
     grades.forEach(grade => calculateGradeTotal(grade));
     calculateOverallTotals();
 }
