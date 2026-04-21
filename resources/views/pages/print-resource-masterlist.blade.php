@@ -176,7 +176,7 @@
                                             Edit
                                         </a>
                                         {{-- Delete --}}
-                                        <form action="{{ route('masterlist.destroy', $row->id) }}" method="POST"
+                                        <!-- <form action="{{ route('masterlist.destroy', $row->id) }}" method="POST"
                                             data-delete-form
                                             data-title="{{ $row->printTitle->title ?? 'this resource' }}">
                                             @csrf
@@ -191,7 +191,7 @@
                                                 </svg>
                                                 Delete
                                             </button>
-                                        </form>
+                                        </form> -->
                                     </div>
                                 </td>
                             </tr>
