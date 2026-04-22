@@ -433,7 +433,7 @@
                     <form method="GET" action="{{ route('masterlist.index') }}" class="flex gap-2">
                         <input type="hidden" name="active_tab" value="tab-requests">
                         <input type="text" name="rq_search" value="{{ request('rq_search') }}"
-                               placeholder="Search requests..."
+                            placeholder="Search requests..."
                                 class="border border-gray-300 rounded-lg px-4 py-2.5 text-sm 
                                     w-full md:w-[200px] lg:w-[300px] xl:w-[400px] 2xl:w-[500px]
                                     focus:outline-none focus:ring-2 focus:ring-blue-500">
@@ -443,7 +443,7 @@
                         </button>
                         @if(request('rq_search'))
                             <a href="{{ route('masterlist.index', ['active_tab' => 'tab-requests']) }}"
-                               class="px-4 py-2 border border-gray-300 text-gray-600 text-sm rounded-lg hover:bg-gray-50 transition-colors">
+                            class="px-4 py-2 border border-gray-300 text-gray-600 text-sm rounded-lg hover:bg-gray-50 transition-colors">
                                 Clear
                             </a>
                         @endif
@@ -482,7 +482,9 @@
                             <tr class="hover:bg-gray-50 transition-colors">
                                 <td class="px-3 py-2">
                                     <img src="{{ $req->thumb_url }}" alt="cover"
-                                         class="w-9 h-12 object-cover rounded border border-gray-200 shadow-sm" loading="lazy">
+                                        class="w-9 h-12 object-cover rounded border border-gray-200 shadow-sm cursor-pointer hover:opacity-80 transition-opacity"
+                                        loading="lazy"
+                                        onclick="showImageModal('{{ $req->thumb_url }}', '{{ addslashes($req->printTitle->title ?? 'Image') }}')">
                                 </td>
                                 <td class="px-3 py-2 font-medium text-gray-900 max-w-40">
                                     <span title="{{ $req->printTitle->title ?? '' }}">{{ Str::limit($req->printTitle->title ?? '-', 38) }}</span>
@@ -506,7 +508,7 @@
                                     <div class="flex justify-center gap-2">
                                         {{-- Approve --}}
                                         <form action="{{ route('masterlist.approve', $req->id) }}" method="POST"
-                                              onsubmit="return confirm('Approve this resource request? It will be added to the masterlist.')">
+                                            onsubmit="return confirm('Approve this resource request? It will be added to the masterlist.')">
                                             @csrf
                                             @method('PATCH')
                                             <button type="submit"
@@ -521,7 +523,7 @@
 
                                         {{-- Reject --}}
                                         <form action="{{ route('masterlist.reject', $req->id) }}" method="POST"
-                                              onsubmit="return confirm('Reject and delete this request? The title and authors will not be removed as they may be used by other resources.')">
+                                            onsubmit="return confirm('Reject and delete this request? The title and authors will not be removed as they may be used by other resources.')">
                                             @csrf
                                             @method('DELETE')
                                             <button type="submit"
@@ -560,6 +562,37 @@
             @endif
         </div>
     </div>
+
+    <!-- Image Modal -->
+    <div id="imageModal" class="fixed inset-0 bg-black/50 z-50 hidden flex items-center justify-center p-4" onclick="hideImageModal()">
+        <div class="relative max-w-4xl max-h-full" onclick="event.stopPropagation()">
+            <button onclick="hideImageModal()" 
+                    class="absolute -top-10 right-0 text-white hover:text-gray-300 transition-colors text-3xl font-bold">
+                &times;
+            </button>
+            <img id="modalImage" src="" alt="Full size cover" class="max-w-full max-h-[90vh] object-contain rounded-lg shadow-2xl">
+            <div id="modalCaption" class="absolute bottom-0 left-0 right-0 bg-black bg-opacity-50 text-white text-center py-2 px-4 rounded-b-lg">
+            </div>
+        </div>
+    </div>
+
+    <style>
+    /* Optional: Add fade animation */
+    #imageModal {
+        transition: opacity 0.3s ease;
+    }
+    #imageModal:not(.hidden) {
+        animation: fadeIn 0.2s ease-out;
+    }
+    @keyframes fadeIn {
+        from {
+            opacity: 0;
+        }
+        to {
+            opacity: 1;
+        }
+    }
+    </style>
     @endif
 
     {{-- ===== VIEW RESOURCE MODAL ===== --}}
@@ -1358,6 +1391,38 @@
     })();
 
 })();
+
+function showImageModal(imageUrl, caption) {
+    const modal = document.getElementById('imageModal');
+    const modalImage = document.getElementById('modalImage');
+    const modalCaption = document.getElementById('modalCaption');
+    
+    modalImage.src = imageUrl;
+    modalCaption.textContent = caption;
+    modal.classList.remove('hidden');
+    
+    // Prevent body scrolling when modal is open
+    document.body.style.overflow = 'hidden';
+}
+
+function hideImageModal() {
+    const modal = document.getElementById('imageModal');
+    modal.classList.add('hidden');
+    
+    // Restore body scrolling
+    document.body.style.overflow = '';
+}
+
+// Close modal with Escape key
+document.addEventListener('keydown', function(event) {
+    if (event.key === 'Escape') {
+        const modal = document.getElementById('imageModal');
+        if (modal && !modal.classList.contains('hidden')) {
+            hideImageModal();
+        }
+    }
+});
+
 </script>
 
 @vite(['resources/js/add-print-resource.js'])
