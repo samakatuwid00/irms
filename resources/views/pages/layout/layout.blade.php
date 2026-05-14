@@ -667,28 +667,6 @@
                             </template>
                         </li>
                     @endif
-                    @if (Auth::check() && in_array(Auth::user()?->userType?->level, [1, 3]))
-                    <li class="relative group rounded-lg transition-colors">
-                        <a href="{{ route('package') }}"
-                           class="flex items-center gap-x-3.5 py-2 text-sm text-gray-800 rounded-lg transition-all duration-200
-                                  {{ request()->routeIs('package') ? 'bg-blue-100 text-blue-600 font-semibold' : 'hover:bg-gray-100' }}"
-                           :class="collapsed ? 'justify-center px-2' : 'px-2.5'">
-                            <svg class="size-5 shrink-0 transition-transform duration-200 group-hover:scale-110" xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                                <path d="M16.5 9.4 7.55 4.24"/>
-                                <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/>
-                                <path d="M3.27 6.96 12 12.01l8.73-5.05"/>
-                                <path d="M12 22.08V12"/>
-                            </svg>
-                            <span x-show="!collapsed" x-transition.opacity.duration.200ms class="whitespace-nowrap">Package</span>
-                        </a>
-                        <template x-if="collapsed">
-                            <div class="absolute left-full top-1/2 -translate-y-1/2 ml-3 px-3 py-1.5 bg-gray-900 text-white text-xs rounded-lg shadow-lg whitespace-nowrap pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-150 z-[60]">
-                                Package
-                                <div class="absolute right-full top-1/2 -translate-y-1/2 border-4 border-transparent border-r-gray-900"></div>
-                            </div>
-                        </template>
-                    </li>
-                    @endif
                 </ul>
             </nav>
 
