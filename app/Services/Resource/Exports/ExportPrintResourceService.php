@@ -24,17 +24,21 @@ class ExportPrintResourceService
     public const LEVEL_DIVISION = 3;
     public const LEVEL_REGION   = 4;
 
-    // No pagination — exports dump everything matching the current filter
-    public function getExportData(Request $request, int $level, string $stationId): Collection
+    // No pagination — exports dump everything matching the current filter.
+    // Returns an array: ['resources' => Collection, 'libraryIds' => Collection]
+    // so the caller can use scopedQuantities() to show only this library's counts.
+    public function getExportData(Request $request, int $level, string $stationId): array
     {
         $libraryIds = $this->getLibraryIds($request, $level, $stationId);
 
         if ($libraryIds->isEmpty()) {
-            return collect();
+            return ['resources' => collect(), 'libraryIds' => collect()];
         }
 
         // library_id lives on print_acquisitions, not on the resource itself —
-        // scope via whereHas and let eager loading pull the acquisitions through
+        // scope via whereHas so only resources held by these libraries are returned.
+        // Eager-load printAcquisitions WITHOUT a scope — scopedQuantities() on the
+        // model will filter to the right library IDs at display time.
         $query = PrintResource::with(['printTitle.authors', 'type', 'printAcquisitions'])
             ->whereHas('printAcquisitions', function ($q) use ($libraryIds) {
                 $q->whereIn('library_id', $libraryIds->toArray());
@@ -42,11 +46,17 @@ class ExportPrintResourceService
 
         $this->applySearch($query, $this->getSearchParam($request, $level));
 
-        return $query->get();
+        return ['resources' => $query->get(), 'libraryIds' => $libraryIds];
     }
 
     private function getSearchParam(Request $request, int $level): string
     {
+        // Level 1 division tab uses 'division_search' to avoid colliding with
+        // the school tab's 'search' param — mirror the same logic as the list view.
+        if ($level === self::LEVEL_SCHOOL && $request->input('tab') === 'division') {
+            return (string) $request->input('division_search', '');
+        }
+
         if ($level === self::LEVEL_DIVISION) {
             // Division has two separate search boxes — one for its own tab, one for the school tab
             return $request->has('district') || $request->has('school')
@@ -60,7 +70,7 @@ class ExportPrintResourceService
     private function getLibraryIds(Request $request, int $level, string $stationId): Collection
     {
         return match($level) {
-            self::LEVEL_SCHOOL   => $this->getLevel1LibraryIds($stationId),
+            self::LEVEL_SCHOOL   => $this->getLevel1LibraryIds($request, $stationId),
             self::LEVEL_DISTRICT => $this->getLevel2LibraryIds($request, $stationId),
             self::LEVEL_DIVISION => $this->getLevel3LibraryIds($request, $stationId),
             self::LEVEL_REGION   => $this->getLevel4LibraryIds($request, $stationId),
@@ -68,8 +78,31 @@ class ExportPrintResourceService
         };
     }
 
-    private function getLevel1LibraryIds(string $schoolId): Collection
+    private function getLevel1LibraryIds(Request $request, string $schoolId): Collection
     {
+        // When the user clicks Export from the Division tab, resolve the parent
+        // division's library IDs instead of the school's own.
+        if ($request->input('tab') === 'division') {
+            return Cache::remember(
+                "school_division_libraries_{$schoolId}",
+                self::CACHE_TTL_HIERARCHY,
+                function () use ($schoolId) {
+                    $school = School::find($schoolId);
+                    if (!$school || !$school->district_id) {
+                        return collect();
+                    }
+
+                    $district = District::find($school->district_id);
+                    if (!$district || !$district->division_id) {
+                        return collect();
+                    }
+
+                    return DivisionLibrary::where('division_id', $district->division_id)->pluck('id');
+                }
+            );
+        }
+
+        // Default: school tab — export only this school's own library resources.
         return Cache::remember(
             "school_libraries_{$schoolId}",
             self::CACHE_TTL_HIERARCHY,

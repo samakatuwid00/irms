@@ -91,10 +91,37 @@ function interceptForms() {
 
         let containerId = 'table-results-container';
         if (tab === 'division') containerId = 'division-results-container';
-        if (tab === 'school')   containerId = 'school-results-container';
+        // Level 1 (school account): the school tab container is table-results-container.
+        // Level 3 (division account): the school sub-tab has its own school-results-container.
+        if (tab === 'school') containerId = level === 3 ? 'school-results-container' : 'table-results-container';
 
         loadTableAjax(url, containerId);
     }, true);
+
+    // Auto-reset when all characters are cleared from a search input.
+    // Uses 'input' so it fires on every keystroke — no need to press Search or Enter.
+    document.addEventListener('input', (e) => {
+        const input = e.target.closest('#print-resources-wrapper input[type="text"]');
+        if (!input || input.value !== '') return;
+
+        const form = input.closest('form[data-ajax]');
+        if (!form) return;
+
+        const tabInput = form.querySelector('input[name="tab"]');
+        const tab = tabInput ? tabInput.value : null;
+
+        // Build params from the form but strip the now-empty search field so the URL stays clean
+        const params = new URLSearchParams(new FormData(form));
+        params.delete(input.getAttribute('name'));
+
+        const url = `${window.location.pathname}?${params.toString()}`;
+
+        let containerId = 'table-results-container';
+        if (tab === 'division') containerId = 'division-results-container';
+        if (tab === 'school') containerId = level === 3 ? 'school-results-container' : 'table-results-container';
+
+        loadTableAjax(url, containerId);
+    });
 
     // Intercept pagination links inside any results container
     document.addEventListener('click', (e) => {

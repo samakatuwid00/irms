@@ -34,8 +34,12 @@ class PrintResourceExportController extends BaseController
         $level     = $user->userType?->level ?? 0;
         $stationId = (string) $user->station_id;
 
-        // Service applies the same level-based scoping as the list view
-        $resources = $this->exportService->getExportData($request, $level, $stationId);
+        // Service applies the same level-based scoping as the list view.
+        // Returns both the resources and the scoped library IDs so we can call
+        // scopedQuantities() and show only counts from the relevant libraries.
+        $result     = $this->exportService->getExportData($request, $level, $stationId);
+        $resources  = $result['resources'];
+        $libraryIds = $result['libraryIds']->values()->all();
 
         // Bail early rather than producing a confusingly empty spreadsheet
         if ($resources->isEmpty()) {
@@ -128,7 +132,9 @@ class PrintResourceExportController extends BaseController
             }
             $subjectsText = $subjects ? implode(', ', $subjects) : 'No assignment';
 
-            $qty   = $resource->quantities;
+            // scopedQuantities() sums only acquisitions belonging to the filtered
+            // library IDs — prevents double-counting across schools/divisions.
+            $qty   = $resource->scopedQuantities($libraryIds);
             $total = array_sum($qty);
 
             $sheet->setCellValue('A' . $row, $resource->printTitle->title);
