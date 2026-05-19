@@ -9,28 +9,41 @@ let currentBosyLevel = 'region'; // 'region' or 'division'
 function initBosyStatus() {
     const regionSelect = document.getElementById('regionFilter');
     const districtSelect = document.getElementById('divisionFilter'); // level 3 district dropdown
+    const printTypeSelect = document.getElementById('bosyPrintTypeFilter');
 
     // Initial load
     const initialHubFilter = regionSelect ? regionSelect.value : '';
     const initialDistrictFilter = districtSelect ? districtSelect.value : '';
-    fetchBosyStatus(true, initialHubFilter, initialDistrictFilter);
+    const initialPrintType = printTypeSelect ? printTypeSelect.value : '';
+    fetchBosyStatus(true, initialHubFilter, initialDistrictFilter, initialPrintType);
 
     // Level 4+: hub filter changes
     if (regionSelect) {
         regionSelect.addEventListener('change', () => {
-            fetchBosyStatus(true, regionSelect.value, '');
+            const printType = printTypeSelect ? printTypeSelect.value : '';
+            fetchBosyStatus(true, regionSelect.value, '', printType);
         });
     }
 
     // Level 3: district filter changes
     if (districtSelect) {
         districtSelect.addEventListener('change', () => {
-            fetchBosyStatus(true, '', districtSelect.value);
+            const printType = printTypeSelect ? printTypeSelect.value : '';
+            fetchBosyStatus(true, '', districtSelect.value, printType);
+        });
+    }
+
+    // Print type filter changes
+    if (printTypeSelect) {
+        printTypeSelect.addEventListener('change', () => {
+            const hubFilter = regionSelect ? regionSelect.value : '';
+            const distFilter = districtSelect ? districtSelect.value : '';
+            fetchBosyStatus(true, hubFilter, distFilter, printTypeSelect.value);
         });
     }
 }
 
-function fetchBosyStatus(isFullRefresh = false, hubFilter = '', districtFilter = '') {
+function fetchBosyStatus(isFullRefresh = false, hubFilter = '', districtFilter = '', printTypeId = '') {
     const container = document.getElementById('bosy-divisions-container');
     if (!container) return;
 
@@ -41,10 +54,11 @@ function fetchBosyStatus(isFullRefresh = false, hubFilter = '', districtFilter =
 
     const token = document.querySelector('meta[name="csrf-token"]')?.content;
 
-    // Build URL with both query params
+    // Build URL with all query params
     const params = new URLSearchParams();
     if (hubFilter) params.set('hub_filter', hubFilter);
     if (districtFilter) params.set('district_filter', districtFilter);
+    if (printTypeId) params.set('print_type_id', printTypeId);
 
     const url = `/dashboard/bosy-status?${params.toString()}`;
 
