@@ -180,42 +180,42 @@
 
         </div>
 
-<div class="flex flex-col sm:flex-row flex-wrap items-stretch sm:items-end gap-4 md:gap-6 mb-0">
-    
-    <x-filter-select
-        id="globalFilter"
-        label="Visualization"
-        :options="[
-            ['value' => 'lr-availability', 'label' => 'Subject Level LR Availability'],
-            ['value' => 'lr-ratio',        'label' => 'Learning Resources to Learner Ratio'],
-            ['value' => 'lr-exdef',        'label' => 'Excess / Deficiency'],
-            ['value' => 'lr-heatmap',      'label' => 'Equitable Distribution'],
-        ]"
-        class="w-full sm:flex-1 min-w-0"
-    />
+        <div class="flex flex-col sm:flex-row flex-wrap items-stretch sm:items-end gap-4 md:gap-6 mb-0">
+            
+            <x-filter-select
+                id="globalFilter"
+                label="Visualization"
+                :options="[
+                    ['value' => 'lr-availability', 'label' => 'Subject Level LR Availability'],
+                    ['value' => 'lr-ratio',        'label' => 'Learning Resources to Learner Ratio'],
+                    ['value' => 'lr-exdef',        'label' => 'Excess / Deficiency'],
+                    ['value' => 'lr-heatmap',      'label' => 'Equitable Distribution'],
+                ]"
+                class="w-full sm:flex-1 min-w-0"
+            />
 
-    <x-filter-select
-        id="schoolYearFilter"
-        label="Key Stages"
-        :options="[
-            ['value' => 'All', 'label' => 'All Key Stages', 'selected' => true],
-            ['value' => 'K1', 'label' => 'Key Stage 1'],
-            ['value' => 'K2', 'label' => 'Key Stage 2'],
-            ['value' => 'JH', 'label' => 'Junior High'],
-            ['value' => 'SH', 'label' => 'Senior High'],
-        ]"
-        class="w-full sm:flex-1 min-w-0"
-    />
+            <x-filter-select
+                id="schoolYearFilter"
+                label="Key Stages"
+                :options="[
+                    ['value' => 'All', 'label' => 'All Key Stages', 'selected' => true],
+                    ['value' => 'K1', 'label' => 'Key Stage 1'],
+                    ['value' => 'K2', 'label' => 'Key Stage 2'],
+                    ['value' => 'JH', 'label' => 'Junior High'],
+                    ['value' => 'SH', 'label' => 'Senior High'],
+                ]"
+                class="w-full sm:flex-1 min-w-0"
+            />
 
-    <!-- Print Type Filter -->
-    <x-filter-select
-        id="printTypeFilter"
-        label="Print Types"
-        :options="$printTypeOptions"
-        class="w-full sm:flex-1 min-w-0"
-    />
+            <!-- Print Type Filter -->
+            <x-filter-select
+                id="printTypeFilter"
+                label="Print Types"
+                :options="$printTypeOptions"
+                class="w-full sm:flex-1 min-w-0"
+            />
 
-</div>
+        </div>
   
         <!-- LR Availability -->
         <x-chart-card id="lr-availability" title="LR Availability" class="chart-container">
@@ -260,20 +260,33 @@
         </x-chart-card>
 
         <!-- BOSY -->
-        @if($userLevel >= 4)
+        <div class="flex flex-col sm:flex-row flex-wrap items-stretch sm:items-end gap-4 md:gap-6 mb-0">
+
+            @if($userLevel >= 4)
+                <x-filter-select
+                    id="regionFilter"
+                    label="Region / Library Level"
+                    :options="$regionOptions"
+                    class="w-full sm:flex-1 min-w-0"
+                />
+            @endif
+            @if($userLevel == 3)
+                <x-filter-select id="divisionFilter" label="District" class="w-full sm:flex-1 min-w-0">
+                    @foreach($divisions as $district)
+                        <option value="{{ $district['id'] }}">{{ $district['name'] }}</option>
+                    @endforeach
+                </x-filter-select>
+            @endif
+
+            <!-- Print Type Filter for BOSY -->
             <x-filter-select
-                id="regionFilter"
-                label="Region / Library Level"
-                :options="$regionOptions"
+                id="bosyPrintTypeFilter"
+                label="Print Types"
+                :options="$printTypeOptions"
+                class="w-full sm:flex-1 min-w-0"
             />
-        @endif
-        @if($userLevel == 3)
-            <x-filter-select id="divisionFilter" label="District">
-                @foreach($divisions as $district)
-                    <option value="{{ $district['id'] }}">{{ $district['name'] }}</option>
-                @endforeach
-            </x-filter-select>
-        @endif
+
+        </div>
 
         <x-chart-card id="bosy-status" title="BOSY Status" class="chart-container">
 
