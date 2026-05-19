@@ -21,13 +21,14 @@ class BosyStatusService
 
         $hubFilter      = $request->query('hub_filter', '');
         $districtFilter = $request->query('district_filter', '');
+        $printTypeId    = $request->query('print_type_id') ?: null;
 
         try {
             return match ($userLevel) {
-                4 => $this->getRegionData($stationId, $hubFilter),
-                3 => $this->getDivisionData($stationId, $districtFilter),
-                2 => $this->getDistrictData($stationId),
-                1 => $this->getSchoolData($stationId),
+                4 => $this->getRegionData($stationId, $hubFilter, $printTypeId),
+                3 => $this->getDivisionData($stationId, $districtFilter, $printTypeId),
+                2 => $this->getDistrictData($stationId, $printTypeId),
+                1 => $this->getSchoolData($stationId, $printTypeId),
             };
         } catch (\Exception $e) {
             Log::error('BOSY Status data failed', [
@@ -41,7 +42,7 @@ class BosyStatusService
         }
     }
 
-    private function getSchoolData(string $schoolId): array
+    private function getSchoolData(string $schoolId, ?string $printTypeId = null): array
     {
         // 1. Get school info + library estimated resources
         $school = DB::table('lrmis.schools as s')
@@ -84,36 +85,44 @@ class BosyStatusService
         $userIds = $users->pluck('user_id')->toArray();
 
         // Print LR per user
-        $printPerUser = DB::table('lrmis.print_acquisitions as pa')
+        $printQuery = DB::table('lrmis.print_acquisitions as pa')
             ->join('lrmis.print_resources as pr', 'pr.id', '=', 'pa.print_id')
             ->whereIn('pa.encoded_by', $userIds)
             ->where('pa.library_id', function ($q) use ($schoolId) {
                 $q->select('id')
                     ->from('lrmis.school_libraries')
                     ->where('school_id', $schoolId);
-            })
-            ->select(
+            });
+
+        if ($printTypeId) {
+            $printQuery->where('pr.print_type_id', $printTypeId);
+        }
+
+        $printPerUser = $printQuery->select(
                 'pa.encoded_by',
                 DB::raw('COALESCE(SUM(pa.usable + pa.partially_damaged + pa.damaged + pa.lost + pa.condemnable), 0) as total_print')
             )
             ->groupBy('pa.encoded_by')
             ->pluck('total_print', 'encoded_by');
 
-        // Nonprint LR per user
-        $nonprintPerUser = DB::table('lrmis.nonprint_acquisitions as na')
-            ->join('lrmis.nonprint_resources as nr', 'nr.id', '=', 'na.nonprint_id')
-            ->whereIn('na.encoded_by', $userIds)
-            ->where('na.library_id', function ($q) use ($schoolId) {
-                $q->select('id')
-                    ->from('lrmis.school_libraries')
-                    ->where('school_id', $schoolId);
-            })
-            ->select(
-                'na.encoded_by',
-                DB::raw('COALESCE(SUM(na.total_qty), 0) as total_nonprint')
-            )
-            ->groupBy('na.encoded_by')
-            ->pluck('total_nonprint', 'encoded_by');
+        // Nonprint LR per user (skip when filtering by print type)
+        $nonprintPerUser = collect();
+        if (!$printTypeId) {
+            $nonprintPerUser = DB::table('lrmis.nonprint_acquisitions as na')
+                ->join('lrmis.nonprint_resources as nr', 'nr.id', '=', 'na.nonprint_id')
+                ->whereIn('na.encoded_by', $userIds)
+                ->where('na.library_id', function ($q) use ($schoolId) {
+                    $q->select('id')
+                        ->from('lrmis.school_libraries')
+                        ->where('school_id', $schoolId);
+                })
+                ->select(
+                    'na.encoded_by',
+                    DB::raw('COALESCE(SUM(na.total_qty), 0) as total_nonprint')
+                )
+                ->groupBy('na.encoded_by')
+                ->pluck('total_nonprint', 'encoded_by');
+        }
 
         // 4. Build items — one row per user
         $items = $users->map(function ($user) use ($printPerUser, $nonprintPerUser, $school) {
@@ -182,42 +191,59 @@ class BosyStatusService
         ];
     }
 
-    private function getDistrictData(string $districtId): array
+    private function getDistrictData(string $districtId, ?string $printTypeId = null): array
     {
         $schools = DB::table('lrmis.mv_bosy_district_schools_status')
             ->where('district_id', $districtId)
             ->orderBy('school_name')
             ->get();
 
+        // When print type is selected, overlay real-time total_lr from schema
+        $realTimeLr = [];
+        if ($printTypeId && $schools->isNotEmpty()) {
+            $schoolIds = $schools->pluck('school_id')->toArray();
+            $realTimeLr = $this->getRealTimeLrBySchool($schoolIds, $printTypeId);
+        }
+
         if ($schools->isEmpty()) {
             return $this->emptyResponse('district', $districtId);
         }
 
-        $items = $schools->map(fn($school) => [
-            'id' => $school->school_id,
-            'name' => $school->school_name,
-            'shortname' => $school->school_name,
-            'logo' => $school->logo
-                ? asset('storage/' . $school->logo)
-                : asset('assets/images/no_image.jpg'),
-            'total_lr' => (int) $school->total_actual_lr,
-            'estimated_resource' => (int) $school->total_estimated_resource,
-            'percentage' => (int) $school->percentage,
-            'status' => $school->status,
-            'color' => $school->color,
-            'last_updated' => $school->last_updated_formatted,
-            'libraries' => [
-                'total' => (int) $school->total_libraries,
-            ],
-            'parent' => [
-                'id' => $school->division_id,
-                'name' => $school->division_name,
-            ],
-            'district' => [
-                'id' => $school->district_id,
-                'name' => $school->district_name,
-            ],
-        ]);
+        $items = $schools->map(function ($school) use ($printTypeId, $realTimeLr) {
+            $totalLr = $printTypeId
+                ? (int) ($realTimeLr[$school->school_id] ?? 0)
+                : (int) $school->total_actual_lr;
+            $estimated = (int) $school->total_estimated_resource;
+            $percentage = $printTypeId
+                ? $this->calculatePercentage($totalLr, $estimated)
+                : (int) $school->percentage;
+
+            return [
+                'id' => $school->school_id,
+                'name' => $school->school_name,
+                'shortname' => $school->school_name,
+                'logo' => $school->logo
+                    ? asset('storage/' . $school->logo)
+                    : asset('assets/images/no_image.jpg'),
+                'total_lr' => $totalLr,
+                'estimated_resource' => $estimated,
+                'percentage' => $percentage,
+                'status' => $printTypeId ? $this->determineBosyStatus($percentage) : $school->status,
+                'color' => $printTypeId ? $this->determineBosyColor($percentage) : $school->color,
+                'last_updated' => $school->last_updated_formatted,
+                'libraries' => [
+                    'total' => (int) $school->total_libraries,
+                ],
+                'parent' => [
+                    'id' => $school->division_id,
+                    'name' => $school->division_name,
+                ],
+                'district' => [
+                    'id' => $school->district_id,
+                    'name' => $school->district_name,
+                ],
+            ];
+        });
 
         $totals = [
             'total_lr' => $items->sum('total_lr'),
@@ -257,39 +283,51 @@ class BosyStatusService
         ];
     }
 
-    private function getRegionData(string $regionId, string $hubFilter = ''): array
+    private function getRegionData(string $regionId, string $hubFilter = '', ?string $printTypeId = null): array
     {
         $divisions = DB::table('lrmis.mv_bosy_division_status')
             ->where('region_id', $regionId)
             ->orderBy('division_name')
             ->get();
 
+        // When print type is selected, overlay real-time total_lr from schema
+        $realTimeLr = [];
+        if ($printTypeId && $divisions->isNotEmpty()) {
+            $divisionIds = $divisions->pluck('division_id')->toArray();
+            $realTimeLr = $this->getRealTimeLrByDivision($divisionIds, $printTypeId, $hubFilter);
+        }
+
         if ($divisions->isEmpty()) {
             return $this->emptyResponse('region', $regionId);
         }
 
-        $items = $divisions->map(function ($division) use ($hubFilter) {
-            // Choose columns based on hub filter
+        $items = $divisions->map(function ($division) use ($hubFilter, $printTypeId, $realTimeLr) {
+            // Choose estimated resource based on hub filter (always from MV)
             switch ($hubFilter) {
                 case 'division-hub':
-                    $actualLr = (int) $division->division_actual_lr;
+                    $mvActualLr = (int) $division->division_actual_lr;
                     $estimatedResource = (int) $division->division_estimated_resource;
                     break;
                 case 'school-hub':
-                    $actualLr = (int) $division->school_actual_lr;
+                    $mvActualLr = (int) $division->school_actual_lr;
                     $estimatedResource = (int) $division->school_estimated_resource;
                     break;
-                default: // '' = All Library Hubs
-                    $actualLr = (int) $division->total_actual_lr;
+                default:
+                    $mvActualLr = (int) $division->total_actual_lr;
                     $estimatedResource = (int) $division->total_estimated_resource;
                     break;
             }
+
+            // Use real-time LR when print type is selected, otherwise MV data
+            $actualLr = $printTypeId
+                ? (int) ($realTimeLr[$division->division_id] ?? 0)
+                : $mvActualLr;
 
             $percentage = $this->calculatePercentage($actualLr, $estimatedResource);
 
             return [
                 'id' => $division->division_id,
-                'name' => $division->division_name,  // always the same
+                'name' => $division->division_name,
                 'shortname' => $division->division_name,
                 'logo' => $division->logo
                     ? asset('storage/' . $division->logo)
@@ -346,7 +384,7 @@ class BosyStatusService
         ];
     }
 
-    private function getDivisionData(string $divisionId, string $districtFilter = ''): array
+    private function getDivisionData(string $divisionId, string $districtFilter = '', ?string $printTypeId = null): array
     {
         $query = DB::table('lrmis.mv_bosy_division_schools_status')
             ->where('division_id', $divisionId);
@@ -358,36 +396,52 @@ class BosyStatusService
 
         $schools = $query->orderBy('school_name')->get();
 
+        // When print type is selected, overlay real-time total_lr from schema
+        $realTimeLr = [];
+        if ($printTypeId && $schools->isNotEmpty()) {
+            $schoolIds = $schools->pluck('school_id')->toArray();
+            $realTimeLr = $this->getRealTimeLrBySchool($schoolIds, $printTypeId);
+        }
+
         if ($schools->isEmpty()) {
             return $this->emptyResponse('division', $divisionId);
         }
 
-        $items = $schools->map(fn($school) => [
-            'id' => $school->school_id,
-            'name' => $school->school_name,
-            'shortname' => $school->school_name,
-            'logo' => $school->logo
-                ? asset('storage/' . $school->logo)
-                : asset('assets/images/no_image.jpg'),
-            'total_lr' => (int) $school->total_actual_lr,
-            'estimated_resource' => (int) $school->total_estimated_resource,
-            'percentage' => (int) $school->percentage,
-            'status' => $school->status,
-            'color' => $school->color,
-            'last_updated' => $school->last_updated_formatted,
-            'libraries' => [
-                'total' => (int) $school->total_libraries,
-            ],
-            'parent' => [
-                'id' => $school->division_id,
-                'name' => $school->division_name,
-            ],
-            // expose district info per item (useful for display)
-            'district' => [
-                'id' => $school->district_id,
-                'name' => $school->district_name,
-            ],
-        ]);
+        $items = $schools->map(function ($school) use ($printTypeId, $realTimeLr) {
+            $totalLr = $printTypeId
+                ? (int) ($realTimeLr[$school->school_id] ?? 0)
+                : (int) $school->total_actual_lr;
+            $estimated = (int) $school->total_estimated_resource;
+            $percentage = $printTypeId
+                ? $this->calculatePercentage($totalLr, $estimated)
+                : (int) $school->percentage;
+
+            return [
+                'id' => $school->school_id,
+                'name' => $school->school_name,
+                'shortname' => $school->school_name,
+                'logo' => $school->logo
+                    ? asset('storage/' . $school->logo)
+                    : asset('assets/images/no_image.jpg'),
+                'total_lr' => $totalLr,
+                'estimated_resource' => $estimated,
+                'percentage' => $percentage,
+                'status' => $printTypeId ? $this->determineBosyStatus($percentage) : $school->status,
+                'color' => $printTypeId ? $this->determineBosyColor($percentage) : $school->color,
+                'last_updated' => $school->last_updated_formatted,
+                'libraries' => [
+                    'total' => (int) $school->total_libraries,
+                ],
+                'parent' => [
+                    'id' => $school->division_id,
+                    'name' => $school->division_name,
+                ],
+                'district' => [
+                    'id' => $school->district_id,
+                    'name' => $school->district_name,
+                ],
+            ];
+        });
 
         $totals = [
             'total_lr' => $items->sum('total_lr'),
@@ -438,6 +492,72 @@ class BosyStatusService
             return min(100, round(($total / $estimated) * 100));
         }
         return $total > 0 ? 100 : 0;
+    }
+
+    /**
+     * Real-time total LR per school filtered by print_type_id.
+     * Queries the schema directly (not the MV) for accurate per-type counts.
+     */
+    private function getRealTimeLrBySchool(array $schoolIds, string $printTypeId): array
+    {
+        if (empty($schoolIds)) return [];
+
+        return DB::table('lrmis.school_libraries as sl')
+            ->join('lrmis.print_acquisitions as pa', 'pa.library_id', '=', 'sl.id')
+            ->join('lrmis.print_resources as pr', 'pr.id', '=', 'pa.print_id')
+            ->where('pr.print_type_id', $printTypeId)
+            ->whereIn('sl.school_id', $schoolIds)
+            ->select('sl.school_id', DB::raw('COALESCE(SUM(pa.total_qty), 0)::integer as total_lr'))
+            ->groupBy('sl.school_id')
+            ->pluck('total_lr', 'school_id')
+            ->all();
+    }
+
+    /**
+     * Real-time total LR per division filtered by print_type_id.
+     * Respects hub_filter to scope to school-only or division-only libraries.
+     */
+    private function getRealTimeLrByDivision(array $divisionIds, string $printTypeId, string $hubFilter = ''): array
+    {
+        if (empty($divisionIds)) return [];
+
+        $result = array_fill_keys($divisionIds, 0);
+
+        // School libraries component
+        if ($hubFilter !== 'division-hub') {
+            $schoolLr = DB::table('lrmis.school_libraries as sl')
+                ->join('lrmis.schools as s', 's.id', '=', 'sl.school_id')
+                ->join('lrmis.districts as dt', 'dt.id', '=', 's.district_id')
+                ->join('lrmis.print_acquisitions as pa', 'pa.library_id', '=', 'sl.id')
+                ->join('lrmis.print_resources as pr', 'pr.id', '=', 'pa.print_id')
+                ->where('pr.print_type_id', $printTypeId)
+                ->whereIn('dt.division_id', $divisionIds)
+                ->select('dt.division_id', DB::raw('COALESCE(SUM(pa.total_qty), 0)::integer as total_lr'))
+                ->groupBy('dt.division_id')
+                ->pluck('total_lr', 'division_id');
+
+            foreach ($schoolLr as $divId => $lr) {
+                $result[$divId] = ($result[$divId] ?? 0) + (int) $lr;
+            }
+        }
+
+        // Division libraries component
+        if ($hubFilter !== 'school-hub') {
+            $divisionLr = DB::table('lrmis.division_libraries as dl')
+                ->join('lrmis.print_acquisitions as pa', 'pa.library_id', '=', 'dl.id')
+                ->join('lrmis.print_resources as pr', 'pr.id', '=', 'pa.print_id')
+                ->where('pr.print_type_id', $printTypeId)
+                ->whereIn('dl.division_id', $divisionIds)
+                ->select('dl.division_id', DB::raw('COALESCE(SUM(pa.total_qty), 0)::integer as total_lr'))
+                ->groupBy('dl.division_id')
+                ->pluck('total_lr', 'division_id');
+
+            foreach ($divisionLr as $divId => $lr) {
+                $result[$divId] = ($result[$divId] ?? 0) + (int) $lr;
+            }
+        }
+
+        return $result;
     }
 
     private function emptyResponse(string $level, string $stationId): array
