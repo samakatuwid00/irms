@@ -1,4 +1,14 @@
 <form method="GET" data-ajax class="bg-white p-4 rounded-xl shadow space-y-4">
+    
+    @if(request()->has('school') && request('school') !== 'all')
+        <div class="flex items-center gap-2 px-3 py-2 bg-blue-50 border border-blue-200 rounded-lg text-sm text-blue-700">
+            <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+            </svg>
+            <span>Showing resources for the school selected from the <strong>BOSY Status</strong> chart.</span>
+            <a href="{{ route('print-resources') }}?tab=school" class="ml-auto font-medium underline hover:text-blue-900 whitespace-nowrap">Clear filter</a>
+        </div>
+    @endif
 
     <!-- TOP ROW: Search -->
     <div class="flex gap-3">
