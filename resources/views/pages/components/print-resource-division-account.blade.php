@@ -1,13 +1,17 @@
+@php
+    $activeTab = request('tab', 'division');
+@endphp
+
 <!-- Tab Navigation -->
 <div class="bg-white rounded-t-xl shadow">
     <div class="flex border-b">
         <button type="button"
-            class="tab-btn px-6 py-3 font-medium text-sm transition-colors border-b-2 border-blue-600 text-blue-600"
+            class="tab-btn px-6 py-3 font-medium text-sm transition-colors border-b-2 {{ $activeTab === 'division' ? 'border-blue-600 text-blue-600' : 'border-transparent text-gray-600 hover:text-gray-800' }}"
             data-tab="division">
             Division
         </button>
         <button type="button"
-            class="tab-btn px-6 py-3 font-medium text-sm transition-colors border-b-2 border-transparent text-gray-600 hover:text-gray-800"
+            class="tab-btn px-6 py-3 font-medium text-sm transition-colors border-b-2 {{ $activeTab === 'school' ? 'border-blue-600 text-blue-600' : 'border-transparent text-gray-600 hover:text-gray-800' }}"
             data-tab="school">
             School
         </button>
@@ -20,7 +24,7 @@
     <!-- ============================================================ -->
     <!-- DIVISION LIBRARY TAB                                         -->
     <!-- ============================================================ -->
-    <div id="division-tab" class="tab-content">
+    <div id="division-tab" class="tab-content {{ $activeTab === 'school' ? 'hidden' : '' }}">
         <div class="bg-white rounded-b-xl shadow p-4">
             <form method="GET" data-ajax class="flex gap-3 mb-4">
                 <input type="hidden" name="tab" value="division">
@@ -212,9 +216,19 @@
     <!-- ============================================================ -->
     <!-- SCHOOL LIBRARY TAB                                           -->
     <!-- ============================================================ -->
-    <div id="school-tab" class="tab-content hidden">
+    <div id="school-tab" class="tab-content {{ $activeTab === 'school' ? '' : 'hidden' }}">
         <form method="GET" data-ajax class="bg-white p-4 rounded-xl shadow space-y-4">
             <input type="hidden" name="tab" value="school">
+
+            @if($activeTab === 'school' && request()->has('school') && request('school') !== 'all')
+            <div class="flex items-center gap-2 px-3 py-2 bg-blue-50 border border-blue-200 rounded-lg text-sm text-blue-700">
+                <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                </svg>
+                <span>Showing resources for the school selected from the <strong>BOSY Status</strong> chart.</span>
+                <a href="{{ route('print-resources') }}?tab=school" class="ml-auto font-medium underline hover:text-blue-900 whitespace-nowrap">Clear filter</a>
+            </div>
+            @endif
 
             <div class="flex gap-3">
                 <div class="relative w-full">
