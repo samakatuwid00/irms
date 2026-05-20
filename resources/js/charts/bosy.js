@@ -197,11 +197,37 @@ function createItemElement(item) {
     // Determine initial logo source
     const logoSource = item.logo || '/assets/images/no_image.jpg';
 
+    // Build a clickable link to Print Resources for division/district/region-level items
+    const isSchoolItem = (currentBosyLevel === 'division' || currentBosyLevel === 'district')
+        && item.district && item.district.id;
+    const isDivisionItem = currentBosyLevel === 'region';
+
+    let schoolNameHtml;
+    if (isSchoolItem) {
+        // Division account: school name → Print Resources school tab, pre-filtered (blue)
+        schoolNameHtml = `<a href="/print-resources?tab=school&district=${encodeURIComponent(item.district.id)}&school=${encodeURIComponent(item.id)}"
+              class="text-sm sm:text-base font-semibold text-gray-900 hover:text-gray-600 hover:underline truncate block transition-colors cursor-pointer"
+              title="View ${escapeHtml(item.name)} resources in Print Resources">
+               ${escapeHtml(item.shortname || item.name)}
+           </a>`;
+    } else if (isDivisionItem) {
+        // Region account: division name → Print Resources, pre-filtered by division (black)
+        schoolNameHtml = `<a href="/print-resources?division=${encodeURIComponent(item.id)}"
+              class="text-sm sm:text-base font-semibold text-gray-900 hover:text-gray-600 hover:underline truncate block transition-colors cursor-pointer"
+              title="View ${escapeHtml(item.name)} resources in Print Resources">
+               ${escapeHtml(item.shortname || item.name)}
+           </a>`;
+    } else {
+        schoolNameHtml = `<h3 class="text-sm sm:text-base font-semibold text-gray-900 truncate" title="${escapeHtml(item.name)}">
+               ${escapeHtml(item.shortname || item.name)}
+           </h3>`;
+    }
+
     div.innerHTML = `
         <div class="w-12 h-12 sm:w-14 sm:h-14 flex-shrink-0">
             <img
                 src="${logoSource}"
-                alt="${item.name}"
+                alt="${escapeHtml(item.name)}"
                 class="w-full h-full rounded-full object-cover bg-white p-1 shadow-sm border border-gray-200"
                 loading="lazy"
                 decoding="async"
@@ -211,9 +237,7 @@ function createItemElement(item) {
 
             <!-- Name + subtitle -->
             <div class="bosy-col-name min-w-0">
-                <h3 class="text-sm sm:text-base font-semibold text-gray-900 truncate" title="${item.name}">
-                    ${escapeHtml(item.shortname || item.name)}
-                </h3>
+                ${schoolNameHtml}
                 ${subtitleHtml}
             </div>
 
