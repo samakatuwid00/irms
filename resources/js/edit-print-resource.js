@@ -1,20 +1,27 @@
 /**
  * edit-print-resource.js
  * Handles the acquisition list logic for the Edit Print Resource form.
- * Vite-ready ES module — import this in your resources/js entry or directly via @vite.
+ *
+ * Only the current user's library acquisitions are shown and editable in the table.
+ * Acquisitions belonging to other libraries are passed through silently on save
+ * (via window.__otherAcquisitions) so the service layer does not delete them.
  */
 
-/**
- * Auto-initializes when loaded by Vite, reading acquisition data
- * that the Blade template has placed on window.__printAcquisitions.
- */
 document.addEventListener('DOMContentLoaded', () => {
-    initEditPrintResource(window.__printAcquisitions ?? []);
+    initEditPrintResource(
+        window.__printAcquisitions ?? [],
+        window.__otherAcquisitions ?? [],
+    );
 });
 
-export function initEditPrintResource(acquisitionsData) {
+export function initEditPrintResource(acquisitionsData, otherAcquisitionsData = []) {
+    // Editable rows — only this user's library(ies)
     let acquisitions = Array.isArray(acquisitionsData) ? acquisitionsData : [];
-    let editIndex    = null;
+
+    // Read-only pass-through rows — other libraries; never displayed, always included on save
+    const otherAcquisitions = Array.isArray(otherAcquisitionsData) ? otherAcquisitionsData : [];
+
+    let editIndex = null;
 
     const tableBody      = document.getElementById('acquisitionTableBody');
     const hiddenInput    = document.getElementById('acquisitionsInput');
@@ -25,6 +32,12 @@ export function initEditPrintResource(acquisitionsData) {
     const saveBtnText    = document.getElementById('updatePrintText');
     const saveBtnLoading = document.getElementById('updatePrintLoading');
     const libraryEl      = document.getElementById('acqLibraryId');
+    const otherNotice    = document.getElementById('otherLibraryNotice');
+
+    // Show the informational banner if there are other-library rows
+    if (otherNotice && otherAcquisitions.length > 0) {
+        otherNotice.classList.remove('hidden');
+    }
 
     // ── Helpers ──────────────────────────────────────────────────────────────
 
@@ -63,7 +76,6 @@ export function initEditPrintResource(acquisitionsData) {
             condemnable:       document.getElementById('acqCondemnable').value,
             total_quantity:    totalField.value,
         };
-        // Preserve ID if updating existing acquisition
         if (preserveId) {
             data.id = preserveId;
         }
@@ -102,19 +114,23 @@ export function initEditPrintResource(acquisitionsData) {
         calcTotal();
     }
 
+    /**
+     * Merge the user's (editable) acquisitions with the other-library (pass-through)
+     * rows before writing to the hidden input.  The service layer will update the
+     * editable rows and leave the pass-through rows unchanged.
+     */
     function updateHidden() {
-        hiddenInput.value = JSON.stringify(acquisitions);
+        hiddenInput.value = JSON.stringify([...acquisitions, ...otherAcquisitions]);
     }
 
     /**
-     * Validate data integrity: ensure IDs are preserved correctly
-     * and all acquisitions have required fields
+     * Validate data integrity: ensure all acquisitions have required fields.
      */
     function validateAcquisitionsData() {
         const issues = [];
         acquisitions.forEach((acq, idx) => {
-            if (!acq.library_id) issues.push(`Row ${idx + 1}: Missing library_id`);
-            if (!acq.source) issues.push(`Row ${idx + 1}: Missing source`);
+            if (!acq.library_id)    issues.push(`Row ${idx + 1}: Missing library_id`);
+            if (!acq.source)        issues.push(`Row ${idx + 1}: Missing source`);
             if (!acq.date_acquired) issues.push(`Row ${idx + 1}: Missing date_acquired`);
         });
         return issues;
@@ -127,13 +143,15 @@ export function initEditPrintResource(acquisitionsData) {
     }
 
     // ── Render table ─────────────────────────────────────────────────────────
+    // Only the current user's library acquisitions are rendered.
+    // Other-library rows are intentionally excluded from the table.
 
     function render() {
         tableBody.innerHTML = '';
 
         if (!acquisitions.length) {
             tableBody.innerHTML =
-                '<tr><td colspan="14" class="text-center text-gray-400 py-3">No acquisitions added yet</td></tr>';
+                '<tr><td colspan="13" class="text-center text-gray-400 py-3">No acquisitions added yet</td></tr>';
             return;
         }
 
@@ -145,14 +163,11 @@ export function initEditPrintResource(acquisitionsData) {
                 ? acq.library_name.substring(0, 22) + '...'
                 : (acq.library_name || '-');
 
-            const isUserLibrary = acq.isUserLibrary !== false; // Default to true if not specified
             const row = document.createElement('tr');
             row.setAttribute('data-id', acq.id || '');
             row.setAttribute('data-index', idx);
-            row.setAttribute('data-user-lib', isUserLibrary);
             row.innerHTML = `
-                
-                <td class="border px-2 py-1 text-xs" title="${esc(acq.library_name)}">${esc(shortLibrary)}${!isUserLibrary ? ' <span class="text-xs text-gray-400">(read-only)</span>' : ''}</td>
+                <td class="border px-2 py-1 text-xs" title="${esc(acq.library_name)}">${esc(shortLibrary)}</td>
                 <td class="border px-2 py-1 text-xs">${esc(acq.source)}</td>
                 <td class="border px-2 py-1 text-xs">${esc(acq.date_acquired)}</td>
                 <td class="border px-2 py-1 text-xs">${esc(acq.cost) || '-'}</td>
@@ -167,18 +182,14 @@ export function initEditPrintResource(acquisitionsData) {
                 <td class="border px-2 py-1 text-center">
                     <div class="flex justify-center gap-1">
                         <button type="button" data-action="edit" data-index="${idx}"
-                                class="p-1 rounded hover:bg-blue-100 text-blue-600 disabled:opacity-50 disabled:cursor-not-allowed" 
-                                title="${isUserLibrary ? 'Edit' : 'Cannot edit acquisitions from other libraries'}"
-                                ${!isUserLibrary ? 'disabled' : ''}>
+                                class="p-1 rounded hover:bg-blue-100 text-blue-600" title="Edit">
                             <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                                 <path stroke-linecap="round" stroke-linejoin="round"
                                     d="M16.862 4.487l1.687-1.687a1.875 1.875 0 112.652 2.652L7.5 19.153 3 21l1.847-4.5L16.862 4.487z"/>
                             </svg>
                         </button>
                         <button type="button" data-action="delete" data-index="${idx}"
-                                class="p-1 rounded hover:bg-red-100 text-red-600 disabled:opacity-50 disabled:cursor-not-allowed" 
-                                title="${isUserLibrary ? 'Delete' : 'Cannot delete acquisitions from other libraries'}"
-                                ${!isUserLibrary ? 'disabled' : ''}>
+                                class="p-1 rounded hover:bg-red-100 text-red-600" title="Delete">
                             <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                                 <path stroke-linecap="round" stroke-linejoin="round"
                                     d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862
@@ -201,7 +212,6 @@ export function initEditPrintResource(acquisitionsData) {
     // ── Event: Add / Update acquisition ──────────────────────────────────────
 
     function handleAdd() {
-        // Get form values, preserving existing ID if editing
         const acq = getFieldValues(editIndex !== null ? acquisitions[editIndex].id : null);
 
         if (!acq.library_id) {
@@ -218,12 +228,10 @@ export function initEditPrintResource(acquisitionsData) {
         }
 
         if (editIndex !== null) {
-            // Update existing acquisition, ensuring ID is preserved
             acquisitions[editIndex] = acq;
             editIndex = null;
             addBtn.textContent = '➕ Add Acquisition';
         } else {
-            // Add new acquisition (no ID yet)
             acquisitions.push(acq);
         }
 
@@ -239,13 +247,7 @@ export function initEditPrintResource(acquisitionsData) {
     tableBody.addEventListener('click', e => {
         const btn = e.target.closest('button[data-action]');
         if (!btn) return;
-        
-        // Prevent action if button is disabled (non-user-library acquisitions)
-        if (btn.disabled) {
-            e.preventDefault();
-            return;
-        }
-        
+
         const idx = parseInt(btn.dataset.index);
 
         if (btn.dataset.action === 'edit') {
@@ -268,7 +270,6 @@ export function initEditPrintResource(acquisitionsData) {
     // ── Event: Form submit ────────────────────────────────────────────────────
 
     form.addEventListener('submit', (e) => {
-        // Validate data integrity before submission
         const validationIssues = validateAcquisitionsData();
         if (validationIssues.length > 0) {
             alert('Data validation failed:\n' + validationIssues.join('\n'));
@@ -285,4 +286,5 @@ export function initEditPrintResource(acquisitionsData) {
     // ── Init ──────────────────────────────────────────────────────────────────
 
     render();
+    updateHidden(); // pre-populate hidden input so a save with no changes still passes through all rows
 }

@@ -45,6 +45,11 @@ class EditPrintResourceService
     // - rows with an id  → update or delete (if qty zeroed out)
     // - rows without an id → insert as new
     // - DB rows not present in submission → delete (user removed them)
+    //
+    // NOTE: The front-end always submits ALL acquisition rows — both the user's
+    // own (editable) rows and other libraries' (pass-through) rows.  Pass-through
+    // rows have an id and unchanged data, so updateExistingAcquisition simply
+    // re-saves identical values.  No DB rows are accidentally deleted.
     private function updateAcquisitions(PrintResource $printResource, string $acquisitionsJson): void
     {
         $acquisitions = json_decode($acquisitionsJson, true) ?? [];

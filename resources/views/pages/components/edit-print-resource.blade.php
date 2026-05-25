@@ -335,10 +335,10 @@
 </form>
 
 @php
-    $userLevel   = Auth::user()->userType?->level;
-    
+    $userLevel = Auth::user()->userType?->level;
+
     $editableLibraryIds = [];
-    
+
     if ($userLevel === 1) {
         if ($schoolLibrary) {
             $editableLibraryIds[] = $schoolLibrary->id;
@@ -351,13 +351,16 @@
         }
     }
 
-    $acquisitionsData = [];
-    $acqQuery = $printResource->printAcquisitions ?? collect();
+    // Split acquisitions into two sets:
+    //   $acquisitionsData  → belongs to the current user's library(ies); shown & editable in the table
+    //   $otherAcquisitions → belongs to other libraries; hidden from the table but passed through on save
+    $acquisitionsData  = [];
+    $otherAcquisitions = [];
 
-    foreach ($acqQuery as $acq) {
+    foreach ($printResource->printAcquisitions ?? collect() as $acq) {
         $isUserLibrary = in_array($acq->library_id, $editableLibraryIds);
-        
-        $acquisitionsData[] = [
+
+        $row = [
             'id'                => $acq->id,
             'library_id'        => $acq->library_id        ?? '',
             'library_name'      => $acq->library_name      ?? '',
@@ -372,13 +375,22 @@
             'lost'              => $acq->lost,
             'condemnable'       => $acq->condemnable,
             'total_quantity'    => $acq->total_qty,
-            'isUserLibrary'     => $isUserLibrary,
         ];
+
+        if ($isUserLibrary) {
+            $acquisitionsData[] = $row;   // editable — loaded into JS acquisitions array
+        } else {
+            $otherAcquisitions[] = $row;  // read-only pass-through — never shown in the table
+        }
     }
 @endphp
 
 <script>
+    // Only the current user's library acquisitions — displayed & editable in the table
     window.__printAcquisitions = @json($acquisitionsData);
+
+    // Other libraries' acquisitions — passed through silently on save so they are not deleted
+    window.__otherAcquisitions = @json($otherAcquisitions);
 </script>
 
 @vite('resources/js/edit-print-resource.js')
