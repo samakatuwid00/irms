@@ -337,8 +337,8 @@
 {{-- ── Pre-load existing acquisitions from the database ── --}}
 @php
     $userLevel   = Auth::user()->userType?->level;
-
-    $filterLibId = match($userLevel) {
+    
+    $userLibId = match($userLevel) {
         1 => $schoolLibrary?->id,
         3 => $divisionLibrary?->id,
         4 => $regionLibrary?->id,
@@ -348,12 +348,13 @@
     $acquisitionsData = [];
     $acqQuery = $printResource->printAcquisitions ?? collect();
 
-    // For level-1 and level-4, narrow down to just their library
-    if ($filterLibId) {
-        $acqQuery = $acqQuery->where('library_id', $filterLibId);
-    }
-
+    // Only display acquisitions from the current user's library
     foreach ($acqQuery as $acq) {
+        // Skip acquisitions from other libraries — only show user's own
+        if ($userLibId && $acq->library_id !== $userLibId) {
+            continue;
+        }
+        
         $acquisitionsData[] = [
             'id'                => $acq->id,
             'library_id'        => $acq->library_id        ?? '',

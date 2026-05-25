@@ -8,6 +8,7 @@ use App\Models\PrintResource;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
+use Illuminate\Validation\ValidationException;
 
 class EditPrintResourceService
 {
@@ -18,6 +19,8 @@ class EditPrintResourceService
         'lost'              => 'LOST',
         'condemnable'       => 'CONDEMNABLE',
     ];
+
+    private const PROTECTED_BORROW_STATUSES = ['borrowed', 'reserved'];
 
     // Only acquisition rows are touched here — title/authors/cover/etc. are managed
     // by AddPrintResourceService::updatePrintResource()
@@ -196,7 +199,8 @@ class EditPrintResourceService
         return $acquisitionId;
     }
 
-    // Diff old vs new per-status quantities and queue inserts or deletes accordingly
+    // Diff old vs new per-status quantities and queue inserts or deletes accordingly.
+    // Only masterlist rows that are not currently borrowed or reserved may be deleted.
     private function prepareMasterlistChanges(
         PrintAcquisition $acquisition,
         array $oldQuantities,
@@ -216,9 +220,10 @@ class EditPrintResourceService
                     ];
                 }
             } elseif ($diff < 0) {
-                // Pick arbitrary rows to delete — the status is what matters, not which specific row
+                // Only delete rows that are not currently borrowed or reserved
                 $toDelete = PrintMasterlist::where('print_acquisition_id', $acquisition->id)
                     ->where('status', $statusName)
+                    ->whereNotIn('borrow_status', self::PROTECTED_BORROW_STATUSES)
                     ->limit(abs($diff))
                     ->pluck('id')
                     ->toArray();
@@ -242,13 +247,34 @@ class EditPrintResourceService
         }
     }
 
+    // Guard: throw a validation error if any masterlist rows under these acquisition IDs
+    // are currently borrowed or reserved. The FK on print_borrowings would otherwise
+    // prevent the delete and bubble up as an unhandled DB exception.
+    private function assertNoProtectedCopies(array $acquisitionIds, string $context): void
+    {
+        $protectedCount = PrintMasterlist::whereIn('print_acquisition_id', $acquisitionIds)
+            ->whereIn('borrow_status', self::PROTECTED_BORROW_STATUSES)
+            ->count();
+
+        if ($protectedCount > 0) {
+            throw ValidationException::withMessages([
+                'acquisitions' => "Cannot remove {$context}: {$protectedCount} copy/copies are currently borrowed or reserved.",
+            ]);
+        }
+    }
+
     private function deleteZeroQuantityAcquisitions(array $ids): void
     {
-        if (!empty($ids)) {
-            // Masterlist first — FK constraint requires it before we can delete the acquisition
-            PrintMasterlist::whereIn('print_acquisition_id', $ids)->delete();
-            PrintAcquisition::whereIn('id', $ids)->delete();
+        if (empty($ids)) {
+            return;
         }
+
+        // Block if any copies are still out on loan or reserved
+        $this->assertNoProtectedCopies($ids, 'acquisition(s) with zero quantity');
+
+        // Masterlist first — FK constraint requires it before we can delete the acquisition
+        PrintMasterlist::whereIn('print_acquisition_id', $ids)->delete();
+        PrintAcquisition::whereIn('id', $ids)->delete();
     }
 
     private function deleteRemovedAcquisitions(PrintResource $printResource, array $keptIds): void
@@ -256,10 +282,15 @@ class EditPrintResourceService
         $existingIds = $printResource->printAcquisitions->pluck('id')->toArray();
         $toDelete    = array_diff($existingIds, $keptIds);
 
-        if (!empty($toDelete)) {
-            PrintMasterlist::whereIn('print_acquisition_id', $toDelete)->delete();
-            PrintAcquisition::whereIn('id', $toDelete)->delete();
+        if (empty($toDelete)) {
+            return;
         }
+
+        // Block if any copies are still out on loan or reserved
+        $this->assertNoProtectedCopies(array_values($toDelete), 'removed acquisition(s)');
+
+        PrintMasterlist::whereIn('print_acquisition_id', $toDelete)->delete();
+        PrintAcquisition::whereIn('id', $toDelete)->delete();
     }
 
     private function updateSearchVector(string $id): void

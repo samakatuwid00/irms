@@ -47,8 +47,8 @@ export function initEditPrintResource(acquisitionsData) {
         totalField.value = total;
     }
 
-    function getFieldValues() {
-        return {
+    function getFieldValues(preserveId = null) {
+        const data = {
             library_id:        getLibraryId(),
             library_name:      getLibraryName(),
             source:            document.getElementById('acqSource').value,
@@ -63,6 +63,11 @@ export function initEditPrintResource(acquisitionsData) {
             condemnable:       document.getElementById('acqCondemnable').value,
             total_quantity:    totalField.value,
         };
+        // Preserve ID if updating existing acquisition
+        if (preserveId) {
+            data.id = preserveId;
+        }
+        return data;
     }
 
     function setFieldValues(acq) {
@@ -101,6 +106,20 @@ export function initEditPrintResource(acquisitionsData) {
         hiddenInput.value = JSON.stringify(acquisitions);
     }
 
+    /**
+     * Validate data integrity: ensure IDs are preserved correctly
+     * and all acquisitions have required fields
+     */
+    function validateAcquisitionsData() {
+        const issues = [];
+        acquisitions.forEach((acq, idx) => {
+            if (!acq.library_id) issues.push(`Row ${idx + 1}: Missing library_id`);
+            if (!acq.source) issues.push(`Row ${idx + 1}: Missing source`);
+            if (!acq.date_acquired) issues.push(`Row ${idx + 1}: Missing date_acquired`);
+        });
+        return issues;
+    }
+
     function esc(str) {
         const div = document.createElement('div');
         div.appendChild(document.createTextNode(String(str ?? '')));
@@ -114,7 +133,7 @@ export function initEditPrintResource(acquisitionsData) {
 
         if (!acquisitions.length) {
             tableBody.innerHTML =
-                '<tr><td colspan="13" class="text-center text-gray-400 py-3">No acquisitions added yet</td></tr>';
+                '<tr><td colspan="14" class="text-center text-gray-400 py-3">No acquisitions added yet</td></tr>';
             return;
         }
 
@@ -127,7 +146,10 @@ export function initEditPrintResource(acquisitionsData) {
                 : (acq.library_name || '-');
 
             const row = document.createElement('tr');
+            row.setAttribute('data-id', acq.id || '');
+            row.setAttribute('data-index', idx);
             row.innerHTML = `
+                <td class="border px-2 py-1 text-xs">${acq.id ? `<span class="text-gray-500">#${acq.id}</span>` : '—'}</td>
                 <td class="border px-2 py-1 text-xs" title="${esc(acq.library_name)}">${esc(shortLibrary)}</td>
                 <td class="border px-2 py-1 text-xs">${esc(acq.source)}</td>
                 <td class="border px-2 py-1 text-xs">${esc(acq.date_acquired)}</td>
@@ -173,7 +195,8 @@ export function initEditPrintResource(acquisitionsData) {
     // ── Event: Add / Update acquisition ──────────────────────────────────────
 
     function handleAdd() {
-        const acq = getFieldValues();
+        // Get form values, preserving existing ID if editing
+        const acq = getFieldValues(editIndex !== null ? acquisitions[editIndex].id : null);
 
         if (!acq.library_id) {
             alert('Please select a library.');
@@ -189,11 +212,12 @@ export function initEditPrintResource(acquisitionsData) {
         }
 
         if (editIndex !== null) {
-            if (acquisitions[editIndex].id) acq.id = acquisitions[editIndex].id;
+            // Update existing acquisition, ensuring ID is preserved
             acquisitions[editIndex] = acq;
             editIndex = null;
             addBtn.textContent = '➕ Add Acquisition';
         } else {
+            // Add new acquisition (no ID yet)
             acquisitions.push(acq);
         }
 
@@ -230,7 +254,15 @@ export function initEditPrintResource(acquisitionsData) {
 
     // ── Event: Form submit ────────────────────────────────────────────────────
 
-    form.addEventListener('submit', () => {
+    form.addEventListener('submit', (e) => {
+        // Validate data integrity before submission
+        const validationIssues = validateAcquisitionsData();
+        if (validationIssues.length > 0) {
+            alert('Data validation failed:\n' + validationIssues.join('\n'));
+            e.preventDefault();
+            return;
+        }
+
         updateHidden();
         saveBtn.disabled = true;
         saveBtnText.classList.add('hidden');
