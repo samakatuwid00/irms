@@ -334,26 +334,28 @@
 
 </form>
 
-{{-- ── Pre-load existing acquisitions from the database ── --}}
 @php
     $userLevel   = Auth::user()->userType?->level;
     
-    $userLibId = match($userLevel) {
-        1 => $schoolLibrary?->id,
-        3 => $divisionLibrary?->id,
-        4 => $regionLibrary?->id,
-        default => null,
-    };
+    $editableLibraryIds = [];
+    
+    if ($userLevel === 1) {
+        if ($schoolLibrary) {
+            $editableLibraryIds[] = $schoolLibrary->id;
+        }
+    } elseif ($userLevel === 3) {
+        $editableLibraryIds = $divisionLibraries->pluck('id')->toArray();
+    } elseif ($userLevel === 4) {
+        if ($regionLibrary) {
+            $editableLibraryIds[] = $regionLibrary->id;
+        }
+    }
 
     $acquisitionsData = [];
     $acqQuery = $printResource->printAcquisitions ?? collect();
 
-    // Load ALL acquisitions (not filtered by library) to prevent backend from
-    // thinking removed ones were deleted when only a subset is editable on the frontend.
-    // The backend will compare the full list and reject any attempts to actually delete
-    // acquisitions with borrowed/reserved copies.
     foreach ($acqQuery as $acq) {
-        $isUserLibrary = !$userLibId || $acq->library_id === $userLibId;
+        $isUserLibrary = in_array($acq->library_id, $editableLibraryIds);
         
         $acquisitionsData[] = [
             'id'                => $acq->id,
