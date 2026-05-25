@@ -145,12 +145,14 @@ export function initEditPrintResource(acquisitionsData) {
                 ? acq.library_name.substring(0, 22) + '...'
                 : (acq.library_name || '-');
 
+            const isUserLibrary = acq.isUserLibrary !== false; // Default to true if not specified
             const row = document.createElement('tr');
             row.setAttribute('data-id', acq.id || '');
             row.setAttribute('data-index', idx);
+            row.setAttribute('data-user-lib', isUserLibrary);
             row.innerHTML = `
-                <td class="border px-2 py-1 text-xs">${acq.id ? `<span class="text-gray-500">#${acq.id}</span>` : '—'}</td>
-                <td class="border px-2 py-1 text-xs" title="${esc(acq.library_name)}">${esc(shortLibrary)}</td>
+                
+                <td class="border px-2 py-1 text-xs" title="${esc(acq.library_name)}">${esc(shortLibrary)}${!isUserLibrary ? ' <span class="text-xs text-gray-400">(read-only)</span>' : ''}</td>
                 <td class="border px-2 py-1 text-xs">${esc(acq.source)}</td>
                 <td class="border px-2 py-1 text-xs">${esc(acq.date_acquired)}</td>
                 <td class="border px-2 py-1 text-xs">${esc(acq.cost) || '-'}</td>
@@ -165,14 +167,18 @@ export function initEditPrintResource(acquisitionsData) {
                 <td class="border px-2 py-1 text-center">
                     <div class="flex justify-center gap-1">
                         <button type="button" data-action="edit" data-index="${idx}"
-                                class="p-1 rounded hover:bg-blue-100 text-blue-600" title="Edit">
+                                class="p-1 rounded hover:bg-blue-100 text-blue-600 disabled:opacity-50 disabled:cursor-not-allowed" 
+                                title="${isUserLibrary ? 'Edit' : 'Cannot edit acquisitions from other libraries'}"
+                                ${!isUserLibrary ? 'disabled' : ''}>
                             <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                                 <path stroke-linecap="round" stroke-linejoin="round"
                                     d="M16.862 4.487l1.687-1.687a1.875 1.875 0 112.652 2.652L7.5 19.153 3 21l1.847-4.5L16.862 4.487z"/>
                             </svg>
                         </button>
                         <button type="button" data-action="delete" data-index="${idx}"
-                                class="p-1 rounded hover:bg-red-100 text-red-600" title="Delete">
+                                class="p-1 rounded hover:bg-red-100 text-red-600 disabled:opacity-50 disabled:cursor-not-allowed" 
+                                title="${isUserLibrary ? 'Delete' : 'Cannot delete acquisitions from other libraries'}"
+                                ${!isUserLibrary ? 'disabled' : ''}>
                             <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                                 <path stroke-linecap="round" stroke-linejoin="round"
                                     d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862
@@ -233,6 +239,13 @@ export function initEditPrintResource(acquisitionsData) {
     tableBody.addEventListener('click', e => {
         const btn = e.target.closest('button[data-action]');
         if (!btn) return;
+        
+        // Prevent action if button is disabled (non-user-library acquisitions)
+        if (btn.disabled) {
+            e.preventDefault();
+            return;
+        }
+        
         const idx = parseInt(btn.dataset.index);
 
         if (btn.dataset.action === 'edit') {

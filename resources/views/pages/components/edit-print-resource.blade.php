@@ -348,12 +348,12 @@
     $acquisitionsData = [];
     $acqQuery = $printResource->printAcquisitions ?? collect();
 
-    // Only display acquisitions from the current user's library
+    // Load ALL acquisitions (not filtered by library) to prevent backend from
+    // thinking removed ones were deleted when only a subset is editable on the frontend.
+    // The backend will compare the full list and reject any attempts to actually delete
+    // acquisitions with borrowed/reserved copies.
     foreach ($acqQuery as $acq) {
-        // Skip acquisitions from other libraries — only show user's own
-        if ($userLibId && $acq->library_id !== $userLibId) {
-            continue;
-        }
+        $isUserLibrary = !$userLibId || $acq->library_id === $userLibId;
         
         $acquisitionsData[] = [
             'id'                => $acq->id,
@@ -370,6 +370,7 @@
             'lost'              => $acq->lost,
             'condemnable'       => $acq->condemnable,
             'total_quantity'    => $acq->total_qty,
+            'isUserLibrary'     => $isUserLibrary,
         ];
     }
 @endphp
