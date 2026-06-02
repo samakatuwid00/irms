@@ -1,3 +1,96 @@
+/* ── BOSY Search Bar ── */
+    .bosy-search-wrapper {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .bosy-search-bar {
+        position: relative;
+        display: flex;
+        align-items: center;
+        flex: 1;
+        background: #f8fafc;
+        border: 1.5px solid #e2e8f0;
+        border-radius: 0.625rem;
+        padding: 0;
+        transition: border-color 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
+    }
+
+    .bosy-search-bar:focus-within {
+        border-color: #818cf8;
+        box-shadow: 0 0 0 3px rgba(129, 140, 248, 0.15);
+        background: #ffffff;
+    }
+
+    .bosy-search-icon {
+        position: absolute;
+        left: 0.75rem;
+        width: 1.125rem;
+        height: 1.125rem;
+        color: #94a3b8;
+        pointer-events: none;
+        transition: color 0.2s ease;
+        flex-shrink: 0;
+    }
+
+    .bosy-search-bar:focus-within .bosy-search-icon {
+        color: #818cf8;
+    }
+
+    .bosy-search-input {
+        flex: 1;
+        border: none;
+        outline: none;
+        background: transparent;
+        font-size: 0.8125rem;
+        color: #1e293b;
+        padding: 0.5rem 3rem 0.5rem 2.35rem;
+        min-width: 0;
+        line-height: 1.5;
+    }
+
+    .bosy-search-input::placeholder {
+        color: #94a3b8;
+        font-weight: 400;
+    }
+
+    .bosy-search-clear {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 1.75rem;
+        height: 1.75rem;
+        border: none;
+        border-radius: 50%;
+        background: #e2e8f0;
+        color: #64748b;
+        cursor: pointer;
+        transition: background-color 0.15s ease, color 0.15s ease, transform 0.15s ease;
+        padding: 0;
+        flex-shrink: 0;
+    }
+
+    .bosy-search-clear:hover {
+        background: #cbd5e1;
+        color: #334155;
+        transform: scale(1.1);
+    }
+
+    .bosy-search-count {
+        position: absolute;
+        right: 0.625rem;
+        font-size: 0.6875rem;
+        font-weight: 600;
+        color: #6366f1;
+        background: #eef2ff;
+        padding: 0.15rem 0.5rem;
+        border-radius: 9999px;
+        white-space: nowrap;
+        pointer-events: none;
+        line-height: 1.4;
+    }
+
     /* ── Outer wrapper: horizontal scroll on narrow viewports ── */
     .bosy-x-scroll-wrapper {
         overflow-x: auto;
