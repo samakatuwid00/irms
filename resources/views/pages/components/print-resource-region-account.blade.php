@@ -1,7 +1,7 @@
 <form method="GET" data-ajax class="bg-white p-4 rounded-xl shadow space-y-4">
 
     @if(request()->has('division') && request('division') !== 'all')
-    <div class="flex items-center gap-2 px-3 py-2 bg-blue-50 border border-blue-200 rounded-lg text-sm text-blue-700"">
+    <div class="flex items-center gap-2 px-3 py-2 bg-blue-50 border border-blue-200 rounded-lg text-sm text-blue-700">
         <svg class="w-4 h-4 flex-shrink-0 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
         </svg>
@@ -81,23 +81,50 @@
             </button>
         </div>
     </div>
+
+    <!-- Hidden view input – carries current view through search/pagination -->
+    <input type="hidden" name="view" id="view-input" value="{{ request('view', 'table') }}">
 </form>
 
 <div id="table-results-container">
     @if (request()->has('division') || request()->has('district') || request()->has('school'))
-        <!-- Export Button -->
-        <div class="export-btn-wrapper flex justify-end mt-4">
+
+        <!-- Toolbar: Export + View Toggle -->
+        <div class="flex items-center justify-between mt-4">
             <a href="{{ route('print-resources.export', request()->query()) }}"
-                class="inline-flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors">
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                class="inline-flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors text-sm">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                         d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                 </svg>
                 Export to Excel
             </a>
+
+            <!-- View Toggle Buttons -->
+            <div class="flex items-center gap-1 bg-gray-100 p-1 rounded-lg">
+                <button type="button"
+                    class="view-toggle-btn px-3 py-1.5 rounded-md text-sm font-medium transition-all flex items-center gap-1.5 bg-white shadow text-blue-600"
+                    data-view="table">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M3 10h18M3 6h18M3 14h18M3 18h18" />
+                    </svg>
+                    Table
+                </button>
+                <button type="button"
+                    class="view-toggle-btn px-3 py-1.5 rounded-md text-sm font-medium transition-all flex items-center gap-1.5 text-gray-500 hover:text-gray-700"
+                    data-view="card">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
+                    </svg>
+                    Cards
+                </button>
+            </div>
         </div>
 
-        <div class="bg-white rounded-xl shadow overflow-hidden mt-4">
+        <!-- ── TABLE VIEW ── -->
+        <div id="table-view" class="bg-white rounded-xl shadow overflow-hidden mt-4">
             <div class="overflow-x-auto max-h-150 overflow-y-auto">
                 <table class="w-full text-sm text-center">
                     <thead class="bg-gray-100 text-gray-600 uppercase text-xs sticky top-0 z-10">
@@ -126,13 +153,11 @@
                                     <img src="{{ $item->thumb_url }}" alt="{{ $item->printTitle->title }}"
                                         class="w-12 h-16 object-cover rounded shadow" loading="lazy">
                                 </td>
-                                <td class="px-2 py-3 font-medium text-gray-800 max-w-xs">{{ $item->printTitle->title }}
-                                </td>
+                                <td class="px-2 py-3 font-medium text-gray-800 max-w-xs">{{ $item->printTitle->title }}</td>
                                 <td class="px-2 py-3 text-gray-600">{{ $authors }}</td>
                                 <td class="px-2 py-3 text-gray-600">{{ $item->publisher }}</td>
                                 <td class="px-2 py-3">
-                                    <span
-                                        class="px-2 py-1 text-xs rounded-full bg-blue-100 text-blue-700">{{ $item->type->shortname }}</span>
+                                    <span class="px-2 py-1 text-xs rounded-full bg-blue-100 text-blue-700">{{ $item->type->shortname }}</span>
                                 </td>
                                 <td class="px-2 py-3 text-xs">
                                     @if ($item->subjects()->count())
@@ -156,8 +181,7 @@
                                                 tooltip.classList.add('invisible', 'opacity-0');
                                                 tooltip.classList.remove('visible', 'opacity-100');
                                             " @endif>
-                                            <span
-                                                class="inline-block bg-blue-100 text-blue-800 font-medium px-2 py-1 rounded-full cursor-default">
+                                            <span class="inline-block bg-blue-100 text-blue-800 font-medium px-2 py-1 rounded-full cursor-default">
                                                 {{ $first->subject->subject_name }} - {{ $first->gradeLevel->grade }}
                                                 @if ($count > 1)
                                                     <span class="ml-1 text-green-600">+{{ $count - 1 }}</span>
@@ -188,23 +212,15 @@
                                 <td class="px-2 py-3 text-center text-xs">
                                     <div class="space-y-1">
                                         <div class="flex justify-center gap-3 text-gray-700">
-                                            <span title="Usable"><strong
-                                                    class="text-green-600">{{ $qty['usable'] }}</strong> Usable</span>
-                                            <span title="Partially Damaged"><strong
-                                                    class="text-yellow-600">{{ $qty['partially_damaged'] }}</strong>
-                                                PD</span>
+                                            <span title="Usable"><strong class="text-green-600">{{ $qty['usable'] }}</strong> Usable</span>
+                                            <span title="Partially Damaged"><strong class="text-yellow-600">{{ $qty['partially_damaged'] }}</strong> PD</span>
                                         </div>
                                         <div class="flex justify-center gap-3 text-gray-600">
-                                            <span title="Damaged"><strong
-                                                    class="text-red-600">{{ $qty['damaged'] }}</strong> Damaged</span>
-                                            <span title="Lost"><strong
-                                                    class="text-purple-600">{{ $qty['lost'] }}</strong> Lost</span>
-                                            <span title="Condemnable"><strong
-                                                    class="text-gray-800">{{ $qty['condemnable'] }}</strong>
-                                                Cond.</span>
+                                            <span title="Damaged"><strong class="text-red-600">{{ $qty['damaged'] }}</strong> Damaged</span>
+                                            <span title="Lost"><strong class="text-purple-600">{{ $qty['lost'] }}</strong> Lost</span>
+                                            <span title="Condemnable"><strong class="text-gray-800">{{ $qty['condemnable'] }}</strong> Cond.</span>
                                         </div>
-                                        <div class="font-semibold text-gray-800 border-t pt-1">Total:
-                                            {{ $total }}</div>
+                                        <div class="font-semibold text-gray-800 border-t pt-1">Total: {{ $total }}</div>
                                     </div>
                                 </td>
                                 <td class="px-4 py-3">
@@ -231,6 +247,63 @@
                 </div>
             @endif
         </div>
+
+        <!-- ── CARD VIEW ── -->
+        <div id="card-view" class="hidden mt-4">
+            <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+                @forelse ($filteredResources as $item)
+                    @php
+                        $authors = $item->printTitle->authors->pluck('author_name')->join(', ');
+                        $qty = $item->scopedQuantities($filteredLibraryIds);
+                        $total = array_sum($qty);
+                    @endphp
+                    <div class="bg-white rounded-xl shadow overflow-hidden flex flex-col cursor-pointer group"
+                         onclick='openPrintModal(@json($item->showDetails($filteredLibraryIds)))'>
+
+                        <!-- Cover image -->
+                        <div class="relative w-full" style="padding-bottom: 140%;">
+                            <img src="{{ $item->thumb_url }}" alt="{{ $item->printTitle->title }}"
+                                class="absolute inset-0 w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+                                loading="lazy">
+
+                            <!-- Total copies dot badge -->
+                            <span class="absolute top-2 right-2 inline-flex items-center gap-1 bg-white/90 backdrop-blur-sm text-xs font-semibold px-2 py-0.5 rounded-full shadow
+                                {{ $qty['usable'] > 0 ? 'text-green-700' : 'text-red-600' }}">
+                                <span class="w-1.5 h-1.5 rounded-full inline-block {{ $qty['usable'] > 0 ? 'bg-green-500' : 'bg-red-500' }}"></span>
+                                {{ $total }}
+                            </span>
+                        </div>
+
+                        <!-- Card footer info -->
+                        <div class="p-3 flex flex-col gap-1 flex-1">
+                            <h3 class="text-xs font-semibold text-gray-900 leading-tight line-clamp-2">
+                                {{ $item->printTitle->title }}
+                            </h3>
+                            @if ($authors)
+                                <p class="text-xs text-gray-500 truncate">{{ $authors }}</p>
+                            @endif
+                            <div class="mt-auto pt-2 flex items-center justify-between gap-1">
+                                <span class="px-1.5 py-0.5 text-xs rounded bg-blue-50 text-blue-700 font-medium truncate max-w-[70%]">
+                                    {{ $item->type->shortname }}
+                                </span>
+                                <span class="text-xs text-gray-400 whitespace-nowrap">{{ $total }} copies</span>
+                            </div>
+                        </div>
+                    </div>
+                @empty
+                    <div class="col-span-full bg-white rounded-xl shadow p-8 text-center text-gray-500">
+                        No resources found.
+                    </div>
+                @endforelse
+            </div>
+
+            @if ($filteredResources instanceof \Illuminate\Pagination\LengthAwarePaginator)
+                <div class="bg-white rounded-xl shadow p-4 mt-4">
+                    {{ $filteredResources->appends(request()->query())->links() }}
+                </div>
+            @endif
+        </div>
+
     @else
         <div class="bg-white p-6 rounded-xl shadow text-center text-gray-600 mt-4">
             Select division/district/school and click "Load Data" to view resources.

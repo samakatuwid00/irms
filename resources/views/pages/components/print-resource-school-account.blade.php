@@ -26,6 +26,9 @@
         <div class="bg-white rounded-xl shadow p-4">
             <form method="GET" data-ajax class="flex items-center gap-3">
                 <input type="hidden" name="tab" value="school">
+                <!-- Hidden view input – carries current view through search/pagination -->
+                <input type="hidden" name="school_view" id="school-view-input" value="{{ request('school_view', 'table') }}">
+
                 <div class="relative w-full">
                     <input type="text" name="search"
                         placeholder="Search by Title, Author, ISBN, Publisher, Grade, Subject..."
@@ -50,7 +53,7 @@
             </form>
         </div>
 
-        <!-- Button row: estimated resource + export -->
+        <!-- Button row: estimated resource + export + view toggle -->
         <div class="flex justify-between items-center mt-4">
             <form action="{{ route('school-library.update-estimated-resource') }}" method="POST"
                 class="flex items-center gap-3">
@@ -90,18 +93,44 @@
                 @enderror
             </form>
 
-            <a href="{{ route('print-resources.export', array_merge(request()->query(), ['tab' => 'school'])) }}"
-                class="inline-flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors">
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                        d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                </svg>
-                Export to Excel
-            </a>
+            <div class="flex items-center gap-3">
+                <!-- View Toggle Buttons -->
+                <div class="flex items-center gap-1 bg-gray-100 p-1 rounded-lg">
+                    <button type="button"
+                        class="view-toggle-btn px-3 py-1.5 rounded-md text-sm font-medium transition-all flex items-center gap-1.5 bg-white shadow text-blue-600"
+                        data-target="school" data-view="table">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M3 10h18M3 6h18M3 14h18M3 18h18" />
+                        </svg>
+                        Table
+                    </button>
+                    <button type="button"
+                        class="view-toggle-btn px-3 py-1.5 rounded-md text-sm font-medium transition-all flex items-center gap-1.5 text-gray-500 hover:text-gray-700"
+                        data-target="school" data-view="card">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
+                        </svg>
+                        Cards
+                    </button>
+                </div>
+
+                <a href="{{ route('print-resources.export', array_merge(request()->query(), ['tab' => 'school'])) }}"
+                    class="inline-flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                    Export to Excel
+                </a>
+            </div>
         </div>
 
-        <div id="table-results-container">
-            <div class="bg-white rounded-xl shadow overflow-hidden mt-4">
+        <div id="school-results-container">
+
+            <!-- ── SCHOOL TABLE VIEW ── -->
+            <div id="school-table-view" class="bg-white rounded-xl shadow overflow-hidden mt-4">
                 <div class="overflow-x-auto max-h-150 overflow-y-auto">
                     <table class="w-full text-sm text-center">
                         <thead class="bg-gray-100 text-gray-600 uppercase text-xs sticky top-0 z-10">
@@ -241,6 +270,72 @@
                     {{ $resources->appends(request()->query())->links() }}
                 </div>
             </div>
+
+            <!-- ── SCHOOL CARD VIEW ── -->
+            <div id="school-card-view" class="hidden mt-4">
+                <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+                    @forelse ($resources as $item)
+                        @php
+                            $authors = $item->printTitle->authors->pluck('author_name')->join(', ');
+                            $qty = $item->scopedQuantities($mainLibraryIds);
+                            $total = array_sum($qty);
+                        @endphp
+                        <div class="bg-white rounded-xl shadow overflow-hidden flex flex-col cursor-pointer group"
+                             onclick='openPrintModal(@json($item->showDetails($schoolLibrary ? [$schoolLibrary->id] : [])))'>
+
+                            <!-- Cover image -->
+                            <div class="relative w-full" style="padding-bottom: 140%;">
+                                <img src="{{ $item->thumb_url }}" alt="{{ $item->printTitle->title }}"
+                                    class="absolute inset-0 w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+                                    loading="lazy">
+
+                                <!-- Total copies dot badge -->
+                                <span class="absolute top-2 right-2 inline-flex items-center gap-1 bg-white/90 backdrop-blur-sm text-xs font-semibold px-2 py-0.5 rounded-full shadow
+                                    {{ $qty['usable'] > 0 ? 'text-green-700' : 'text-red-600' }}">
+                                    <span class="w-1.5 h-1.5 rounded-full inline-block {{ $qty['usable'] > 0 ? 'bg-green-500' : 'bg-red-500' }}"></span>
+                                    {{ $total }}
+                                </span>
+
+                                <!-- Edit shortcut (top-left) -->
+                                <a href="{{ route('edit-resource', $item->id) }}"
+                                   onclick="event.stopPropagation()"
+                                   class="absolute top-2 left-2 opacity-0 group-hover:opacity-100 transition-opacity bg-white/90 backdrop-blur-sm rounded-full p-1 shadow hover:bg-yellow-50"
+                                   title="Edit">
+                                    <svg class="w-3.5 h-3.5 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            d="M15.232 5.232l3.536 3.536M9 13l6.586-6.586a2 2 0 112.828 2.828L11.828 15.828a2 2 0 01-1.414.586H9v-2a2 2 0 01.586-1.414z"/>
+                                    </svg>
+                                </a>
+                            </div>
+
+                            <!-- Card footer info -->
+                            <div class="p-3 flex flex-col gap-1 flex-1">
+                                <h3 class="text-xs font-semibold text-gray-900 leading-tight line-clamp-2">
+                                    {{ $item->printTitle->title }}
+                                </h3>
+                                @if ($authors)
+                                    <p class="text-xs text-gray-500 truncate">{{ $authors }}</p>
+                                @endif
+                                <div class="mt-auto pt-2 flex items-center justify-between gap-1">
+                                    <span class="px-1.5 py-0.5 text-xs rounded bg-blue-50 text-blue-700 font-medium truncate max-w-[70%]">
+                                        {{ $item->type->shortname }}
+                                    </span>
+                                    <span class="text-xs text-gray-400 whitespace-nowrap">{{ $total }} copies</span>
+                                </div>
+                            </div>
+                        </div>
+                    @empty
+                        <div class="col-span-full bg-white rounded-xl shadow p-8 text-center text-gray-500">
+                            No resources found.
+                        </div>
+                    @endforelse
+                </div>
+
+                <div class="bg-white rounded-xl shadow p-4 mt-4">
+                    {{ $resources->appends(request()->query())->links() }}
+                </div>
+            </div>
+
         </div>
     </div>
 
@@ -251,6 +346,9 @@
         <div class="bg-white rounded-xl shadow p-4">
             <form method="GET" data-ajax class="flex items-center gap-3">
                 <input type="hidden" name="tab" value="division">
+                <!-- Hidden view input – carries current view through search/pagination -->
+                <input type="hidden" name="division_view" id="division-view-input" value="{{ request('division_view', 'table') }}">
+
                 <div class="relative w-full">
                     <input type="text" name="division_search"
                         placeholder="Search Division Library... Search by Title, Author, ISBN, Publisher, Grade, Subject..."
@@ -275,8 +373,8 @@
             </form>
         </div>
 
-        <!-- Export Button for Division Resources -->
-        <div class="export-btn-wrapper flex justify-end mt-4">
+        <!-- Export Button + View Toggle for Division -->
+        <div class="flex items-center justify-between mt-4">
             <a href="{{ route('print-resources.export', array_merge(request()->query(), ['tab' => 'division'])) }}"
                 class="inline-flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -285,10 +383,34 @@
                 </svg>
                 Export to Excel
             </a>
+
+            <!-- View Toggle Buttons -->
+            <div class="flex items-center gap-1 bg-gray-100 p-1 rounded-lg">
+                <button type="button"
+                    class="view-toggle-btn px-3 py-1.5 rounded-md text-sm font-medium transition-all flex items-center gap-1.5 bg-white shadow text-blue-600"
+                    data-target="division" data-view="table">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M3 10h18M3 6h18M3 14h18M3 18h18" />
+                    </svg>
+                    Table
+                </button>
+                <button type="button"
+                    class="view-toggle-btn px-3 py-1.5 rounded-md text-sm font-medium transition-all flex items-center gap-1.5 text-gray-500 hover:text-gray-700"
+                    data-target="division" data-view="card">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
+                    </svg>
+                    Cards
+                </button>
+            </div>
         </div>
 
         <div id="division-results-container">
-            <div class="bg-white rounded-xl shadow overflow-hidden mt-4">
+
+            <!-- ── DIVISION TABLE VIEW ── -->
+            <div id="division-table-view" class="bg-white rounded-xl shadow overflow-hidden mt-4">
                 <div class="overflow-x-auto max-h-150 overflow-y-auto">
                     <table class="w-full text-sm text-center">
                         <thead class="bg-gray-100 text-gray-600 uppercase text-xs sticky top-0 z-10">
@@ -425,6 +547,61 @@
                     {{ $divisionResources->appends(array_merge(request()->query(), ['tab' => 'division']))->links() }}
                 </div>
             </div>
+
+            <!-- ── DIVISION CARD VIEW ── -->
+            <div id="division-card-view" class="hidden mt-4">
+                <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+                    @forelse ($divisionResources as $item)
+                        @php
+                            $authors = $item->printTitle->authors->pluck('author_name')->join(', ');
+                            $qty = $item->scopedQuantities($divisionLibraryIds);
+                            $total = array_sum($qty);
+                        @endphp
+                        <div class="bg-white rounded-xl shadow overflow-hidden flex flex-col cursor-pointer group"
+                             onclick='openPrintModal(@json($item->showDetails($divisionLibraryIds)))'>
+
+                            <!-- Cover image -->
+                            <div class="relative w-full" style="padding-bottom: 140%;">
+                                <img src="{{ $item->thumb_url }}" alt="{{ $item->printTitle->title }}"
+                                    class="absolute inset-0 w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+                                    loading="lazy">
+
+                                <!-- Total copies dot badge -->
+                                <span class="absolute top-2 right-2 inline-flex items-center gap-1 bg-white/90 backdrop-blur-sm text-xs font-semibold px-2 py-0.5 rounded-full shadow
+                                    {{ $qty['usable'] > 0 ? 'text-green-700' : 'text-red-600' }}">
+                                    <span class="w-1.5 h-1.5 rounded-full inline-block {{ $qty['usable'] > 0 ? 'bg-green-500' : 'bg-red-500' }}"></span>
+                                    {{ $total }}
+                                </span>
+                            </div>
+
+                            <!-- Card footer info -->
+                            <div class="p-3 flex flex-col gap-1 flex-1">
+                                <h3 class="text-xs font-semibold text-gray-900 leading-tight line-clamp-2">
+                                    {{ $item->printTitle->title }}
+                                </h3>
+                                @if ($authors)
+                                    <p class="text-xs text-gray-500 truncate">{{ $authors }}</p>
+                                @endif
+                                <div class="mt-auto pt-2 flex items-center justify-between gap-1">
+                                    <span class="px-1.5 py-0.5 text-xs rounded bg-blue-50 text-blue-700 font-medium truncate max-w-[70%]">
+                                        {{ $item->type->shortname }}
+                                    </span>
+                                    <span class="text-xs text-gray-400 whitespace-nowrap">{{ $total }} copies</span>
+                                </div>
+                            </div>
+                        </div>
+                    @empty
+                        <div class="col-span-full bg-white rounded-xl shadow p-8 text-center text-gray-500">
+                            No division resources found.
+                        </div>
+                    @endforelse
+                </div>
+
+                <div class="bg-white rounded-xl shadow p-4 mt-4">
+                    {{ $divisionResources->appends(array_merge(request()->query(), ['tab' => 'division']))->links() }}
+                </div>
+            </div>
+
         </div>
     </div>
 </div>
@@ -434,3 +611,82 @@
         display: none !important;
     }
 </style>
+
+<script>
+(function () {
+    const STORAGE_KEYS = {
+        school:   'print-resources-school-view',
+        division: 'print-resources-division-view',
+    };
+
+    function applyView(target, view, persist) {
+        const tableEl = document.getElementById(target + '-table-view');
+        const cardEl  = document.getElementById(target + '-card-view');
+
+        if (tableEl && cardEl) {
+            if (view === 'card') {
+                tableEl.classList.add('hidden');
+                cardEl.classList.remove('hidden');
+            } else {
+                cardEl.classList.add('hidden');
+                tableEl.classList.remove('hidden');
+            }
+        }
+
+        // Keep hidden input in sync so form submissions carry the correct value
+        const input = document.getElementById(target + '-view-input');
+        if (input) input.value = view;
+
+        // Persist to localStorage so the preference survives pagination/search
+        if (persist !== false && STORAGE_KEYS[target]) {
+            try { localStorage.setItem(STORAGE_KEYS[target], view); } catch (_) {}
+        }
+
+        // Update toggle button styles for this target
+        document.querySelectorAll(`.view-toggle-btn[data-target="${target}"]`).forEach(btn => {
+            const isActive = btn.dataset.view === view;
+            btn.classList.toggle('bg-white',            isActive);
+            btn.classList.toggle('shadow',              isActive);
+            btn.classList.toggle('text-blue-600',       isActive);
+            btn.classList.toggle('text-gray-500',      !isActive);
+            btn.classList.toggle('hover:text-gray-700',!isActive);
+        });
+    }
+
+    // View toggle button click
+    document.addEventListener('click', function (e) {
+        const btn = e.target.closest('.view-toggle-btn');
+        if (btn) applyView(btn.dataset.target, btn.dataset.view);
+    });
+
+    // Restore view on load / after AJAX updates
+    function restoreViews() {
+        ['school', 'division'].forEach(target => {
+            // Priority 1: URL/request param via hidden input (set by Blade)
+            const input   = document.getElementById(target + '-view-input');
+            const fromUrl = input && input.value ? input.value : null;
+
+            // Priority 2: localStorage (survives pagination when param might be absent)
+            let fromStorage = null;
+            try { fromStorage = localStorage.getItem(STORAGE_KEYS[target]); } catch (_) {}
+
+            const view = fromUrl || fromStorage || 'table';
+
+            applyView(target, view, false); // don't re-persist during restore
+
+            // Sync hidden input so any subsequent form submit sends the correct value
+            if (input) input.value = view;
+        });
+    }
+
+    restoreViews();
+
+    // Re-run after AJAX content swaps on both containers
+    ['school-results-container', 'division-results-container'].forEach(id => {
+        const container = document.getElementById(id);
+        if (container) {
+            new MutationObserver(restoreViews).observe(container, { childList: true, subtree: true });
+        }
+    });
+})();
+</script>

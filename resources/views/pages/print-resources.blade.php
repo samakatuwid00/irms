@@ -64,6 +64,6 @@
     </div>
 
     @vite('resources/js/print-resources.js')
-
+    @vite('resources/js/print-resources-view-toggle.js')
     @include('pages.modals.view-print-modal')
 @endsection

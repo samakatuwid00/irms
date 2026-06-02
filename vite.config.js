@@ -37,6 +37,7 @@ export default defineConfig({
                 'resources/css/bosy/bosy.css',
                 'resources/js/package.js',
                 'resources/js/import-sf6.js',
+                'resources/js/print-resources-view-toggle.js',
             ],
             refresh: true,
         }),
