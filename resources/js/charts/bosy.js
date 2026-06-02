@@ -5,6 +5,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
 let bosyAllItems = [];
 let currentBosyLevel = 'region'; // 'region' or 'division'
+let bosySearchTerm = '';
+let bosySearchDebounceTimer = null;
+
+// Cache for universal search at division level (all schools across all districts)
+let bosyFullDivisionItems = null;
+let bosyFullDivisionPrintType = null;
+let bosyFullDivisionFetching = false;
 
 function initBosyStatus() {
     const regionSelect = document.getElementById('regionFilter');
@@ -41,6 +48,49 @@ function initBosyStatus() {
             fetchBosyStatus(true, hubFilter, distFilter, printTypeSelect.value);
         });
     }
+
+    // BOSY Search bar
+    const searchInput = document.getElementById('bosySearchInput');
+    const searchClear = document.getElementById('bosySearchClear');
+    const searchCount = document.getElementById('bosySearchCount');
+
+    if (searchInput) {
+        searchInput.addEventListener('input', () => {
+            clearTimeout(bosySearchDebounceTimer);
+            bosySearchDebounceTimer = setTimeout(() => {
+                bosySearchTerm = searchInput.value.trim().toLowerCase();
+                toggleSearchClear(searchInput, searchClear);
+
+                // Universal search at division level: fetch all schools if needed
+                if (bosySearchTerm && currentBosyLevel === 'division') {
+                    const currentPrintType = printTypeSelect ? printTypeSelect.value : '';
+                    ensureFullDivisionData(currentPrintType, () => {
+                        const container = document.getElementById('bosy-divisions-container');
+                        if (container) renderAllItems(container);
+                        updateSearchCount(searchCount);
+                    });
+                    return;
+                }
+
+                const container = document.getElementById('bosy-divisions-container');
+                if (container) renderAllItems(container);
+                updateSearchCount(searchCount);
+            }, 300);
+        });
+
+        // Clear button
+        if (searchClear) {
+            searchClear.addEventListener('click', () => {
+                searchInput.value = '';
+                bosySearchTerm = '';
+                toggleSearchClear(searchInput, searchClear);
+                const container = document.getElementById('bosy-divisions-container');
+                if (container) renderAllItems(container);
+                updateSearchCount(searchCount);
+                searchInput.focus();
+            });
+        }
+    }
 }
 
 function fetchBosyStatus(isFullRefresh = false, hubFilter = '', districtFilter = '', printTypeId = '') {
@@ -50,6 +100,18 @@ function fetchBosyStatus(isFullRefresh = false, hubFilter = '', districtFilter =
     if (isFullRefresh) {
         showSkeletonLoaders(container);
         bosyAllItems = [];
+        // Invalidate full division cache on new fetch
+        bosyFullDivisionItems = null;
+        bosyFullDivisionPrintType = null;
+        bosyFullDivisionFetching = false;
+        // Reset search on new data fetch
+        bosySearchTerm = '';
+        const searchInput = document.getElementById('bosySearchInput');
+        const searchClear = document.getElementById('bosySearchClear');
+        const searchCount = document.getElementById('bosySearchCount');
+        if (searchInput) searchInput.value = '';
+        if (searchClear) searchClear.classList.add('hidden');
+        if (searchCount) { searchCount.classList.add('hidden'); searchCount.textContent = ''; }
     }
 
     const token = document.querySelector('meta[name="csrf-token"]')?.content;
@@ -157,14 +219,15 @@ function updateBosySummary(summary, level) {
 function renderAllItems(container) {
     container.innerHTML = '';
 
+    const labelMap = {
+        school: 'users',
+        district: 'schools',
+        division: 'schools',
+        region: 'divisions',
+    };
+    const label = labelMap[currentBosyLevel] || 'items';
+
     if (bosyAllItems.length === 0) {
-        const labelMap = {
-            school: 'users',
-            district: 'schools',
-            division: 'schools',
-            region: 'divisions',
-        };
-        const label = labelMap[currentBosyLevel] || 'items';
         container.innerHTML = `
             <div class="text-center py-12 text-gray-500">
                 No ${label} found for this period.
@@ -173,8 +236,31 @@ function renderAllItems(container) {
         return;
     }
 
+    // For universal search at division level, use the full cached dataset
+    const sourceItems = (bosySearchTerm && currentBosyLevel === 'division' && bosyFullDivisionItems)
+        ? bosyFullDivisionItems
+        : bosyAllItems;
+
+    // Filter items by search term
+    const filteredItems = bosySearchTerm
+        ? sourceItems.filter(item => matchesBosySearch(item, bosySearchTerm))
+        : bosyAllItems;
+
+    if (filteredItems.length === 0) {
+        container.innerHTML = `
+            <div class="text-center py-12 text-gray-400">
+                <svg class="mx-auto h-10 w-10 mb-3 text-gray-300" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z" />
+                </svg>
+                <p class="font-medium">No ${label} match "<span class="text-gray-600">${escapeHtml(bosySearchTerm)}</span>"</p>
+                <p class="text-xs mt-1">Try a different search term</p>
+            </div>
+        `;
+        return;
+    }
+
     const fragment = document.createDocumentFragment();
-    bosyAllItems.forEach(item => {
+    filteredItems.forEach(item => {
         fragment.appendChild(createItemElement(item));
     });
     container.appendChild(fragment);
@@ -342,4 +428,114 @@ function showError(container, message) {
 
 function escapeHtml(unsafe) {
     return unsafe.replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m]));
+}
+
+// ── BOSY Search Helpers ──
+
+/**
+ * Check if an item matches the search term.
+ * Searches across: name, shortname, district name, parent (division) name.
+ */
+function matchesBosySearch(item, term) {
+    const haystack = [
+        item.name,
+        item.shortname,
+        item.district?.name,
+        item.parent?.name,
+        item.role,
+    ]
+        .filter(Boolean)
+        .join(' ')
+        .toLowerCase();
+
+    // Support multi-word search: every word must appear somewhere
+    const words = term.split(/\s+/).filter(Boolean);
+    return words.every(word => haystack.includes(word));
+}
+
+/**
+ * Show/hide the clear button based on input content.
+ */
+function toggleSearchClear(input, clearBtn) {
+    if (!clearBtn) return;
+    if (input.value.trim().length > 0) {
+        clearBtn.classList.remove('hidden');
+    } else {
+        clearBtn.classList.add('hidden');
+    }
+}
+
+/**
+ * Update the search result count badge.
+ */
+function updateSearchCount(countEl) {
+    if (!countEl) return;
+    if (!bosySearchTerm) {
+        countEl.classList.add('hidden');
+        countEl.textContent = '';
+        return;
+    }
+
+    // Use the full division dataset when searching at division level
+    const sourceItems = (currentBosyLevel === 'division' && bosyFullDivisionItems)
+        ? bosyFullDivisionItems
+        : bosyAllItems;
+
+    const matched = sourceItems.filter(item => matchesBosySearch(item, bosySearchTerm)).length;
+    const total = sourceItems.length;
+    countEl.textContent = `${matched} / ${total}`;
+    countEl.classList.remove('hidden');
+}
+
+/**
+ * Ensure we have the full division dataset (all districts) for universal search.
+ * Fetches lazily and caches. Calls the callback when data is ready.
+ */
+function ensureFullDivisionData(printTypeId, callback) {
+    // Already cached and same print type → use cache immediately
+    if (bosyFullDivisionItems && bosyFullDivisionPrintType === printTypeId) {
+        callback();
+        return;
+    }
+
+    // Already fetching → wait, the callback will fire when fetch completes via next input event
+    if (bosyFullDivisionFetching) {
+        return;
+    }
+
+    bosyFullDivisionFetching = true;
+
+    const token = document.querySelector('meta[name="csrf-token"]')?.content;
+    const params = new URLSearchParams();
+    // Intentionally omit district_filter to get ALL schools in the division
+    if (printTypeId) params.set('print_type_id', printTypeId);
+
+    const url = `/dashboard/bosy-status?${params.toString()}`;
+
+    fetch(url, {
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest',
+            'Accept': 'application/json',
+            'X-CSRF-TOKEN': token || ''
+        },
+        credentials: 'same-origin'
+    })
+        .then(response => {
+            if (!response.ok) throw new Error(`HTTP ${response.status}`);
+            return response.json();
+        })
+        .then(data => {
+            if (!data.error) {
+                bosyFullDivisionItems = data.items || [];
+                bosyFullDivisionPrintType = printTypeId;
+            }
+            bosyFullDivisionFetching = false;
+            callback();
+        })
+        .catch(err => {
+            console.error('Failed to fetch full division data for search:', err);
+            bosyFullDivisionFetching = false;
+            // Fall back to local items
+            callback();
+        });
 }
