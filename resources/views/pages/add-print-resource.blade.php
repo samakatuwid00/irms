@@ -720,10 +720,6 @@
 
     // ────────────────────────────────────────────────────────────────────────
     // REVEAL & ACTIVATE TAB-ADD
-    // The tab button is hidden on fresh load (non-edit mode).
-    // It becomes visible only after the user explicitly clicks
-    // "Manual Add" or "submit a new request" in the search tab,
-    // enforcing the search-first workflow.
     // ────────────────────────────────────────────────────────────────────────
     function revealAndOpenTabAdd() {
         const tabAddBtn = document.getElementById('tabAddBtn');
@@ -732,24 +728,19 @@
     }
 
     function resetTabAdd() {
-        // Re-hide the tab button
         const tabAddBtn = document.getElementById('tabAddBtn');
         if (tabAddBtn) tabAddBtn.classList.add('hidden');
 
-        // Clear sessionStorage so a page reload doesn't re-open tab-add
         sessionStorage.removeItem(STORAGE_KEY);
 
-        // Reset the form fields
         const form = document.getElementById('print');
         if (!form) return;
 
         form.reset();
 
-        // Reset image preview back to default
         const preview = document.getElementById('imagePreview');
         if (preview) preview.src = preview.dataset.defaultSrc;
 
-        // Clear author tags (the tag-input widget managed by add-print-resource.js)
         const authorWrapper = document.getElementById('author-wrapper');
         const authorInput   = document.getElementById('author-input');
         const authorsHidden = document.getElementById('authors-hidden');
@@ -759,8 +750,6 @@
         if (authorsHidden) authorsHidden.value = '';
         if (authorInput)   authorInput.value   = '';
 
-        // Reset SGL checkboxes (form.reset() handles them, but fire a custom
-        // event in case add-print-resource.js tracks state separately)
         document.querySelectorAll('input[name="subject_grade_levels[]"]').forEach(cb => {
             cb.checked = false;
         });
@@ -771,8 +760,6 @@
     });
 
     // ── INITIAL TAB ──────────────────────────────────────────────────────────
-    // When the controller renders the edit form ($isEditing === true), always
-    // open tab-add so the user lands directly on the filled-in form.
     let initialTab;
     if (isEditing) {
         initialTab = 'tab-add';
@@ -781,8 +768,6 @@
             || sessionStorage.getItem(STORAGE_KEY)
             || 'tab-search';
 
-        // If sessionStorage remembers tab-add from a previous visit,
-        // make sure the tab button is visible again so the UI is consistent.
         if (initialTab === 'tab-add') {
             const tabAddBtn = document.getElementById('tabAddBtn');
             if (tabAddBtn) tabAddBtn.classList.remove('hidden');
@@ -797,14 +782,12 @@
         btn.addEventListener('click', () => {
             const targetTab = btn.dataset.pageTab;
 
-            // If in edit mode and navigating away from tab-add, reset to create mode
             if (isEditing && targetTab !== 'tab-add') {
                 sessionStorage.setItem(STORAGE_KEY, targetTab);
                 window.location.href = '{{ route('print-resource.create') }}?tab=' + targetTab;
                 return;
             }
 
-            // If navigating away from tab-add (non-edit mode), reset form and re-hide tab
             if (!isEditing && targetTab !== 'tab-add') {
                 resetTabAdd();
             }
@@ -892,10 +875,40 @@
         if (searchInput.value.trim().length >= 2) searchTimeout = setTimeout(performSearch, 450);
     });
 
+    // ── HIGHLIGHT HELPER ─────────────────────────────────────────────────────
+    // Escapes the string first (XSS-safe), then wraps each matched token
+    // in a <mark> tag so the browser highlights it visually.
+    function esc(str) {
+        const d = document.createElement('div');
+        d.appendChild(document.createTextNode(String(str ?? '')));
+        return d.innerHTML;
+    }
+
+    function highlight(str, tokens) {
+        let result = esc(str); // escape first — never run regex on raw user input
+        tokens.forEach(token => {
+            if (!token) return;
+            // Escape any regex special characters in the token itself
+            const safe  = token.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+            const regex = new RegExp('(' + safe + ')', 'gi');
+            result = result.replace(regex, '<mark class="bg-yellow-200 text-gray-900 rounded px-0.5">$1</mark>');
+        });
+        return result;
+    }
+    // ─────────────────────────────────────────────────────────────────────────
+
     function renderResults(titles) {
         resultsList.innerHTML = '';
         resultCount.textContent = `${titles.length} title(s) found`;
         resultsArea.classList.remove('hidden');
+
+        // Tokenize the same way the backend does:
+        // lowercase, split on whitespace, strip trailing 's' for plural tolerance
+        const tokens = searchInput.value.trim()
+            .toLowerCase()
+            .split(/\s+/)
+            .filter(t => t.length >= 1)
+            .map(t => t.replace(/s$/, ''));
 
         titles.forEach(title => {
             const editionBadges = title.editions.map(e => {
@@ -911,10 +924,10 @@
                 <div class="flex items-start gap-4">
                     <img src="${esc(title.cover)}" alt="cover" class="w-12 h-16 object-cover rounded shadow-sm flex-shrink-0 border border-gray-200">
                     <div class="flex-1 min-w-0 space-y-1.5">
-                        <p class="font-semibold text-gray-900">${esc(title.title)}</p>
-                        <p class="text-xs text-gray-500">${esc(title.authors)}</p>
+                        <p class="font-semibold text-gray-900">${highlight(title.title, tokens)}</p>
+                        <p class="text-xs text-gray-500">${highlight(title.authors, tokens)}</p>
                         <p class="text-xs text-gray-600 leading-relaxed">
-                            <span class="font-medium">Subjects:</span> ${esc(title.subjects)}
+                            <span class="font-medium">Subjects:</span> ${highlight(title.subjects, tokens)}
                         </p>
                         <div class="flex flex-wrap gap-1.5 pt-0.5">
                             ${editionBadges || '<span class="text-xs text-gray-400">No editions</span>'}
@@ -1003,11 +1016,6 @@
         resultsArea.classList.add('hidden');
         emptyState.classList.add('hidden');
         initialHint.classList.add('hidden');
-    }
-    function esc(str) {
-        const d = document.createElement('div');
-        d.appendChild(document.createTextNode(String(str ?? '')));
-        return d.innerHTML;
     }
 
     // ────────────────────────────────────────────────────────────────────────

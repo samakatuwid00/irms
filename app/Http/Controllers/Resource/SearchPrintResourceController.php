@@ -43,10 +43,24 @@ class SearchPrintResourceController extends BaseController
             return response()->json([]);
         }
 
-        // Search by title or author so the user can find a book even if they only remember the author
+        // Tokenize: split on whitespace, lowercase, strip trailing 's' for basic plural matching
+        // e.g. "Grammars Essential 4" → ['grammar', 'essential', '4']
+        $tokens = collect(preg_split('/\s+/', mb_strtolower($query)))
+            ->filter(fn($t) => strlen($t) >= 1)
+            ->map(fn($t) => rtrim($t, 's'))
+            ->unique()
+            ->values();
+
+        // Each token must match either the title or an author name — word-order agnostic
         $titleIds = PrintTitle::with('authors')
-            ->where('title', 'ILIKE', '%' . $query . '%')
-            ->orWhereHas('authors', fn($q) => $q->where('author_name', 'ILIKE', '%' . $query . '%'))
+            ->where(function ($q) use ($tokens) {
+                foreach ($tokens as $token) {
+                    $q->where(function ($inner) use ($token) {
+                        $inner->where('title', 'ILIKE', '%' . $token . '%')
+                            ->orWhereHas('authors', fn($a) => $a->where('author_name', 'ILIKE', '%' . $token . '%'));
+                    });
+                }
+            })
             ->pluck('id');
 
         // Group by uniqueness_hash so we show one card per variant group,
