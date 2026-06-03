@@ -47,11 +47,71 @@
             overflow: hidden;
             transition: max-height 0.3s ease-in-out;
         }
-
         #mobile-menu.open {
             max-height: calc(100vh - 64px);
         }
+
+        /* Shimmer skeleton animation */
+        @keyframes shimmer {
+            0%   { background-position: -600px 0; }
+            100% { background-position:  600px 0; }
+        }
+        .skeleton {
+            background: linear-gradient(90deg, #f0f0f0 25%, #e4e4e4 50%, #f0f0f0 75%);
+            background-size: 600px 100%;
+            animation: shimmer 1.4s infinite linear;
+            border-radius: 6px;
+        }
+
+        /* Correct sidebar width from the very first paint — zero layout shift */
+        html[data-sidebar="collapsed"] #desktop-sidebar { width: 5rem; }
+        html[data-sidebar="expanded"]  #desktop-sidebar,
+        html:not([data-sidebar])       #desktop-sidebar { width: 16rem; }
+        #desktop-sidebar { transition: width 300ms ease-in-out; }
+
+        /* Before Alpine boots: show skeleton, hide real content */
+        #sidebar-skeleton      { display: flex; flex-direction: column; flex: 1; overflow: hidden; }
+        #sidebar-real-content  { display: none; flex-direction: column; flex: 1; overflow: hidden; }
+
+        /* After Alpine adds .sidebar-ready: swap them */
+        #desktop-sidebar.sidebar-ready #sidebar-skeleton      { display: none; }
+        #desktop-sidebar.sidebar-ready #sidebar-real-content  { display: flex; }
+        #desktop-sidebar.sidebar-ready #sidebar-real-content  {
+            animation: sidebarFadeIn 180ms ease-out both;
+        }
+        @keyframes sidebarFadeIn {
+            from { opacity: 0; transform: translateX(-4px); }
+            to   { opacity: 1; transform: translateX(0); }
+        }
+
+        /* Main content skeleton: shown until window load fires */
+        #content-skeleton { display: block; }
+        #content-real     { display: none; }
+        body.page-ready #content-skeleton { display: none; }
+        body.page-ready #content-real     {
+            display: block;
+            animation: contentFadeIn 220ms ease-out both;
+        }
+        @keyframes contentFadeIn {
+            from { opacity: 0; transform: translateY(8px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
     </style>
+
+    <!--
+        Runs synchronously (no defer) — before Alpine, before first paint.
+        Sets html[data-sidebar] so the CSS width rules above apply immediately.
+    -->
+    <script>
+        (function () {
+            try {
+                var c = JSON.parse(localStorage.getItem('sidebar_collapsed') || 'false');
+                document.documentElement.setAttribute('data-sidebar', c ? 'collapsed' : 'expanded');
+            } catch (e) {
+                document.documentElement.setAttribute('data-sidebar', 'expanded');
+            }
+        })();
+    </script>
     @stack('styles')
 </head>
 <body class="bg-gray-100">
@@ -377,17 +437,80 @@
              toggleSidebar() {
                  this.collapsed = !this.collapsed;
                  localStorage.setItem('sidebar_collapsed', JSON.stringify(this.collapsed));
+                 document.documentElement.setAttribute('data-sidebar', this.collapsed ? 'collapsed' : 'expanded');
              }
          }">
         <!-- Desktop Sidebar -->
-        <div :class="collapsed ? 'md:w-20' : 'md:w-64'"
+        <div id="desktop-sidebar"
+             x-init="$nextTick(() => $el.classList.add('sidebar-ready'))"
+             :class="collapsed ? 'md:w-20' : 'md:w-64'"
              class="hidden md:flex md:flex-col bg-white shadow-lg shrink-0 transition-all duration-300 ease-in-out">
+
+            <!-- ══ SIDEBAR SKELETON (shown before Alpine boots) ══════════════ -->
+            <div id="sidebar-skeleton">
+                <!-- Header skeleton -->
+                <div class="flex items-center border-b border-gray-200 shrink-0 p-4 gap-3">
+                    <div class="skeleton w-10 h-10 rounded-lg shrink-0"></div>
+                    <div id="sk-title" class="skeleton h-5 flex-1 rounded"
+                         style="display: var(--sk-expanded-only, block)"></div>
+                </div>
+                <!-- Nav items skeleton -->
+                <div class="p-3 flex-1 space-y-2">
+                    <!-- 6 nav rows: icon + label (label hidden when collapsed) -->
+                    <div class="flex items-center gap-3 px-2.5 py-2">
+                        <div class="skeleton w-5 h-5 rounded shrink-0"></div>
+                        <div class="skeleton h-3.5 flex-1 rounded sk-label"></div>
+                    </div>
+                    <div class="flex items-center gap-3 px-2.5 py-2">
+                        <div class="skeleton w-5 h-5 rounded shrink-0"></div>
+                        <div class="skeleton h-3.5 flex-1 rounded sk-label"></div>
+                    </div>
+                    <div class="flex items-center gap-3 px-2.5 py-2">
+                        <div class="skeleton w-5 h-5 rounded shrink-0"></div>
+                        <div class="skeleton h-3.5 flex-1 rounded sk-label"></div>
+                    </div>
+                    <div class="flex items-center gap-3 px-2.5 py-2">
+                        <div class="skeleton w-5 h-5 rounded shrink-0"></div>
+                        <div class="skeleton h-3.5 flex-1 rounded sk-label"></div>
+                    </div>
+                    <div class="flex items-center gap-3 px-2.5 py-2">
+                        <div class="skeleton w-5 h-5 rounded shrink-0"></div>
+                        <div class="skeleton h-3.5 w-3/4 rounded sk-label"></div>
+                    </div>
+                    <div class="border-t border-gray-100 my-1"></div>
+                    <div class="flex items-center gap-3 px-2.5 py-2">
+                        <div class="skeleton w-5 h-5 rounded shrink-0"></div>
+                        <div class="skeleton h-3.5 flex-1 rounded sk-label"></div>
+                    </div>
+                </div>
+                <!-- Logo skeleton -->
+                <div class="p-6 flex justify-center">
+                    <div class="skeleton rounded-full sk-logo-expanded"
+                         style="width:80px;height:80px"></div>
+                    <div class="skeleton rounded-full sk-logo-collapsed"
+                         style="width:32px;height:32px;display:none"></div>
+                </div>
+                <!-- User footer skeleton -->
+                <div class="border-t border-gray-200 p-3 mb-5">
+                    <div class="flex items-center gap-3">
+                        <div class="skeleton w-10 h-10 rounded-full shrink-0"></div>
+                        <div class="space-y-1.5 flex-1 sk-label">
+                            <div class="skeleton h-3 w-3/4 rounded"></div>
+                            <div class="skeleton h-2.5 w-1/2 rounded"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <!-- ══ END SIDEBAR SKELETON ══════════════════════════════════════ -->
+
+            <!-- ══ REAL SIDEBAR CONTENT (hidden until Alpine ready) ══════════ -->
+            <div id="sidebar-real-content">
             <div class="flex items-center border-b border-gray-300 shrink-0 p-4"
                  :class="collapsed ? 'flex-col gap-3 py-4 px-2' : 'justify-between'">
                 <div class="flex items-center gap-3">
                     <img src="{{ asset('assets/images/logo.png') }}" alt="iRIMS-V Logo"
                          class="w-10 h-10 object-contain shrink-0">
-                    <h2 x-show="!collapsed" x-transition.opacity.duration.200ms
+                    <h2 x-show="!collapsed" x-cloak x-transition.opacity.duration.200ms
                         class="text-xl font-bold tracking-wide whitespace-nowrap">
                         <span class="text-[#0AC4E0]">i</span><span class="text-[#1A3263]">RIMS-</span><span class="text-[#DA3D20]">V</span>
                     </h2>
@@ -415,7 +538,7 @@
                             <svg class="size-5 shrink-0 transition-transform duration-200 group-hover:scale-110" xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                                 <path d="M3 9.5 12 3l9 6.5V21a1 1 0 0 1-1 1h-6v-7H10v7H4a1 1 0 0 1-1-1z"/>
                             </svg>
-                            <span x-show="!collapsed" x-transition.opacity.duration.200ms class="whitespace-nowrap">Dashboard</span>
+                            <span x-show="!collapsed" x-cloak x-transition.opacity.duration.200ms class="whitespace-nowrap">Dashboard</span>
                         </a>
                         <template x-if="collapsed">
                             <div class="absolute left-full top-1/2 -translate-y-1/2 ml-3 px-3 py-1.5 bg-gray-900 text-white text-xs rounded-lg shadow-lg whitespace-nowrap pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-150 z-[60]">
@@ -437,8 +560,8 @@
                                     <path d="M4 19a2 2 0 0 0 2 2h12"/><path d="M4 5a2 2 0 0 1 2-2h12v14H6a2 2 0 0 0-2 2z"/>
                                     <path d="M12 7v6"/><path d="M9 10h6"/>
                                 </svg>
-                                <span x-show="!collapsed" x-transition.opacity.duration.200ms class="flex-1 text-left whitespace-nowrap">Add Resource</span>
-                                <svg x-show="!collapsed" :class="open ? 'rotate-180' : ''" class="size-4 shrink-0 transition-transform" xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                <span x-show="!collapsed" x-cloak x-transition.opacity.duration.200ms class="flex-1 text-left whitespace-nowrap">Add Resource</span>
+                                <svg x-show="!collapsed" x-cloak :class="open ? 'rotate-180' : ''" class="size-4 shrink-0 transition-transform" xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                                     <path d="m6 9 6 6 6-6"/>
                                 </svg>
                             </button>
@@ -490,8 +613,8 @@
                             <svg class="size-5 shrink-0 transition-transform duration-200 group-hover:scale-110" xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                                 <path d="M3 7a2 2 0 0 1 2-2h5l2 2h7a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
                             </svg>
-                            <span x-show="!collapsed" x-transition.opacity.duration.200ms class="flex-1 text-left whitespace-nowrap">Resources</span>
-                            <svg x-show="!collapsed" :class="open ? 'rotate-180' : ''" class="size-4 shrink-0 transition-transform"
+                            <span x-show="!collapsed" x-cloak x-transition.opacity.duration.200ms class="flex-1 text-left whitespace-nowrap">Resources</span>
+                            <svg x-show="!collapsed" x-cloak :class="open ? 'rotate-180' : ''" class="size-4 shrink-0 transition-transform"
                                  xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                                 <path d="m6 9 6 6 6-6"/>
                             </svg>
@@ -557,7 +680,7 @@
                                     <circle cx="17" cy="7" r="3"/>
                                     <path d="M22 21v-2a4 4 0 0 0-3-3.87"/>
                                 </svg>
-                                <span x-show="!collapsed" x-transition.opacity.duration.200ms class="whitespace-nowrap">{{ $label }}</span>
+                                <span x-show="!collapsed" x-cloak x-transition.opacity.duration.200ms class="whitespace-nowrap">{{ $label }}</span>
                             </a>
                             <template x-if="collapsed">
                                 <div class="absolute left-full top-1/2 -translate-y-1/2 ml-3 px-3 py-1.5 bg-gray-900 text-white text-xs rounded-lg shadow-lg whitespace-nowrap pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-150 z-[60]">
@@ -588,7 +711,7 @@
                                     <path d="M12 3l9 6-9 6-9-6z"/>
                                     <path d="M3 21h18"/>
                                 </svg>
-                                <span x-show="!collapsed" x-transition.opacity.duration.200ms class="whitespace-nowrap">{{ $label }}</span>
+                                <span x-show="!collapsed" x-cloak x-transition.opacity.duration.200ms class="whitespace-nowrap">{{ $label }}</span>
                             </a>
                             <template x-if="collapsed">
                                 <div class="absolute left-full top-1/2 -translate-y-1/2 ml-3 px-3 py-1.5 bg-gray-900 text-white text-xs rounded-lg shadow-lg whitespace-nowrap pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-150 z-[60]">
@@ -623,8 +746,8 @@
                                 <svg class="size-5 shrink-0 transition-transform duration-200 group-hover:scale-110" xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                                     <path d="M4 6h16M4 10h16M4 14h16M4 18h16"/>
                                 </svg>
-                                <span x-show="!collapsed" x-transition.opacity.duration.200ms class="flex-1 text-left whitespace-nowrap">Masterlist</span>
-                                <svg x-show="!collapsed" :class="open ? 'rotate-180' : ''" class="size-4 shrink-0 transition-transform"
+                                <span x-show="!collapsed" x-cloak x-transition.opacity.duration.200ms class="flex-1 text-left whitespace-nowrap">Masterlist</span>
+                                <svg x-show="!collapsed" x-cloak :class="open ? 'rotate-180' : ''" class="size-4 shrink-0 transition-transform"
                                     xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                                     <path d="m6 9 6 6 6-6"/>
                                 </svg>
@@ -670,12 +793,12 @@
                 </ul>
             </nav>
 
-            <div x-show="!collapsed" x-transition.opacity.duration.200ms class="p-8">
+            <div x-show="!collapsed" x-cloak x-transition.opacity.duration.200ms class="p-8">
                 <div class="flex items-center justify-center">
                     <img src="{{ Auth::user()?->station_logo_url ?? asset('assets/images/logo.png') }}" alt="Logo" class="h-20 w-auto">
                 </div>
             </div>
-            <div x-show="collapsed" x-transition.opacity.duration.200ms class="py-4 flex items-center justify-center">
+            <div x-show="collapsed" x-cloak x-transition.opacity.duration.200ms class="py-4 flex items-center justify-center">
                 <img src="{{ Auth::user()?->station_logo_url ?? asset('assets/images/logo.png') }}" alt="Logo" class="h-8 w-8 object-contain">
             </div>
 
@@ -684,7 +807,7 @@
                     x-data="{ accountOpen: false }" @click.outside="accountOpen = false">
 
                 {{-- ── COLLAPSED: avatar-only button + icon-only flyout ── --}}
-                <div x-show="collapsed" class="flex justify-center">
+                <div x-show="collapsed" x-cloak class="flex justify-center">
                     <div class="relative">
                         <button type="button"
                                 @click="accountOpen = !accountOpen"
@@ -755,7 +878,7 @@
                 </div>
 
                 {{-- ── EXPANDED: full name button + full dropdown ── --}}
-                <div x-show="!collapsed" class="relative w-full">
+                <div x-show="!collapsed" x-cloak class="relative w-full">
                     <button type="button"
                             @click="accountOpen = !accountOpen"
                             class="w-full flex items-center gap-x-3.5 py-2 px-2.5 text-sm text-gray-800 rounded-lg hover:bg-gray-100 transition-colors">
@@ -832,20 +955,96 @@
                     </div>
                 </div>
             </footer>
-        </div>
+        </div><!-- /#sidebar-real-content -->
+        </div><!-- /#desktop-sidebar -->
             <!-- Main Content Area -->
             <div class="flex-1 flex flex-col overflow-hidden">
                 <main class="p-6 overflow-y-auto mt-16 md:mt-0 flex-1">
-                    @yield('content')
-                    <!-- Copyright Footer - sits below content, scrolls with page -->
-                    <p class="w-full text-center pt-6 pb-3 text-xs text-gray-400 select-none border-t border-gray-200 mt-8">
-                        Designed &amp; Developed by<br>
-                        <span class="font-semibold text-gray-500">LRMS Naga</span> &copy; Copyright 2022
-                    </p>
+
+                    <!-- ══ CONTENT SKELETON (shown until page-ready) ══════════ -->
+                    <div id="content-skeleton" aria-hidden="true">
+                        <!-- Page title bar skeleton -->
+                        <div class="mb-6 flex items-center justify-between">
+                            <div class="space-y-2">
+                                <div class="skeleton h-7 w-48 rounded-lg"></div>
+                                <div class="skeleton h-4 w-72 rounded"></div>
+                            </div>
+                            <div class="skeleton h-9 w-28 rounded-lg"></div>
+                        </div>
+                        <!-- Stats row skeleton -->
+                        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                            <div class="skeleton h-24 rounded-xl"></div>
+                            <div class="skeleton h-24 rounded-xl"></div>
+                            <div class="skeleton h-24 rounded-xl"></div>
+                            <div class="skeleton h-24 rounded-xl"></div>
+                        </div>
+                        <!-- Content cards skeleton -->
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                            <div class="skeleton h-48 rounded-xl"></div>
+                            <div class="skeleton h-48 rounded-xl"></div>
+                        </div>
+                        <!-- Table skeleton -->
+                        <div class="bg-white rounded-xl border border-gray-100 overflow-hidden">
+                            <div class="p-4 border-b border-gray-100">
+                                <div class="skeleton h-5 w-32 rounded"></div>
+                            </div>
+                            <div class="divide-y divide-gray-50">
+                                @for ($i = 0; $i < 6; $i++)
+                                <div class="flex items-center gap-4 p-4">
+                                    <div class="skeleton w-8 h-8 rounded-full shrink-0"></div>
+                                    <div class="flex-1 space-y-1.5">
+                                        <div class="skeleton h-3.5 w-1/2 rounded"></div>
+                                        <div class="skeleton h-3 w-1/3 rounded"></div>
+                                    </div>
+                                    <div class="skeleton h-6 w-16 rounded-full"></div>
+                                </div>
+                                @endfor
+                            </div>
+                        </div>
+                    </div>
+                    <!-- ══ END CONTENT SKELETON ══════════════════════════════ -->
+
+                    <!-- ══ REAL PAGE CONTENT ═════════════════════════════════ -->
+                    <div id="content-real">
+                        @yield('content')
+                        <!-- Copyright Footer -->
+                        <p class="w-full text-center pt-6 pb-3 text-xs text-gray-400 select-none border-t border-gray-200 mt-8">
+                            Designed &amp; Developed by<br>
+                            <span class="font-semibold text-gray-500">LRMS Naga</span> &copy; Copyright 2022
+                        </p>
+                    </div>
+                    <!-- ══ END REAL PAGE CONTENT ════════════════════════════ -->
+
                 </main>
             </div>
     </div>
 
     @stack('scripts')
+
+    <script>
+        /* ── Sync skeleton label visibility with stored collapsed state ──────
+           Runs immediately after DOM is parsed (before Alpine, before paint)
+           so skeleton rows already match the correct collapsed/expanded look.  */
+        (function () {
+            var collapsed = false;
+            try { collapsed = JSON.parse(localStorage.getItem('sidebar_collapsed') || 'false'); } catch(e) {}
+            if (collapsed) {
+                document.querySelectorAll('.sk-label').forEach(function(el){ el.style.display = 'none'; });
+                var logoExp = document.querySelector('.sk-logo-expanded');
+                var logoColl = document.querySelector('.sk-logo-collapsed');
+                if (logoExp)  logoExp.style.display  = 'none';
+                if (logoColl) logoColl.style.display = 'block';
+            }
+        })();
+
+        /* ── Reveal real page content once the page is fully loaded ──────────
+           Using 'load' ensures images/assets are ready so the swap looks clean.
+           A 60ms delay lets Alpine finish its own init tick first.             */
+        window.addEventListener('load', function () {
+            setTimeout(function () {
+                document.body.classList.add('page-ready');
+            }, 60);
+        });
+    </script>
 </body>
 </html>
