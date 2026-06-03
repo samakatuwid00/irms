@@ -43,28 +43,38 @@ class SearchPrintResourceController extends BaseController
             return response()->json([]);
         }
 
-        // Tokenize: split on whitespace, lowercase, strip trailing 's' for basic plural matching
-        // e.g. "Grammars Essential 4" → ['grammar', 'essential', '4']
+        // Tokenize: lowercase, split on spaces, strip trailing 's'
         $tokens = collect(preg_split('/\s+/', mb_strtolower($query)))
             ->filter(fn($t) => strlen($t) >= 1)
             ->map(fn($t) => rtrim($t, 's'))
             ->unique()
             ->values();
 
-        // Each token must match either the title or an author name — word-order agnostic
+        // Space-stripped version for concatenated searches e.g. "grammaressential4"
+        $nospaceQuery = preg_replace('/\s+/', '', mb_strtolower($query));
+
         $titleIds = PrintTitle::with('authors')
-            ->where(function ($q) use ($tokens) {
+            ->where(function ($q) use ($tokens, $nospaceQuery) {
+
+                // Each token must match either the title or an author
                 foreach ($tokens as $token) {
                     $q->where(function ($inner) use ($token) {
                         $inner->where('title', 'ILIKE', '%' . $token . '%')
                             ->orWhereHas('authors', fn($a) => $a->where('author_name', 'ILIKE', '%' . $token . '%'));
                     });
                 }
+
+                // Also match when spaces are stripped from both query and title
+                if ($nospaceQuery) {
+                    $q->orWhereRaw(
+                        "regexp_replace(lower(title), '\\s+', '', 'g') ILIKE ?",
+                        ['%' . $nospaceQuery . '%']
+                    );
+                }
             })
             ->pluck('id');
 
-        // Group by uniqueness_hash so we show one card per variant group,
-        // not one card per title (same title can have many edition/publisher combos)
+        // One card per uniqueness_hash, not per title
         $resources = PrintResource::with(['printTitle.authors', 'type'])
             ->whereIn('print_title_id', $titleIds)
             ->where('status', 1)
@@ -75,8 +85,7 @@ class SearchPrintResourceController extends BaseController
             $resource = $group->first();
             $title    = $resource->printTitle;
 
-            // Aggregate SGL IDs across all resources in the group — different editions
-            // may cover different subjects, so the card should show the union of all of them
+            // Union of all SGL IDs across editions in the group
             $allSglIds = $group
                 ->pluck('subject_grade_level_ids')
                 ->filter()
@@ -99,7 +108,7 @@ class SearchPrintResourceController extends BaseController
                     ->join(', ');
             }
 
-            // Use the first uploaded cover in the group — not all editions may have one
+            // Use the first available cover in the group
             $cover = $group
                 ->map(fn($r) => $r->cover ? asset('storage/' . $r->cover) : null)
                 ->filter()
