@@ -122,15 +122,26 @@
                                 $total = array_sum($qty);
                             @endphp
                             <tr class="hover:bg-gray-50 border border-gray-300">
+                                <!-- Clickable Cover -->
                                 <td class="px-2 py-3">
-                                    <img src="{{ $item->thumb_url }}" alt="{{ $item->printTitle->title }}"
-                                        class="w-12 h-16 object-cover rounded shadow" loading="lazy">
+                                    <img 
+                                        src="{{ $item->thumb_url }}" 
+                                        alt="{{ $item->printTitle->title }}"
+                                        class="w-12 h-16 object-cover rounded shadow cursor-pointer hover:scale-105 transition-transform duration-200"
+                                        loading="lazy"
+                                        onclick='openPrintModal(@json($item->showDetails($filteredLibraryIds)))'
+                                        title="Click to view details">
                                 </td>
-                                <td class="px-2 py-3 font-medium text-gray-800 max-w-xs">{{ $item->printTitle->title }}</td>
+
+                                <td class="px-2 py-3 font-medium text-gray-800 max-w-xs">
+                                    {{ $item->printTitle->title }}
+                                </td>
                                 <td class="px-2 py-3 text-gray-600">{{ $authors }}</td>
                                 <td class="px-2 py-3 text-gray-600">{{ $item->publisher }}</td>
                                 <td class="px-2 py-3">
-                                    <span class="px-2 py-1 text-xs rounded-full bg-blue-100 text-blue-700">{{ $item->type->shortname }}</span>
+                                    <span class="px-2 py-1 text-xs rounded-full bg-blue-100 text-blue-700">
+                                        {{ $item->type->shortname }}
+                                    </span>
                                 </td>
                                 <td class="px-2 py-3 text-xs">
                                     @if ($item->subjects()->count())

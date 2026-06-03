@@ -155,17 +155,26 @@
                                     $total = array_sum($qty);
                                 @endphp
                                 <tr class="hover:bg-gray-50 border-b border-gray-300">
+                                    <!-- Clickable Cover -->
                                     <td class="px-2 py-3">
-                                        <img src="{{ $item->thumb_url }}" alt="{{ $item->printTitle->title }}"
-                                            class="w-12 h-16 object-cover rounded shadow" loading="lazy">
+                                        <img 
+                                            src="{{ $item->thumb_url }}" 
+                                            alt="{{ $item->printTitle->title }}"
+                                            class="w-12 h-16 object-cover rounded shadow cursor-pointer hover:scale-105 transition-transform duration-200"
+                                            loading="lazy"
+                                            onclick='openPrintModal(@json($item->showDetails($schoolLibrary ? [$schoolLibrary->id] : [])))'
+                                            title="Click to view details">
                                     </td>
+
                                     <td class="px-2 py-3 font-medium text-gray-800 max-w-xs">
-                                        {{ $item->printTitle->title }}</td>
+                                        {{ $item->printTitle->title }}
+                                    </td>
                                     <td class="px-2 py-3 text-gray-600">{{ $authors }}</td>
                                     <td class="px-2 py-3 text-gray-600">{{ $item->publisher }}</td>
                                     <td class="px-2 py-3">
-                                        <span
-                                            class="px-2 py-1 text-xs rounded-full bg-blue-100 text-blue-700">{{ $item->type->shortname }}</span>
+                                        <span class="px-2 py-1 text-xs rounded-full bg-blue-100 text-blue-700">
+                                            {{ $item->type->shortname }}
+                                        </span>
                                     </td>
                                     <td class="px-2 py-3 text-xs">
                                         @if ($item->subjects()->count())
@@ -189,8 +198,7 @@
                                                     tooltip.classList.add('invisible', 'opacity-0');
                                                     tooltip.classList.remove('visible', 'opacity-100');
                                                 " @endif>
-                                                <span
-                                                    class="inline-block bg-blue-100 text-blue-800 font-medium px-2 py-1 rounded-full cursor-default">
+                                                <span class="inline-block bg-blue-100 text-blue-800 font-medium px-2 py-1 rounded-full cursor-default">
                                                     {{ $first->subject->subject_name }} -
                                                     {{ $first->gradeLevel->grade }}
                                                     @if ($count > 1)
@@ -222,26 +230,17 @@
                                     <td class="px-2 py-3 text-center text-xs">
                                         <div class="space-y-1">
                                             <div class="flex justify-center gap-3 text-gray-700">
-                                                <span title="Usable"><strong
-                                                        class="text-green-600">{{ $qty['usable'] }}</strong>
-                                                    Usable</span>
-                                                <span title="Partially Damaged"><strong
-                                                        class="text-yellow-600">{{ $qty['partially_damaged'] }}</strong>
-                                                    PD</span>
+                                                <span title="Usable"><strong class="text-green-600">{{ $qty['usable'] }}</strong> Usable</span>
+                                                <span title="Partially Damaged"><strong class="text-yellow-600">{{ $qty['partially_damaged'] }}</strong> PD</span>
                                             </div>
                                             <div class="flex justify-center gap-3 text-gray-600">
-                                                <span title="Damaged"><strong
-                                                        class="text-red-600">{{ $qty['damaged'] }}</strong>
-                                                    Damaged</span>
-                                                <span title="Lost"><strong
-                                                        class="text-purple-600">{{ $qty['lost'] }}</strong>
-                                                    Lost</span>
-                                                <span title="Condemnable"><strong
-                                                        class="text-gray-800">{{ $qty['condemnable'] }}</strong>
-                                                    Cond.</span>
+                                                <span title="Damaged"><strong class="text-red-600">{{ $qty['damaged'] }}</strong> Damaged</span>
+                                                <span title="Lost"><strong class="text-purple-600">{{ $qty['lost'] }}</strong> Lost</span>
+                                                <span title="Condemnable"><strong class="text-gray-800">{{ $qty['condemnable'] }}</strong> Cond.</span>
                                             </div>
                                             <div class="font-semibold text-gray-800 border-t border-gray-300 pt-1">
-                                                Total: {{ $total }}</div>
+                                                Total: {{ $total }}
+                                            </div>
                                         </div>
                                     </td>
                                     <td class="px-2 py-3">

@@ -71,7 +71,7 @@
 
         /* Before Alpine boots: show skeleton, hide real content */
         #sidebar-skeleton      { display: flex; flex-direction: column; flex: 1; overflow: hidden; }
-        #sidebar-real-content  { display: none; flex-direction: column; flex: 1; overflow: hidden; }
+        #sidebar-real-content  { display: none; flex-direction: column; flex: 1; }
 
         /* After Alpine adds .sidebar-ready: swap them */
         #desktop-sidebar.sidebar-ready #sidebar-skeleton      { display: none; }
@@ -80,8 +80,8 @@
             animation: sidebarFadeIn 180ms ease-out both;
         }
         @keyframes sidebarFadeIn {
-            from { opacity: 0; transform: translateX(-4px); }
-            to   { opacity: 1; transform: translateX(0); }
+            from { opacity: 0; }
+            to   { opacity: 1; }
         }
 
         /* Main content skeleton: shown until window load fires */
@@ -93,8 +93,9 @@
             animation: contentFadeIn 220ms ease-out both;
         }
         @keyframes contentFadeIn {
-            from { opacity: 0; transform: translateY(8px); }
-            to   { opacity: 1; transform: translateY(0); }
+            from { opacity: 0; }
+            to   { opacity: 1; }
+        }
         }
     </style>
 
@@ -550,8 +551,21 @@
 
                     <!-- Add Resource Accordion (Desktop) -->
                     @if (Auth::check() && in_array(Auth::user()?->userType?->level, [1, 3]))
-                        <li class="relative group" x-data="{ open: {{ request()->routeIs('print-resource.create', 'nonprint-resource.create') ? 'true' : 'false' }} }">
-                            <button @click="if(!collapsed) open = !open"
+                        <li class="relative group"
+                            x-data="{
+                                open: {{ request()->routeIs('print-resource.create', 'nonprint-resource.create') ? 'true' : 'false' }},
+                                flyoutOpen: false,
+                                flyoutTop: 0,
+                                flyoutLeft: 0,
+                                toggleFlyout(btn) {
+                                    if (this.flyoutOpen) { this.flyoutOpen = false; return; }
+                                    const r = btn.getBoundingClientRect();
+                                    this.flyoutTop  = r.top;
+                                    this.flyoutLeft = r.right + 12;
+                                    this.flyoutOpen = true;
+                                }
+                            }">
+                            <button @click="collapsed ? toggleFlyout($el) : (open = !open)"
                                     class="w-full flex items-center gap-x-3.5 py-2 text-sm rounded-lg transition-all duration-200
                                     {{ request()->routeIs('print-resource.create', 'nonprint-resource.create') ? 'bg-blue-100 text-blue-600 font-semibold' : 'text-gray-800 hover:bg-gray-100' }}"
                                     :class="collapsed ? 'justify-center px-2' : 'px-2.5'"
@@ -583,8 +597,18 @@
                                     Add Non-Print
                                 </a>
                             </div>
-                            <template x-if="collapsed">
-                                <div class="absolute left-full top-0 ml-2 py-2 bg-white rounded-lg shadow-xl border border-gray-200 min-w-[180px] opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-150 z-[60]">
+                            {{-- Collapsed: click-to-toggle flyout via x-teleport --}}
+                            <template x-teleport="body">
+                                <div x-show="flyoutOpen && collapsed"
+                                     x-transition:enter="transition ease-out duration-150"
+                                     x-transition:enter-start="opacity-0 scale-95"
+                                     x-transition:enter-end="opacity-100 scale-100"
+                                     x-transition:leave="transition ease-in duration-100"
+                                     x-transition:leave-start="opacity-100 scale-100"
+                                     x-transition:leave-end="opacity-0 scale-95"
+                                     @click.outside="flyoutOpen = false"
+                                     :style="`position:fixed; top:${flyoutTop}px; left:${flyoutLeft}px; z-index:9999;`"
+                                     class="bg-white border border-gray-200 rounded-xl shadow-2xl py-2 min-w-[180px]">
                                     <div class="px-3 py-1.5 text-xs font-semibold text-gray-400 uppercase tracking-wide">Add Resource</div>
                                     <a href="{{ route('print-resource.create') }}" class="flex items-center gap-2 px-3 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600 transition-colors">
                                         <svg class="size-4" xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M6 9V2h12v7"/><path d="M6 18h12v4H6z"/><path d="M6 14h12"/></svg>
@@ -596,14 +620,33 @@
                                     </a>
                                 </div>
                             </template>
+                            {{-- Collapsed: tooltip on hover --}}
+                            <template x-if="collapsed">
+                                <div class="absolute left-full top-1/2 -translate-y-1/2 ml-3 px-3 py-1.5 bg-gray-900 text-white text-xs rounded-lg shadow-lg whitespace-nowrap pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-150 z-[60]">
+                                    Add Resource
+                                    <div class="absolute right-full top-1/2 -translate-y-1/2 border-4 border-transparent border-r-gray-900"></div>
+                                </div>
+                            </template>
                         </li>
                     @endif
 
                     <!-- Resources Accordion (Desktop) -->
                     <li class="relative group rounded-lg transition-colors"
-                        x-data="{ open: {{ request()->routeIs('print-resources', 'nonprint-resources') ? 'true' : 'false' }} }">
+                        x-data="{
+                            open: {{ request()->routeIs('print-resources', 'nonprint-resources') ? 'true' : 'false' }},
+                            flyoutOpen: false,
+                            flyoutTop: 0,
+                            flyoutLeft: 0,
+                            toggleFlyout(btn) {
+                                if (this.flyoutOpen) { this.flyoutOpen = false; return; }
+                                const r = btn.getBoundingClientRect();
+                                this.flyoutTop  = r.top;
+                                this.flyoutLeft = r.right + 12;
+                                this.flyoutOpen = true;
+                            }
+                        }">
                         <button type="button"
-                                @click="if(!collapsed) open = !open"
+                                @click="collapsed ? toggleFlyout($el) : (open = !open)"
                                 class="w-full flex items-center gap-x-3.5 py-2 text-sm rounded-lg transition-all duration-200
                                 {{ request()->routeIs('print-resources', 'nonprint-resources')
                                     ? 'bg-blue-100 text-blue-600 font-semibold'
@@ -642,8 +685,18 @@
                                 Non-Print
                             </a>
                         </div>
-                        <template x-if="collapsed">
-                            <div class="absolute left-full top-0 ml-2 py-2 bg-white rounded-lg shadow-xl border border-gray-200 min-w-[180px] opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-150 z-[60]">
+                        {{-- Collapsed: click-to-toggle flyout via x-teleport --}}
+                        <template x-teleport="body">
+                            <div x-show="flyoutOpen && collapsed"
+                                 x-transition:enter="transition ease-out duration-150"
+                                 x-transition:enter-start="opacity-0 scale-95"
+                                 x-transition:enter-end="opacity-100 scale-100"
+                                 x-transition:leave="transition ease-in duration-100"
+                                 x-transition:leave-start="opacity-100 scale-100"
+                                 x-transition:leave-end="opacity-0 scale-95"
+                                 @click.outside="flyoutOpen = false"
+                                 :style="`position:fixed; top:${flyoutTop}px; left:${flyoutLeft}px; z-index:9999;`"
+                                 class="bg-white border border-gray-200 rounded-xl shadow-2xl py-2 min-w-[180px]">
                                 <div class="px-3 py-1.5 text-xs font-semibold text-gray-400 uppercase tracking-wide">Resources</div>
                                 <a href="{{ route('print-resources') }}" class="flex items-center gap-2 px-3 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600 transition-colors">
                                     <svg class="size-4" xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M6 9V2h12v7"/><path d="M6 18h12v4H6z"/><path d="M6 14h12"/></svg>
@@ -653,6 +706,13 @@
                                     <svg class="size-4" xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg>
                                     Non-Print
                                 </a>
+                            </div>
+                        </template>
+                        {{-- Collapsed: tooltip on hover --}}
+                        <template x-if="collapsed">
+                            <div class="absolute left-full top-1/2 -translate-y-1/2 ml-3 px-3 py-1.5 bg-gray-900 text-white text-xs rounded-lg shadow-lg whitespace-nowrap pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-150 z-[60]">
+                                Resources
+                                <div class="absolute right-full top-1/2 -translate-y-1/2 border-4 border-transparent border-r-gray-900"></div>
                             </div>
                         </template>
                     </li>
@@ -734,9 +794,21 @@
                     <!-- Masterlist Accordion (Desktop) -->
                     @if (Auth::check() && in_array(Auth::user()?->userType?->level, [3, 4]))
                         <li class="relative group rounded-lg transition-colors"
-                            x-data="{ open: {{ request()->routeIs('masterlist.*', 'nonprint-masterlist.*') ? 'true' : 'false' }} }">
+                            x-data="{
+                                open: {{ request()->routeIs('masterlist.*', 'nonprint-masterlist.*') ? 'true' : 'false' }},
+                                flyoutOpen: false,
+                                flyoutTop: 0,
+                                flyoutLeft: 0,
+                                toggleFlyout(btn) {
+                                    if (this.flyoutOpen) { this.flyoutOpen = false; return; }
+                                    const r = btn.getBoundingClientRect();
+                                    this.flyoutTop  = r.top;
+                                    this.flyoutLeft = r.right + 12;
+                                    this.flyoutOpen = true;
+                                }
+                            }">
                             <button type="button"
-                                    @click="if(!collapsed) open = !open"
+                                    @click="collapsed ? toggleFlyout($el) : (open = !open)"
                                     class="w-full flex items-center gap-x-3.5 py-2 text-sm rounded-lg transition-all duration-200
                                     {{ request()->routeIs('masterlist.*', 'nonprint-masterlist.*')
                                         ? 'bg-blue-100 text-blue-600 font-semibold'
@@ -775,8 +847,18 @@
                                     Non-Print
                                 </a>
                             </div>
-                            <template x-if="collapsed">
-                                <div class="absolute left-full top-0 ml-2 py-2 bg-white rounded-lg shadow-xl border border-gray-200 min-w-[180px] opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-150 z-[60]">
+                            {{-- Collapsed: click-to-toggle flyout via x-teleport --}}
+                            <template x-teleport="body">
+                                <div x-show="flyoutOpen && collapsed"
+                                     x-transition:enter="transition ease-out duration-150"
+                                     x-transition:enter-start="opacity-0 scale-95"
+                                     x-transition:enter-end="opacity-100 scale-100"
+                                     x-transition:leave="transition ease-in duration-100"
+                                     x-transition:leave-start="opacity-100 scale-100"
+                                     x-transition:leave-end="opacity-0 scale-95"
+                                     @click.outside="flyoutOpen = false"
+                                     :style="`position:fixed; top:${flyoutTop}px; left:${flyoutLeft}px; z-index:9999;`"
+                                     class="bg-white border border-gray-200 rounded-xl shadow-2xl py-2 min-w-[180px]">
                                     <div class="px-3 py-1.5 text-xs font-semibold text-gray-400 uppercase tracking-wide">Masterlist</div>
                                     <a href="{{ route('masterlist.index') }}" class="flex items-center gap-2 px-3 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600 transition-colors">
                                         <svg class="size-4" xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M6 9V2h12v7"/><path d="M6 18h12v4H6z"/><path d="M6 14h12"/></svg>
@@ -786,6 +868,13 @@
                                         <svg class="size-4" xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg>
                                         Non-Print
                                     </a>
+                                </div>
+                            </template>
+                            {{-- Collapsed: tooltip on hover --}}
+                            <template x-if="collapsed">
+                                <div class="absolute left-full top-1/2 -translate-y-1/2 ml-3 px-3 py-1.5 bg-gray-900 text-white text-xs rounded-lg shadow-lg whitespace-nowrap pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-150 z-[60]">
+                                    Masterlist
+                                    <div class="absolute right-full top-1/2 -translate-y-1/2 border-4 border-transparent border-r-gray-900"></div>
                                 </div>
                             </template>
                         </li>
@@ -806,76 +895,106 @@
             <footer class="mt-auto border-t border-gray-300 p-2 mb-5 relative"
                     x-data="{ accountOpen: false }" @click.outside="accountOpen = false">
 
-                {{-- ── COLLAPSED: avatar-only button + icon-only flyout ── --}}
-                <div x-show="collapsed" x-cloak class="flex justify-center">
-                    <div class="relative">
+                {{-- ── COLLAPSED: avatar-only button + fixed portal flyout ──
+                     The dropdown is teleported to <body> via x-teleport so it
+                     escapes every overflow:hidden ancestor in the sidebar.
+                     Position is calculated from the button's bounding rect.     --}}
+                    <div x-show="collapsed" x-cloak class="flex justify-center"
+                        x-data="{
+                            open: false,
+                            top: 0,
+                            left: 0,
+                            toggle(btn) {
+                                if (this.open) { 
+                                    this.open = false; 
+                                    return; 
+                                }
+                                
+                                const r = btn.getBoundingClientRect();
+                                
+                                this.top  = r.top - 110;   // ← Moved upward (adjust as needed)
+                                this.left = r.right + 12; // Slightly more spacing on the right
+                                
+                                this.open = true;
+                            }
+                        }">
+
                         <button type="button"
-                                @click="accountOpen = !accountOpen"
+                                @click="toggle($el)"
                                 class="flex items-center justify-center w-10 h-10 rounded-full hover:ring-2 hover:ring-blue-400 transition">
                             <img class="size-10 rounded-full border-2 border-gray-200"
-                                 src="{{ auth()->user()->photo ? asset('storage/' . auth()->user()->photo) : asset('assets/images/default.jpg') }}"
-                                 alt="User Avatar">
+                                src="{{ auth()->user()->photo ? asset('storage/' . auth()->user()->photo) : asset('assets/images/default.jpg') }}"
+                                alt="User Avatar">
                         </button>
 
-                        {{-- Icon-only dropdown, opens upward to the right --}}
-                        <div x-show="accountOpen"
-                             x-transition:enter="transition ease-out duration-150"
-                             x-transition:enter-start="opacity-0 translate-y-1"
-                             x-transition:enter-end="opacity-100 translate-y-0"
-                             x-transition:leave="transition ease-in duration-100"
-                             x-transition:leave-start="opacity-100"
-                             x-transition:leave-end="opacity-0"
-                             x-cloak
-                             class="absolute bottom-full left-full mb-2 ml-2 bg-white border border-gray-200 rounded-lg shadow-xl z-50 py-1 min-w-[44px]">
-                            {{-- My Account --}}
-                            <a href="{{ route('profile') }}"
-                               title="My Account"
-                               class="flex items-center justify-center w-11 h-11 rounded-lg text-sm {{ request()->routeIs('profile') ? 'bg-blue-100 text-blue-600' : 'text-gray-700 hover:bg-gray-100' }}">
-                                <svg class="size-5" xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                                    <circle cx="12" cy="7" r="4"/>
-                                    <path d="M6 21v-2a6 6 0 0 1 12 0v2"/>
-                                </svg>
-                            </a>
-                            @if (Auth::check() && in_array(Auth::user()?->userType?->level, [1, 2, 3, 4]))
-                                @php
-                                    $level = Auth::user()->userType?->level;
-                                    $routeName = match ($level) {
-                                        1 => 'school-profile',
-                                        2 => 'district-profile',
-                                        3 => 'division-profile',
-                                        4 => 'region-profile',
-                                    };
-                                    $label = match ($level) {
-                                        1 => 'School Profile',
-                                        2 => 'District Profile',
-                                        3 => 'Division Profile',
-                                        4 => 'Region Profile',
-                                    };
-                                @endphp
-                                <a href="{{ route($routeName) }}"
-                                   title="{{ $label }}"
-                                   class="flex items-center justify-center w-11 h-11 rounded-lg text-sm {{ request()->routeIs($routeName) ? 'bg-blue-100 text-blue-600' : 'text-gray-700 hover:bg-gray-100' }}">
+                        {{-- Portal: renders at <body> level --}}
+                        <template x-teleport="body">
+                            <div x-show="open"
+                                x-transition:enter="transition ease-out duration-150"
+                                x-transition:enter-start="opacity-0 scale-95"
+                                x-transition:enter-end="opacity-100 scale-100"
+                                x-transition:leave="transition ease-in duration-100"
+                                x-transition:leave-start="opacity-100 scale-100"
+                                x-transition:leave-end="opacity-0 scale-95"
+                                @click.outside="open = false"
+                                :style="`position:fixed; top:${top}px; left:${left}px; z-index:9999;`"
+                                class="bg-white border border-gray-200 rounded-xl shadow-2xl py-2 min-w-[58px]">
+
+                                {{-- My Account --}}
+                                <a href="{{ route('profile') }}"
+                                title="My Account"
+                                class="flex items-center justify-center w-12 h-12 mx-auto rounded-lg text-sm transition-colors
+                                        {{ request()->routeIs('profile') ? 'bg-blue-100 text-blue-600' : 'text-gray-700 hover:bg-gray-100' }}">
                                     <svg class="size-5" xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                                        <path d="M3 9l9-6 9 6v12a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
-                                        <path d="M9 22V12h6v10"/>
+                                        <circle cx="12" cy="7" r="4"/>
+                                        <path d="M6 21v-2a6 6 0 0 1 12 0v2"/>
                                     </svg>
                                 </a>
-                            @endif
-                            <form action="{{ route('logout') }}" method="POST">
-                                @csrf
-                                <button type="submit"
-                                        title="Sign out"
-                                        class="flex items-center justify-center w-11 h-11 rounded-lg text-red-600 hover:bg-red-50">
-                                    <svg class="size-5" xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                                        <path d="M17 16l4-4-4-4"/>
-                                        <path d="M7 12h14"/>
-                                        <path d="M7 4v16"/>
-                                    </svg>
-                                </button>
-                            </form>
-                        </div>
+
+                                @if (Auth::check() && in_array(Auth::user()?->userType?->level, [1, 2, 3, 4]))
+                                    @php
+                                        $level = Auth::user()->userType?->level;
+                                        $routeName = match ($level) {
+                                            1 => 'school-profile',
+                                            2 => 'district-profile',
+                                            3 => 'division-profile',
+                                            4 => 'region-profile',
+                                        };
+                                        $label = match ($level) {
+                                            1 => 'School Profile',
+                                            2 => 'District Profile',
+                                            3 => 'Division Profile',
+                                            4 => 'Region Profile',
+                                        };
+                                    @endphp
+                                    <a href="{{ route($routeName) }}"
+                                    title="{{ $label }}"
+                                    class="flex items-center justify-center w-12 h-12 mx-auto rounded-lg text-sm transition-colors
+                                            {{ request()->routeIs($routeName) ? 'bg-blue-100 text-blue-600' : 'text-gray-700 hover:bg-gray-100' }}">
+                                        <svg class="size-5" xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                            <path d="M3 9l9-6 9 6v12a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+                                            <path d="M9 22V12h6v10"/>
+                                        </svg>
+                                    </a>
+                                @endif
+
+                                <div class="border-t border-gray-100 my-1 mx-3"></div>
+
+                                <form action="{{ route('logout') }}" method="POST">
+                                    @csrf
+                                    <button type="submit"
+                                            title="Sign out"
+                                            class="flex items-center justify-center w-12 h-12 mx-auto rounded-lg text-red-500 hover:bg-red-50 transition-colors">
+                                        <svg class="size-5" xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                            <path d="M17 16l4-4-4-4"/>
+                                            <path d="M7 12h14"/>
+                                            <path d="M7 4v16"/>
+                                        </svg>
+                                    </button>
+                                </form>
+                            </div>
+                        </template>
                     </div>
-                </div>
 
                 {{-- ── EXPANDED: full name button + full dropdown ── --}}
                 <div x-show="!collapsed" x-cloak class="relative w-full">
