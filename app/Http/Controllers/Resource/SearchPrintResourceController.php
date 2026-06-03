@@ -50,11 +50,34 @@ class SearchPrintResourceController extends BaseController
             ->unique()
             ->values();
 
-        // Space-stripped version for concatenated searches e.g. "grammaressential4"
-        $nospaceQuery = preg_replace('/\s+/', '', mb_strtolower($query));
+        // Cap at 4 tokens to prevent factorial explosion
+        $tokenArray = $tokens->take(4)->all();
+
+        // Generate all permutation subsets of tokens joined without spaces
+        // e.g. ['essential', 'grammar', '4'] → 'essential', 'grammar4', 'essentialgrammar4', etc.
+        $combinator = function($arr, $size) use (&$combinator) {
+            if ($size === 1) return array_map(fn($x) => [$x], $arr);
+            $result = [];
+            foreach ($arr as $i => $item) {
+                $rest = array_values(array_filter($arr, fn($_, $k) => $k !== $i, ARRAY_FILTER_USE_BOTH));
+                foreach ($combinator($rest, $size - 1) as $combo) {
+                    $result[] = array_merge([$item], $combo);
+                }
+            }
+            return $result;
+        };
+
+        $nospaceSubsets = collect();
+        $count = count($tokenArray);
+        for ($i = 1; $i <= $count; $i++) {
+            foreach ($combinator($tokenArray, $i) as $combo) {
+                $nospaceSubsets->push(implode('', $combo));
+            }
+        }
+        $nospaceSubsets = $nospaceSubsets->unique()->filter()->values();
 
         $titleIds = PrintTitle::with('authors')
-            ->where(function ($q) use ($tokens, $nospaceQuery) {
+            ->where(function ($q) use ($tokens, $nospaceSubsets) {
 
                 // Each token must match either the title or an author
                 foreach ($tokens as $token) {
@@ -64,13 +87,15 @@ class SearchPrintResourceController extends BaseController
                     });
                 }
 
-                // Also match when spaces are stripped from both query and title
-                if ($nospaceQuery) {
-                    $q->orWhereRaw(
-                        "regexp_replace(lower(title), '\\s+', '', 'g') ILIKE ?",
-                        ['%' . $nospaceQuery . '%']
-                    );
-                }
+                // Match any no-space subset against the space-stripped title
+                $q->orWhere(function ($inner) use ($nospaceSubsets) {
+                    foreach ($nospaceSubsets as $subset) {
+                        $inner->orWhereRaw(
+                            "regexp_replace(lower(title), '\\s+', '', 'g') ILIKE ?",
+                            ['%' . $subset . '%']
+                        );
+                    }
+                });
             })
             ->pluck('id');
 
