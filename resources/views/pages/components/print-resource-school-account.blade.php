@@ -27,7 +27,8 @@
             <form method="GET" data-ajax class="flex items-center gap-3">
                 <input type="hidden" name="tab" value="school">
                 <!-- Hidden view input – carries current view through search/pagination -->
-                <input type="hidden" name="school_view" id="school-view-input" value="{{ request('school_view', 'table') }}">
+                <input type="hidden" name="school_view" id="school-view-input" value="{{ request('school_view', 'card') }}">
+                <input type="hidden" name="per_page" value="{{ $perPage }}" class="per-page-hidden-input">
 
                 <div class="relative w-full">
                     <input type="text" name="search"
@@ -53,77 +54,101 @@
             </form>
         </div>
 
-        <!-- Button row: estimated resource + export + view toggle -->
-        <div class="flex justify-between items-center mt-4">
-            <form action="{{ route('school-library.update-estimated-resource') }}" method="POST"
-                class="flex items-center gap-3">
-                @csrf
-                @method('PATCH')
+        <!-- Button row: estimated resource + export + per page + view toggle -->
+        <div class="flex flex-col lg:flex-row lg:items-start justify-between gap-4 mt-4">
 
-                <label for="estimated_resource" class="text-sm font-medium text-gray-700">
-                    Estimated Resources:
-                </label>
+            <!-- Left side: Export + Estimated Resources -->
+            <div class="flex flex-col sm:flex-row sm:items-center gap-3 w-full lg:w-auto">
+                
+                <!-- Export Button -->
+                <a href="{{ route('print-resources.export', array_merge(request()->query(), ['tab' => 'school'])) }}"
+                    class="inline-flex items-center justify-center sm:justify-start gap-2 px-5 py-2.5 bg-green-600 hover:bg-green-700 text-white rounded-xl transition-colors text-sm font-medium w-full sm:w-auto whitespace-nowrap">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                    <span class="hidden xs:inline">Export to Excel</span>
+                    <span class="xs:hidden">Export to Excel</span>
+                </a>
 
-                <input type="number" name="estimated_resource" id="estimated_resource" min="0"
-                    value="{{ $schoolLibrary->estimated_resource ?? 0 }}"
-                    class="w-32 h-10 px-3 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    required>
+                <!-- Estimated Resources Form -->
+                <form action="{{ route('school-library.update-estimated-resource') }}" method="POST"
+                    class="flex flex-wrap items-center gap-2 bg-gray-50 rounded-xl px-4 py-3 border border-gray-200 w-full sm:w-auto">
+                    @csrf
+                    @method('PATCH')
 
-                <button type="submit"
-                    class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm rounded-lg transition-colors">
-                    Save
-                </button>
+                    <label for="estimated_resource" class="text-sm font-medium text-gray-700 whitespace-nowrap">
+                        Estimated Resources:
+                    </label>
 
-                <span class="text-gray-600 text-sm">
-                    (The total number of inputted resources is {{ $countPercent->pct_of_estimated ?? 0 }}% of the
-                    estimated resources)
-                </span>
+                    <input type="number" name="estimated_resource" id="estimated_resource" min="0"
+                        value="{{ $schoolLibrary->estimated_resource ?? 0 }}"
+                        class="w-24 h-9 px-3 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        required>
 
-                @if (session('success'))
-                    <div x-data="{ show: true }" x-show="show" x-transition x-init="setTimeout(() => show = false, 3000)"
-                        class="flex items-center justify-between gap-2 px-3 py-2 text-sm text-green-800 bg-green-100 rounded-lg">
-                        <span>{{ session('success') }}</span>
-                        <button type="button" @click="show = false"
-                            class="ml-3 font-bold text-green-700 hover:text-green-900">✕</button>
-                    </div>
-                @endif
-
-                @error('estimated_resource')
-                    <span class="text-sm text-red-600">{{ $message }}</span>
-                @enderror
-            </form>
-
-            <div class="flex items-center gap-3">
-                <!-- View Toggle Buttons -->
-                <div class="flex items-center gap-1 bg-gray-100 p-1 rounded-lg">
-                    <button type="button"
-                        class="view-toggle-btn px-3 py-1.5 rounded-md text-sm font-medium transition-all flex items-center gap-1.5 bg-white shadow text-blue-600"
-                        data-target="school" data-view="table">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                d="M3 10h18M3 6h18M3 14h18M3 18h18" />
-                        </svg>
-                        Table
+                    <button type="submit"
+                        class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-colors whitespace-nowrap">
+                        Save
                     </button>
+
+                    <span class="text-gray-600 text-xs border-l border-gray-300 pl-3 ml-1 whitespace-nowrap hidden sm:inline">
+                        ({{ $countPercent->pct_of_estimated ?? 0 }}% of estimated)
+                    </span>
+
+                    @if (session('success'))
+                        <div x-data="{ show: true }" x-show="show" x-transition x-init="setTimeout(() => show = false, 3000)"
+                            class="flex items-center gap-1 px-2 py-1 text-xs text-green-800 bg-green-100 rounded-lg whitespace-nowrap">
+                            <span>{{ session('success') }}</span>
+                            <button type="button" @click="show = false" class="font-bold">✕</button>
+                        </div>
+                    @endif
+
+                    @error('estimated_resource')
+                        <span class="text-xs text-red-600">{{ $message }}</span>
+                    @enderror
+                </form>
+            </div>
+
+            <!-- Right side: Per Page + View Toggle -->
+            <div class="flex items-center justify-between sm:justify-end gap-3 w-full lg:w-auto">
+                
+                <!-- Per Page Selector -->
+                <div class="flex items-center gap-2 text-sm text-gray-600">
+                    <label for="school-per-page" class="whitespace-nowrap font-medium hidden sm:inline">Show entries:</label>
+                    <label for="school-per-page" class="whitespace-nowrap font-medium sm:hidden">Show:</label>
+                    <select id="school-per-page"
+                        class="per-page-select border border-gray-300 rounded-xl px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
+                        data-context="school">
+                        @foreach ($perPageOptions as $opt)
+                            <option value="{{ $opt }}" {{ $perPage == $opt ? 'selected' : '' }}>{{ $opt }}</option>
+                        @endforeach
+                    </select>
+                </div>
+
+                <!-- View Toggle Buttons -->
+                <div class="flex items-center bg-gray-100 p-1 rounded-xl">
+
                     <button type="button"
-                        class="view-toggle-btn px-3 py-1.5 rounded-md text-sm font-medium transition-all flex items-center gap-1.5 text-gray-500 hover:text-gray-700"
+                        class="view-toggle-btn px-4 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-1.5 text-gray-500 hover:text-gray-700"
                         data-target="school" data-view="card">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                 d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
                         </svg>
-                        Cards
+                        <span class="hidden md:inline">Cards</span>
                     </button>
-                </div>
 
-                <a href="{{ route('print-resources.export', array_merge(request()->query(), ['tab' => 'school'])) }}"
-                    class="inline-flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                            d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                    </svg>
-                    Export to Excel
-                </a>
+                    <button type="button"
+                        class="view-toggle-btn px-4 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-1.5 bg-white shadow text-blue-600"
+                        data-target="school" data-view="table">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M3 10h18M3 6h18M3 14h18M3 18h18" />
+                        </svg>
+                        <span class="hidden md:inline">Table</span>
+                    </button>
+                
+                </div>
             </div>
         </div>
 
@@ -346,7 +371,8 @@
             <form method="GET" data-ajax class="flex items-center gap-3">
                 <input type="hidden" name="tab" value="division">
                 <!-- Hidden view input – carries current view through search/pagination -->
-                <input type="hidden" name="division_view" id="division-view-input" value="{{ request('division_view', 'table') }}">
+                <input type="hidden" name="division_view" id="division-view-input" value="{{ request('division_view', 'card') }}">
+                <input type="hidden" name="per_page" value="{{ $perPage }}" class="per-page-hidden-input">
 
                 <div class="relative w-full">
                     <input type="text" name="division_search"
@@ -372,37 +398,59 @@
             </form>
         </div>
 
-        <!-- Export Button + View Toggle for Division -->
-        <div class="flex items-center justify-between mt-4">
+        <!-- Export Button + Per Page + View Toggle for Division -->
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mt-4">
+
+            <!-- Export Button -->
             <a href="{{ route('print-resources.export', array_merge(request()->query(), ['tab' => 'division'])) }}"
-                class="inline-flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors">
+                class="inline-flex items-center justify-center sm:justify-start gap-2 px-5 py-2.5 bg-green-600 hover:bg-green-700 text-white rounded-xl transition-colors text-sm font-medium w-full sm:w-auto">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                         d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                 </svg>
-                Export to Excel
+                <span class="hidden xs:inline">Export to Excel</span>
+                <span class="xs:hidden">Export</span>
             </a>
 
-            <!-- View Toggle Buttons -->
-            <div class="flex items-center gap-1 bg-gray-100 p-1 rounded-lg">
-                <button type="button"
-                    class="view-toggle-btn px-3 py-1.5 rounded-md text-sm font-medium transition-all flex items-center gap-1.5 bg-white shadow text-blue-600"
-                    data-target="division" data-view="table">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                            d="M3 10h18M3 6h18M3 14h18M3 18h18" />
-                    </svg>
-                    Table
-                </button>
-                <button type="button"
-                    class="view-toggle-btn px-3 py-1.5 rounded-md text-sm font-medium transition-all flex items-center gap-1.5 text-gray-500 hover:text-gray-700"
-                    data-target="division" data-view="card">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                            d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
-                    </svg>
-                    Cards
-                </button>
+            <div class="flex items-center justify-between sm:justify-end gap-3 w-full sm:w-auto">
+                
+                <!-- Per Page Selector -->
+                <div class="flex items-center gap-2 text-sm text-gray-600">
+                    <label for="division-per-page" class="whitespace-nowrap font-medium hidden sm:inline">Show entries:</label>
+                    <label for="division-per-page" class="whitespace-nowrap font-medium sm:hidden">Show:</label>
+                    <select id="division-per-page"
+                        class="per-page-select border border-gray-300 rounded-xl px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
+                        data-context="division">
+                        @foreach ($perPageOptions as $opt)
+                            <option value="{{ $opt }}" {{ $perPage == $opt ? 'selected' : '' }}>{{ $opt }}</option>
+                        @endforeach
+                    </select>
+                </div>
+
+                <!-- View Toggle Buttons -->
+                <div class="flex items-center bg-gray-100 p-1 rounded-xl">
+
+                    <button type="button"
+                        class="view-toggle-btn px-4 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-1.5 text-gray-500 hover:text-gray-700"
+                        data-target="division" data-view="card">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
+                        </svg>
+                        <span class="hidden md:inline">Cards</span>
+                    </button>
+
+                    <button type="button"
+                        class="view-toggle-btn px-4 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-1.5 bg-white shadow text-blue-600"
+                        data-target="division" data-view="table">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M3 10h18M3 6h18M3 14h18M3 18h18" />
+                        </svg>
+                        <span class="hidden md:inline">Table</span>
+                    </button>
+                    
+                </div>
             </div>
         </div>
 
@@ -604,88 +652,3 @@
         </div>
     </div>
 </div>
-
-<style>
-    [x-cloak] {
-        display: none !important;
-    }
-</style>
-
-<script>
-(function () {
-    const STORAGE_KEYS = {
-        school:   'print-resources-school-view',
-        division: 'print-resources-division-view',
-    };
-
-    function applyView(target, view, persist) {
-        const tableEl = document.getElementById(target + '-table-view');
-        const cardEl  = document.getElementById(target + '-card-view');
-
-        if (tableEl && cardEl) {
-            if (view === 'card') {
-                tableEl.classList.add('hidden');
-                cardEl.classList.remove('hidden');
-            } else {
-                cardEl.classList.add('hidden');
-                tableEl.classList.remove('hidden');
-            }
-        }
-
-        // Keep hidden input in sync so form submissions carry the correct value
-        const input = document.getElementById(target + '-view-input');
-        if (input) input.value = view;
-
-        // Persist to localStorage so the preference survives pagination/search
-        if (persist !== false && STORAGE_KEYS[target]) {
-            try { localStorage.setItem(STORAGE_KEYS[target], view); } catch (_) {}
-        }
-
-        // Update toggle button styles for this target
-        document.querySelectorAll(`.view-toggle-btn[data-target="${target}"]`).forEach(btn => {
-            const isActive = btn.dataset.view === view;
-            btn.classList.toggle('bg-white',            isActive);
-            btn.classList.toggle('shadow',              isActive);
-            btn.classList.toggle('text-blue-600',       isActive);
-            btn.classList.toggle('text-gray-500',      !isActive);
-            btn.classList.toggle('hover:text-gray-700',!isActive);
-        });
-    }
-
-    // View toggle button click
-    document.addEventListener('click', function (e) {
-        const btn = e.target.closest('.view-toggle-btn');
-        if (btn) applyView(btn.dataset.target, btn.dataset.view);
-    });
-
-    // Restore view on load / after AJAX updates
-    function restoreViews() {
-        ['school', 'division'].forEach(target => {
-            // Priority 1: URL/request param via hidden input (set by Blade)
-            const input   = document.getElementById(target + '-view-input');
-            const fromUrl = input && input.value ? input.value : null;
-
-            // Priority 2: localStorage (survives pagination when param might be absent)
-            let fromStorage = null;
-            try { fromStorage = localStorage.getItem(STORAGE_KEYS[target]); } catch (_) {}
-
-            const view = fromUrl || fromStorage || 'table';
-
-            applyView(target, view, false); // don't re-persist during restore
-
-            // Sync hidden input so any subsequent form submit sends the correct value
-            if (input) input.value = view;
-        });
-    }
-
-    restoreViews();
-
-    // Re-run after AJAX content swaps on both containers
-    ['school-results-container', 'division-results-container'].forEach(id => {
-        const container = document.getElementById(id);
-        if (container) {
-            new MutationObserver(restoreViews).observe(container, { childList: true, subtree: true });
-        }
-    });
-})();
-</script>

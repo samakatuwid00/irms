@@ -109,6 +109,49 @@
                     </div>
                 </div>
 
+                {{-- ── View Toggle Toolbar ── --}}
+                <div class="flex items-center justify-between flex-wrap gap-3">
+                    <div class="flex items-center gap-2 text-sm text-gray-600">
+                        <label class="whitespace-nowrap font-medium">Show entries:</label>
+                        <select id="nml-per-page-select"
+                            class="border border-gray-300 rounded-xl px-3 py-1.5 text-sm bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
+                            onchange="(function(sel){
+                                var url = new URL(window.location.href);
+                                url.searchParams.set('ml_per_page', sel.value);
+                                url.searchParams.set('active_tab','tab-masterlist');
+                                url.searchParams.set('ml_view', document.getElementById('nml-view-input').value || 'table');
+                                url.searchParams.delete('ml_page');
+                                window.location.href = url.toString();
+                            })(this)">
+                            @foreach([10,25,50,100] as $opt)
+                                <option value="{{ $opt }}" {{ request('ml_per_page', 10) == $opt ? 'selected' : '' }}>{{ $opt }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                    {{-- Hidden input so JS and per-page onchange can always read the current view --}}
+                    <input type="hidden" id="nml-view-input" value="{{ request('ml_view', 'table') }}">
+                    <div class="flex items-center bg-gray-100 p-1 rounded-xl">
+                        <button type="button"
+                            class="nml-view-toggle-btn px-4 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-1.5"
+                            data-nml-view="table">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M3 6h18M3 14h18M3 18h18"/>
+                            </svg>
+                            <span class="hidden md:inline">Table</span>
+                        </button>
+                        <button type="button"
+                            class="nml-view-toggle-btn px-4 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-1.5"
+                            data-nml-view="card">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"/>
+                            </svg>
+                            <span class="hidden md:inline">Cards</span>
+                        </button>
+                    </div>
+                </div>
+
+                {{-- ── TABLE VIEW ── --}}
+                <div id="nml-table-view">
                 <div class="overflow-x-auto rounded-lg border border-gray-200">
                     <table class="w-full text-sm">
                         <thead class="bg-gray-50 text-xs text-gray-500 uppercase tracking-wide">
@@ -218,9 +261,73 @@
 
                 @if ($masterlist->hasPages())
                     <div class="mt-4">
-                        {{ $masterlist->appends(array_filter(['ml_search' => request('ml_search'), 'active_tab' => 'tab-masterlist']))->links() }}
+                        {{ $masterlist->appends(array_filter(['ml_search' => request('ml_search'), 'active_tab' => 'tab-masterlist', 'ml_per_page' => request('ml_per_page', 10), 'ml_view' => request('ml_view', 'table')]))->links() }}
                     </div>
                 @endif
+                </div>{{-- end nml-table-view --}}
+
+                {{-- ── CARD VIEW ── --}}
+                <div id="nml-card-view" class="hidden">
+                    <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 mt-2">
+                        @forelse($masterlist as $item)
+                            @php
+                                $sglIdsC = $item->subject_grade_level_ids ? explode(',', $item->subject_grade_level_ids) : [];
+                                $sglsC   = !empty($sglIdsC) ? \App\Models\SubjectGradeLevel::with(['subject', 'gradeLevel'])->whereIn('id', $sglIdsC)->get() : collect();
+                                $sglTextC = $sglsC->map(fn($s) => ($s->subject->subject_name ?? '') . ' - ' . ($s->gradeLevel->grade ?? ''))->join('; ') ?: '-';
+                            @endphp
+                            <div class="bg-white rounded-xl shadow overflow-hidden flex flex-col group cursor-pointer"
+                                 onclick="(function(el){ var btn = el.querySelector('.view-resource-btn'); if(btn) btn.click(); })(this)">
+                                <div class="relative w-full" style="padding-bottom:140%;">
+                                    <img src="{{ $item->thumb_url }}" alt="{{ $item->nonprintTitle->title ?? '' }}"
+                                         class="absolute inset-0 w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+                                         loading="lazy">
+                                    <span class="absolute top-2 right-2 inline-flex items-center gap-1 bg-white/90 backdrop-blur-sm text-xs font-semibold px-2 py-0.5 rounded-full shadow text-purple-700">
+                                        {{ $item->type->type_name ?? '' }}
+                                    </span>
+                                </div>
+                                <div class="p-3 flex flex-col gap-1 flex-1">
+                                    <h3 class="text-xs font-semibold text-gray-900 leading-tight line-clamp-2">{{ $item->nonprintTitle->title ?? '-' }}</h3>
+                                    <p class="text-xs text-gray-500 truncate">{{ $item->brand ?? '-' }} {{ $item->model ? '/ '.$item->model : '' }}</p>
+                                    <div class="mt-auto pt-2 flex items-center justify-between gap-1">
+                                        <button type="button"
+                                                class="view-resource-btn hidden"
+                                                data-view-id="{{ $item->id }}"
+                                                data-cover="{{ $item->cover_url }}"
+                                                data-title="{{ $item->nonprintTitle->title ?? '-' }}"
+                                                data-type="{{ $item->type->type_name ?? '-' }}"
+                                                data-brand="{{ $item->brand ?? '-' }}"
+                                                data-code="{{ $item->code ?? '-' }}"
+                                                data-version="{{ $item->version ?? '-' }}"
+                                                data-model="{{ $item->model ?? '-' }}"
+                                                data-url="{{ $item->url ?? '-' }}"
+                                                data-size="{{ $item->size ?? '-' }}"
+                                                data-subjects="{{ $sglTextC }}">
+                                        </button>
+                                        <span class="text-xs text-gray-400 truncate">{{ $item->version ?? '' }}</span>
+                                        <a href="{{ route('nonprint-masterlist.edit', $item->id) }}"
+                                           onclick="event.stopPropagation()"
+                                           class="inline-flex items-center gap-1 text-xs px-2 py-1 bg-blue-50 text-blue-600 border border-blue-200 rounded-lg hover:bg-blue-100 transition-colors font-medium">
+                                            <svg class="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16.862 4.487l1.687-1.687a1.875 1.875 0 112.652 2.652L7.5 19.153 3 21l1.847-4.5L16.862 4.487z"/>
+                                            </svg>
+                                            Edit
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                        @empty
+                            <div class="col-span-full text-center text-gray-400 py-10">
+                                <p class="text-sm font-medium">No approved non-print resources found.</p>
+                            </div>
+                        @endforelse
+                    </div>
+                    @if ($masterlist->hasPages())
+                        <div class="mt-4">
+                            {{ $masterlist->appends(array_filter(['ml_search' => request('ml_search'), 'active_tab' => 'tab-masterlist', 'ml_per_page' => request('ml_per_page', 10), 'ml_view' => request('ml_view', 'table')]))->links() }}
+                        </div>
+                    @endif
+                </div>{{-- end nml-card-view --}}
+
             </div>
         </div>
 
@@ -455,6 +562,49 @@
                         </div>
                     </div>
 
+                    {{-- ── View Toggle Toolbar ── --}}
+                    <div class="flex items-center justify-between flex-wrap gap-3">
+                        <div class="flex items-center gap-2 text-sm text-gray-600">
+                            <label class="whitespace-nowrap font-medium">Show entries:</label>
+                            <select id="nrq-per-page-select"
+                                class="border border-gray-300 rounded-xl px-3 py-1.5 text-sm bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
+                                onchange="(function(sel){
+                                    var url = new URL(window.location.href);
+                                    url.searchParams.set('rq_per_page', sel.value);
+                                    url.searchParams.set('active_tab','tab-requests');
+                                    url.searchParams.set('rq_view', document.getElementById('nrq-view-input').value || 'table');
+                                    url.searchParams.delete('rq_page');
+                                    window.location.href = url.toString();
+                                })(this)">
+                                @foreach([10,25,50,100] as $opt)
+                                    <option value="{{ $opt }}" {{ request('rq_per_page', 10) == $opt ? 'selected' : '' }}>{{ $opt }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        {{-- Hidden input so JS and per-page onchange can always read the current view --}}
+                        <input type="hidden" id="nrq-view-input" value="{{ request('rq_view', 'table') }}">
+                        <div class="flex items-center bg-gray-100 p-1 rounded-xl">
+                            <button type="button"
+                                class="nrq-view-toggle-btn px-4 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-1.5"
+                                data-nrq-view="table">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M3 6h18M3 14h18M3 18h18"/>
+                                </svg>
+                                <span class="hidden md:inline">Table</span>
+                            </button>
+                            <button type="button"
+                                class="nrq-view-toggle-btn px-4 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-1.5"
+                                data-nrq-view="card">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"/>
+                                </svg>
+                                <span class="hidden md:inline">Cards</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    {{-- ── TABLE VIEW ── --}}
+                    <div id="nrq-table-view">
                     <div class="overflow-x-auto rounded-lg border border-gray-200">
                         <table class="w-full text-sm">
                             <thead class="bg-gray-50 text-xs text-gray-500 uppercase tracking-wide">
@@ -596,9 +746,92 @@
 
                     @if ($requests && $requests->hasPages())
                         <div class="mt-4">
-                            {{ $requests->appends(array_filter(['rq_search' => request('rq_search'), 'active_tab' => 'tab-requests']))->links() }}
+                            {{ $requests->appends(array_filter(['rq_search' => request('rq_search'), 'active_tab' => 'tab-requests', 'rq_per_page' => request('rq_per_page', 10), 'rq_view' => request('rq_view', 'table')]))->links() }}
                         </div>
                     @endif
+                    </div>{{-- end nrq-table-view --}}
+
+                    {{-- ── CARD VIEW ── --}}
+                    <div id="nrq-card-view" class="hidden">
+                        <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 mt-2">
+                            @forelse($requests as $req)
+                                @php
+                                    $reqSglIdsC = $req->subject_grade_level_ids ? explode(',', $req->subject_grade_level_ids) : [];
+                                    $reqSglsC   = !empty($reqSglIdsC) ? \App\Models\SubjectGradeLevel::with(['subject', 'gradeLevel'])->whereIn('id', $reqSglIdsC)->get() : collect();
+                                    $reqSglTextC = $reqSglsC->map(fn($s) => ($s->subject->subject_name ?? '') . ' - ' . ($s->gradeLevel->grade ?? ''))->join('; ') ?: '-';
+                                @endphp
+                                <div class="bg-white rounded-xl shadow overflow-hidden flex flex-col group cursor-pointer"
+                                     onclick="(function(el){ var btn = el.querySelector('.view-resource-btn'); if(btn) btn.click(); })(this)">
+                                    <div class="relative w-full" style="padding-bottom:140%;">
+                                        <img src="{{ $req->thumb_url }}" alt="{{ $req->nonprintTitle->title ?? '' }}"
+                                             class="absolute inset-0 w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+                                             loading="lazy">
+                                        <span class="absolute top-2 right-2 inline-flex items-center gap-1 bg-white/90 backdrop-blur-sm text-xs font-semibold px-2 py-0.5 rounded-full shadow text-purple-700">
+                                            {{ $req->type->type_name ?? '' }}
+                                        </span>
+                                        <span class="absolute bottom-2 left-2 inline-flex items-center gap-1 bg-black/50 text-white text-xs px-2 py-0.5 rounded-full">
+                                            {{ $req->created_at?->format('M d, Y') ?? '' }}
+                                        </span>
+                                    </div>
+                                    <div class="p-3 flex flex-col gap-1 flex-1">
+                                        <h3 class="text-xs font-semibold text-gray-900 leading-tight line-clamp-2">{{ $req->nonprintTitle->title ?? '-' }}</h3>
+                                        <p class="text-xs text-gray-500 truncate">{{ $req->brand ?? '-' }}{{ $req->model ? ' / '.$req->model : '' }}</p>
+                                        <div class="mt-auto pt-2 flex items-center justify-between gap-1 flex-wrap">
+                                            <button type="button"
+                                                class="view-resource-btn hidden"
+                                                data-view-id="{{ $req->id }}"
+                                                data-cover="{{ $req->cover_url }}"
+                                                data-title="{{ $req->nonprintTitle->title ?? '-' }}"
+                                                data-type="{{ $req->type->type_name ?? '-' }}"
+                                                data-brand="{{ $req->brand ?? '-' }}"
+                                                data-code="{{ $req->code ?? '-' }}"
+                                                data-version="{{ $req->version ?? '-' }}"
+                                                data-model="{{ $req->model ?? '-' }}"
+                                                data-url="{{ $req->url ?? '-' }}"
+                                                data-size="{{ $req->size ?? '-' }}"
+                                                data-subjects="{{ $reqSglTextC }}"
+                                                data-is-request="true">
+                                            </button>
+                                            <form action="{{ route('nonprint-masterlist.approve', $req->id) }}"
+                                                  method="POST"
+                                                  onsubmit="event.stopPropagation(); return confirm('Approve this resource request?')"
+                                                  onclick="event.stopPropagation()">
+                                                @csrf
+                                                @method('PATCH')
+                                                <button type="submit"
+                                                    class="inline-flex items-center gap-1 text-xs px-2 py-1 bg-green-50 text-green-700 border border-green-200 rounded-lg hover:bg-green-100 font-medium">
+                                                    <svg class="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                                                    Approve
+                                                </button>
+                                            </form>
+                                            <form action="{{ route('nonprint-masterlist.reject', $req->id) }}"
+                                                  method="POST"
+                                                  onsubmit="event.stopPropagation(); return confirm('Reject this request?')"
+                                                  onclick="event.stopPropagation()">
+                                                @csrf
+                                                @method('DELETE')
+                                                <button type="submit"
+                                                    class="inline-flex items-center gap-1 text-xs px-2 py-1 bg-red-50 text-red-700 border border-red-200 rounded-lg hover:bg-red-100 font-medium">
+                                                    <svg class="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                                                    Reject
+                                                </button>
+                                            </form>
+                                        </div>
+                                    </div>
+                                </div>
+                            @empty
+                                <div class="col-span-full text-center text-gray-400 py-10">
+                                    <p class="text-sm font-medium">No pending requests.</p>
+                                </div>
+                            @endforelse
+                        </div>
+                        @if ($requests && $requests->hasPages())
+                            <div class="mt-4">
+                                {{ $requests->appends(array_filter(['rq_search' => request('rq_search'), 'active_tab' => 'tab-requests', 'rq_per_page' => request('rq_per_page', 10), 'rq_view' => request('rq_view', 'table')]))->links() }}
+                            </div>
+                        @endif
+                    </div>{{-- end nrq-card-view --}}
+
                 </div>
             </div>
         @endif
@@ -1475,6 +1708,104 @@
 
             attachViewBtnListeners();
 
+            // ── NON-PRINT MASTERLIST VIEW TOGGLE ────────────────────────────────
+            (function () {
+                var NML_KEY = 'nonprint-masterlist-view';
+                var nmlInput = document.getElementById('nml-view-input');
+
+                function applyNmlView(view, persist) {
+                    var tableEl = document.getElementById('nml-table-view');
+                    var cardEl  = document.getElementById('nml-card-view');
+                    if (!tableEl || !cardEl) return;
+                    if (view === 'card') {
+                        tableEl.classList.add('hidden');
+                        cardEl.classList.remove('hidden');
+                    } else {
+                        cardEl.classList.add('hidden');
+                        tableEl.classList.remove('hidden');
+                    }
+                    document.querySelectorAll('.nml-view-toggle-btn').forEach(function(btn) {
+                        var isActive = btn.getAttribute('data-nml-view') === view;
+                        btn.classList.toggle('bg-white', isActive);
+                        btn.classList.toggle('shadow', isActive);
+                        btn.classList.toggle('text-blue-600', isActive);
+                        btn.classList.toggle('text-gray-500', !isActive);
+                        btn.classList.toggle('hover:text-gray-700', !isActive);
+                    });
+                    if (nmlInput) nmlInput.value = view;
+                    try {
+                        var url = new URL(window.location.href);
+                        url.searchParams.set('ml_view', view);
+                        history.replaceState(null, '', url.toString());
+                    } catch(e) {}
+                    if (persist !== false) {
+                        try { localStorage.setItem(NML_KEY, view); } catch(e) {}
+                    }
+                    attachViewBtnListeners();
+                }
+
+                document.querySelectorAll('.nml-view-toggle-btn').forEach(function(btn) {
+                    btn.addEventListener('click', function() {
+                        applyNmlView(btn.getAttribute('data-nml-view'));
+                    });
+                });
+
+                var fromUrl = nmlInput ? nmlInput.value : null;
+                var fromStorage = 'table';
+                try { fromStorage = localStorage.getItem(NML_KEY) || 'table'; } catch(e) {}
+                var initialView = (fromUrl && ['table','card'].includes(fromUrl)) ? fromUrl : fromStorage;
+                applyNmlView(initialView, false);
+            })();
+
+            // ── NON-PRINT REQUESTS VIEW TOGGLE ──────────────────────────────────
+            (function () {
+                var NRQ_KEY = 'nonprint-masterlist-rq-view';
+                var nrqInput = document.getElementById('nrq-view-input');
+
+                function applyNrqView(view, persist) {
+                    var tableEl = document.getElementById('nrq-table-view');
+                    var cardEl  = document.getElementById('nrq-card-view');
+                    if (!tableEl || !cardEl) return;
+                    if (view === 'card') {
+                        tableEl.classList.add('hidden');
+                        cardEl.classList.remove('hidden');
+                    } else {
+                        cardEl.classList.add('hidden');
+                        tableEl.classList.remove('hidden');
+                    }
+                    document.querySelectorAll('.nrq-view-toggle-btn').forEach(function(btn) {
+                        var isActive = btn.getAttribute('data-nrq-view') === view;
+                        btn.classList.toggle('bg-white', isActive);
+                        btn.classList.toggle('shadow', isActive);
+                        btn.classList.toggle('text-blue-600', isActive);
+                        btn.classList.toggle('text-gray-500', !isActive);
+                        btn.classList.toggle('hover:text-gray-700', !isActive);
+                    });
+                    if (nrqInput) nrqInput.value = view;
+                    try {
+                        var url = new URL(window.location.href);
+                        url.searchParams.set('rq_view', view);
+                        history.replaceState(null, '', url.toString());
+                    } catch(e) {}
+                    if (persist !== false) {
+                        try { localStorage.setItem(NRQ_KEY, view); } catch(e) {}
+                    }
+                    attachViewBtnListeners();
+                }
+
+                document.querySelectorAll('.nrq-view-toggle-btn').forEach(function(btn) {
+                    btn.addEventListener('click', function() {
+                        applyNrqView(btn.getAttribute('data-nrq-view'));
+                    });
+                });
+
+                var fromUrl = nrqInput ? nrqInput.value : null;
+                var fromStorage = 'table';
+                try { fromStorage = localStorage.getItem(NRQ_KEY) || 'table'; } catch(e) {}
+                var initialView = (fromUrl && ['table','card'].includes(fromUrl)) ? fromUrl : fromStorage;
+                applyNrqView(initialView, false);
+            })();
+
             closeViewBtn && closeViewBtn.addEventListener('click', closeModal);
             closeViewFooter && closeViewFooter.addEventListener('click', closeModal);
             viewBackdrop && viewBackdrop.addEventListener('click', closeModal);
@@ -1511,6 +1842,37 @@
                     attachViewBtnListeners();
                     attachPaginationListeners();
                     attachSearchFormListeners();
+                    // Re-apply the correct view after AJAX swap
+                    if (tabId === 'tab-masterlist') {
+                        var nmlInput = document.getElementById('nml-view-input');
+                        var nmlView  = (nmlInput && nmlInput.value) ? nmlInput.value : (new URLSearchParams(window.location.search).get('ml_view') || 'table');
+                        var nmlTable = document.getElementById('nml-table-view');
+                        var nmlCard  = document.getElementById('nml-card-view');
+                        if (nmlTable && nmlCard) {
+                            nmlTable.classList.toggle('hidden', nmlView === 'card');
+                            nmlCard.classList.toggle('hidden', nmlView !== 'card');
+                            document.querySelectorAll('.nml-view-toggle-btn').forEach(function(btn) {
+                                var active = btn.getAttribute('data-nml-view') === nmlView;
+                                btn.classList.toggle('bg-white', active); btn.classList.toggle('shadow', active);
+                                btn.classList.toggle('text-blue-600', active); btn.classList.toggle('text-gray-500', !active);
+                            });
+                        }
+                    }
+                    if (tabId === 'tab-requests') {
+                        var nrqInput = document.getElementById('nrq-view-input');
+                        var nrqView  = (nrqInput && nrqInput.value) ? nrqInput.value : (new URLSearchParams(window.location.search).get('rq_view') || 'table');
+                        var nrqTable = document.getElementById('nrq-table-view');
+                        var nrqCard  = document.getElementById('nrq-card-view');
+                        if (nrqTable && nrqCard) {
+                            nrqTable.classList.toggle('hidden', nrqView === 'card');
+                            nrqCard.classList.toggle('hidden', nrqView !== 'card');
+                            document.querySelectorAll('.nrq-view-toggle-btn').forEach(function(btn) {
+                                var active = btn.getAttribute('data-nrq-view') === nrqView;
+                                btn.classList.toggle('bg-white', active); btn.classList.toggle('shadow', active);
+                                btn.classList.toggle('text-blue-600', active); btn.classList.toggle('text-gray-500', !active);
+                            });
+                        }
+                    }
                     const tab = document.getElementById(tabId);
                     if (!tab) return;
                     tab.querySelectorAll('a[href*="nonprint-masterlist"]').forEach(link => {
@@ -1577,6 +1939,17 @@
                                 e.preventDefault();
                                 const url = new URL(this.href, window.location.origin);
                                 url.searchParams.set('active_tab', tabId);
+                                if (tabId === 'tab-masterlist') {
+                                    const nmlInput = document.getElementById('nml-view-input');
+                                    if (nmlInput) url.searchParams.set('ml_view', nmlInput.value || 'table');
+                                    const nmlPp = document.getElementById('nml-per-page-select');
+                                    if (nmlPp) url.searchParams.set('ml_per_page', nmlPp.value);
+                                } else if (tabId === 'tab-requests') {
+                                    const nrqInput = document.getElementById('nrq-view-input');
+                                    if (nrqInput) url.searchParams.set('rq_view', nrqInput.value || 'table');
+                                    const nrqPp = document.getElementById('nrq-per-page-select');
+                                    if (nrqPp) url.searchParams.set('rq_per_page', nrqPp.value);
+                                }
                                 ajaxFetch(url.toString(), tabId);
                             });
                         });

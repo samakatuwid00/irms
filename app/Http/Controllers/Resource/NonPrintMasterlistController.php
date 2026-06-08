@@ -234,6 +234,13 @@ class NonPrintMasterlistController extends BaseController
     // Shared between index() and editForm() to avoid duplicating the tab queries
     private function buildTabData(Request $request, $user, int $level): array
     {
+        $allowedPerPage = [10, 25, 50, 100];
+
+        $mlPerPage = (int) $request->input('ml_per_page', 10);
+        if (!in_array($mlPerPage, $allowedPerPage)) {
+            $mlPerPage = 10;
+        }
+
         $mlSearch = trim($request->input('ml_search', ''));
         $masterlistQuery = NonprintResource::with(['nonprintTitle', 'type'])
             ->where('status', 1);
@@ -246,7 +253,7 @@ class NonPrintMasterlistController extends BaseController
         }
 
         // Named paginator 'ml_page' avoids colliding with 'rq_page' on the same page
-        $masterlist = $masterlistQuery->orderByDesc('created_at')->paginate(15, ['*'], 'ml_page');
+        $masterlist = $masterlistQuery->orderByDesc('created_at')->paginate($mlPerPage, ['*'], 'ml_page');
 
         // Append thumb_url + cover_url to every masterlist row
         $this->resolveCoverUrls($masterlist);
@@ -254,6 +261,11 @@ class NonPrintMasterlistController extends BaseController
         // Region users don't have a pending queue, so $requests stays null
         $requests = null;
         if ($level === 3) {
+            $rqPerPage = (int) $request->input('rq_per_page', 10);
+            if (!in_array($rqPerPage, $allowedPerPage)) {
+                $rqPerPage = 10;
+            }
+
             $rqSearch = trim($request->input('rq_search', ''));
             $requestsQuery = NonprintResource::with(['nonprintTitle', 'type'])
                 ->where('status', 0)
@@ -266,7 +278,7 @@ class NonPrintMasterlistController extends BaseController
                 );
             }
 
-            $requests = $requestsQuery->orderByDesc('created_at')->paginate(15, ['*'], 'rq_page');
+            $requests = $requestsQuery->orderByDesc('created_at')->paginate($rqPerPage, ['*'], 'rq_page');
 
             // Append thumb_url + cover_url to every request row
             $this->resolveCoverUrls($requests);

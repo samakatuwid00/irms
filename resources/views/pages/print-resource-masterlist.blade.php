@@ -101,6 +101,42 @@
                 </div>
             </div>
 
+            {{-- ── View Toggle Toolbar ── --}}
+            <div class="flex items-center justify-between flex-wrap gap-3">
+                <div class="flex items-center gap-2 text-sm text-gray-600">
+                    <label class="whitespace-nowrap font-medium">Show entries:</label>
+                    <select id="ml-per-page-select"
+                        class="border border-gray-300 rounded-xl px-3 py-1.5 text-sm bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
+                        onchange="handlePerPageChange(this, 'tab-masterlist', 'ml_per_page', 'ml-view-input')">
+                        @foreach([5, 10, 15, 20] as $opt)
+                            <option value="{{ $opt }}" {{ request('ml_per_page', 10) == $opt ? 'selected' : '' }}>{{ $opt }}</option>
+                        @endforeach
+                    </select>
+                </div>
+                {{-- Hidden input so JS and per-page onchange can always read the current view --}}
+                <input type="hidden" id="ml-view-input" value="{{ request('ml_view', 'card') }}">
+                <div class="flex items-center bg-gray-100 p-1 rounded-xl">
+                    <button type="button"
+                        class="ml-view-toggle-btn px-4 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-1.5"
+                        data-ml-view="card">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"/>
+                        </svg>
+                        <span class="hidden md:inline">Cards</span>
+                    </button>
+                    <button type="button"
+                        class="ml-view-toggle-btn px-4 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-1.5"
+                        data-ml-view="table">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M3 6h18M3 14h18M3 18h18"/>
+                        </svg>
+                        <span class="hidden md:inline">Table</span>
+                    </button>
+                </div>
+            </div>
+
+            {{-- ── TABLE VIEW ── --}}
+            <div id="ml-table-view">
             <div class="overflow-x-auto rounded-lg border border-gray-200">
                 <table class="w-full text-sm">
                     <thead class="bg-gray-50 text-xs text-gray-500 uppercase tracking-wide">
@@ -214,9 +250,82 @@
 
             @if($masterlist->hasPages())
                 <div class="mt-4">
-                    {{ $masterlist->appends(array_filter(['ml_search' => request('ml_search'), 'active_tab' => 'tab-masterlist']))->links() }}
+                    {{ $masterlist->appends(array_filter(['ml_search' => request('ml_search'), 'active_tab' => 'tab-masterlist', 'ml_per_page' => request('ml_per_page', 10), 'ml_view' => request('ml_view', 'table')]))->links() }}
                 </div>
             @endif
+        </div>{{-- end ml-table-view --}}
+
+            {{-- ── CARD VIEW ── --}}
+            <div id="ml-card-view" class="hidden">
+                <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 mt-2">
+                    @forelse($masterlist as $row)
+                        @php
+                            $sglIdsC  = $row->subject_grade_level_ids ? explode(',', $row->subject_grade_level_ids) : [];
+                            $sglTextC = '-';
+                            if (!empty($sglIdsC)) {
+                                $sglsC    = \App\Models\SubjectGradeLevel::with(['subject', 'gradeLevel'])->whereIn('id', $sglIdsC)->get();
+                                $sglTextC = $sglsC->map(fn($s) => ($s->subject->subject_name ?? '') . ' - ' . ($s->gradeLevel->grade ?? ''))->join('; ');
+                            }
+                        @endphp
+                        <div class="bg-white rounded-xl shadow overflow-hidden flex flex-col group cursor-pointer"
+                             onclick="(function(el){
+                                 var btn = el.querySelector('.view-resource-btn');
+                                 if(btn) btn.click();
+                             })(this)">
+                            <div class="relative w-full" style="padding-bottom:140%;">
+                                <img src="{{ $row->thumb_url }}" alt="{{ $row->printTitle->title ?? '' }}"
+                                     class="absolute inset-0 w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+                                     loading="lazy">
+                                <span class="absolute top-2 right-2 inline-flex items-center gap-1 bg-white/90 backdrop-blur-sm text-xs font-semibold px-2 py-0.5 rounded-full shadow text-blue-700">
+                                    {{ $row->type->shortname ?? '' }}
+                                </span>
+                            </div>
+                            <div class="p-3 flex flex-col gap-1 flex-1">
+                                <h3 class="text-xs font-semibold text-gray-900 leading-tight line-clamp-2">{{ $row->printTitle->title ?? '-' }}</h3>
+                                <p class="text-xs text-gray-500 truncate">{{ $row->printTitle->authors->pluck('author_name')->join(', ') ?: '-' }}</p>
+                                <p class="text-xs text-gray-400 truncate">{{ $row->publisher ?? '-' }}</p>
+                                <div class="mt-auto pt-2 flex items-center justify-between gap-1">
+                                    {{-- hidden view btn so card click triggers it --}}
+                                    <button type="button"
+                                            data-view-id="{{ $row->id }}"
+                                            data-cover="{{ $row->cover_url }}"
+                                            data-title="{{ $row->printTitle->title ?? '-' }}"
+                                            data-authors="{{ $row->printTitle->authors->pluck('author_name')->join(', ') ?: '-' }}"
+                                            data-type="{{ $row->type->type_name ?? '-' }}"
+                                            data-publisher="{{ $row->publisher ?? '-' }}"
+                                            data-volume="{{ $row->volume ?? '-' }}"
+                                            data-edition="{{ $row->edition ?? '-' }}"
+                                            data-copyright="{{ $row->copyright ?? '-' }}"
+                                            data-isbn="{{ $row->isbn ?? '-' }}"
+                                            data-pages="{{ $row->pages ?? '-' }}"
+                                            data-subjects="{{ $sglTextC }}"
+                                            class="view-resource-btn hidden">
+                                    </button>
+                                    <span class="text-xs text-gray-400 whitespace-nowrap">{{ $row->copyright ?? '' }}</span>
+                                    <a href="{{ route('masterlist.edit', $row->id) }}"
+                                       onclick="event.stopPropagation()"
+                                       class="inline-flex items-center gap-1 text-xs px-2 py-1 bg-blue-50 text-blue-600 border border-blue-200 rounded-lg hover:bg-blue-100 transition-colors font-medium">
+                                        <svg class="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16.862 4.487l1.687-1.687a1.875 1.875 0 112.652 2.652L7.5 19.153 3 21l1.847-4.5L16.862 4.487z"/>
+                                        </svg>
+                                        Edit
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    @empty
+                        <div class="col-span-full text-center text-gray-400 py-10">
+                            <p class="text-sm font-medium">No approved resources found.</p>
+                        </div>
+                    @endforelse
+                </div>
+                @if($masterlist->hasPages())
+                    <div class="mt-4">
+                        {{ $masterlist->appends(array_filter(['ml_search' => request('ml_search'), 'active_tab' => 'tab-masterlist', 'ml_per_page' => request('ml_per_page', 10), 'ml_view' => request('ml_view', 'table')]))->links() }}
+                    </div>
+                @endif
+            </div>{{-- end ml-card-view --}}
+
         </div>
     </div>
 
@@ -451,6 +560,42 @@
                 </div>
             </div>
 
+            {{-- ── View Toggle Toolbar ── --}}
+            <div class="flex items-center justify-between flex-wrap gap-3">
+                <div class="flex items-center gap-2 text-sm text-gray-600">
+                    <label class="whitespace-nowrap font-medium">Show entries:</label>
+                    <select id="rq-per-page-select"
+                        class="border border-gray-300 rounded-xl px-3 py-1.5 text-sm bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
+                        onchange="handlePerPageChange(this, 'tab-requests', 'rq_per_page', 'rq-view-input')">
+                        @foreach([5, 10, 15, 20] as $opt)
+                            <option value="{{ $opt }}" {{ request('rq_per_page', 10) == $opt ? 'selected' : '' }}>{{ $opt }}</option>
+                        @endforeach
+                    </select>
+                </div>
+                {{-- Hidden input so JS and per-page onchange can always read the current view --}}
+                <input type="hidden" id="rq-view-input" value="{{ request('rq_view', 'table') }}">
+                <div class="flex items-center bg-gray-100 p-1 rounded-xl">
+                    <button type="button"
+                        class="rq-view-toggle-btn px-4 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-1.5"
+                        data-rq-view="table">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M3 6h18M3 14h18M3 18h18"/>
+                        </svg>
+                        <span class="hidden md:inline">Table</span>
+                    </button>
+                    <button type="button"
+                        class="rq-view-toggle-btn px-4 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-1.5"
+                        data-rq-view="card">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"/>
+                        </svg>
+                        <span class="hidden md:inline">Cards</span>
+                    </button>
+                </div>
+            </div>
+
+            {{-- ── TABLE VIEW ── --}}
+            <div id="rq-table-view">
             <div class="overflow-x-auto rounded-lg border border-gray-200">
                 <table class="w-full text-sm">
                     <thead class="bg-gray-50 text-xs text-gray-500 uppercase tracking-wide">
@@ -506,6 +651,28 @@
                                 </td>
                                 <td class="px-3 py-2 text-center">
                                     <div class="flex justify-center gap-2">
+                                        {{-- View --}}
+                                        <button type="button"
+                                                data-view-id="{{ $req->id }}"
+                                                data-cover="{{ $req->cover_url }}"
+                                                data-title="{{ $req->printTitle->title ?? '-' }}"
+                                                data-authors="{{ $req->printTitle->authors->pluck('author_name')->join(', ') ?: '-' }}"
+                                                data-type="{{ $req->type->type_name ?? '-' }}"
+                                                data-publisher="{{ $req->publisher ?? '-' }}"
+                                                data-volume="{{ $req->volume ?? '-' }}"
+                                                data-edition="{{ $req->edition ?? '-' }}"
+                                                data-copyright="{{ $req->copyright ?? '-' }}"
+                                                data-isbn="{{ $req->isbn ?? '-' }}"
+                                                data-pages="{{ $req->pages ?? '-' }}"
+                                                data-subjects="{{ $reqSglText }}"
+                                                class="view-resource-btn inline-flex items-center gap-1 text-xs px-2.5 py-1.5 bg-indigo-50 text-indigo-600 border border-indigo-200 rounded-lg hover:bg-indigo-100 transition-colors font-medium whitespace-nowrap">
+                                            <svg class="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+                                            </svg>
+                                            View
+                                        </button>
+
                                         {{-- Approve --}}
                                         <form action="{{ route('masterlist.approve', $req->id) }}" method="POST"
                                             onsubmit="return confirm('Approve this resource request? It will be added to the masterlist.')">
@@ -540,7 +707,7 @@
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="10" class="text-center text-gray-400 py-10">
+                                <td colspan="12" class="text-center text-gray-400 py-10">
                                     <svg class="mx-auto mb-3 h-10 w-10 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
                                     </svg>
@@ -557,9 +724,95 @@
 
             @if($requests && $requests->hasPages())
                 <div class="mt-4">
-                    {{ $requests->appends(array_filter(['rq_search' => request('rq_search'), 'active_tab' => 'tab-requests']))->links() }}
+                    {{ $requests->appends(array_filter(['rq_search' => request('rq_search'), 'active_tab' => 'tab-requests', 'rq_per_page' => request('rq_per_page', 10), 'rq_view' => request('rq_view', 'table')]))->links() }}
                 </div>
             @endif
+            </div>{{-- end rq-table-view --}}
+
+            {{-- ── CARD VIEW ── --}}
+            <div id="rq-card-view" class="hidden">
+                <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 mt-2">
+                    @forelse($requests as $req)
+                        @php
+                            $reqSglIdsC  = $req->subject_grade_level_ids ? explode(',', $req->subject_grade_level_ids) : [];
+                            $reqSglTextC = '-';
+                            if (!empty($reqSglIdsC)) {
+                                $reqSglsC    = \App\Models\SubjectGradeLevel::with(['subject', 'gradeLevel'])->whereIn('id', $reqSglIdsC)->get();
+                                $reqSglTextC = $reqSglsC->map(fn($s) => ($s->subject->subject_name ?? '') . ' - ' . ($s->gradeLevel->grade ?? ''))->join('; ');
+                            }
+                        @endphp
+                        <div class="bg-white rounded-xl shadow overflow-hidden flex flex-col group cursor-pointer"
+                             onclick="(function(el){ var btn = el.querySelector('.view-resource-btn'); if(btn) btn.click(); })(this)">
+                            <div class="relative w-full" style="padding-bottom:140%;">
+                                <img src="{{ $req->thumb_url }}" alt="{{ $req->printTitle->title ?? '' }}"
+                                     class="absolute inset-0 w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+                                     loading="lazy">
+                                <span class="absolute top-2 right-2 inline-flex items-center gap-1 bg-white/90 backdrop-blur-sm text-xs font-semibold px-2 py-0.5 rounded-full shadow text-blue-700">
+                                    {{ $req->type->shortname ?? '' }}
+                                </span>
+                                <span class="absolute bottom-2 left-2 inline-flex items-center gap-1 bg-black/50 text-white text-xs px-2 py-0.5 rounded-full">
+                                    {{ $req->created_at?->format('M d, Y') ?? '' }}
+                                </span>
+                            </div>
+                            <div class="p-3 flex flex-col gap-1 flex-1">
+                                <h3 class="text-xs font-semibold text-gray-900 leading-tight line-clamp-2">{{ $req->printTitle->title ?? '-' }}</h3>
+                                <p class="text-xs text-gray-500 truncate">{{ $req->printTitle->authors->pluck('author_name')->join(', ') ?: '-' }}</p>
+                                <p class="text-xs text-gray-400 truncate">by {{ $req->encodedBy ? trim("{$req->encodedBy->firstname} {$req->encodedBy->lastname}") : '-' }}</p>
+                                <div class="mt-auto pt-2 flex items-center justify-between gap-1 flex-wrap">
+                                    {{-- hidden view btn so card click triggers it --}}
+                                    <button type="button"
+                                            data-view-id="{{ $req->id }}"
+                                            data-cover="{{ $req->cover_url }}"
+                                            data-title="{{ $req->printTitle->title ?? '-' }}"
+                                            data-authors="{{ $req->printTitle->authors->pluck('author_name')->join(', ') ?: '-' }}"
+                                            data-type="{{ $req->type->type_name ?? '-' }}"
+                                            data-publisher="{{ $req->publisher ?? '-' }}"
+                                            data-volume="{{ $req->volume ?? '-' }}"
+                                            data-edition="{{ $req->edition ?? '-' }}"
+                                            data-copyright="{{ $req->copyright ?? '-' }}"
+                                            data-isbn="{{ $req->isbn ?? '-' }}"
+                                            data-pages="{{ $req->pages ?? '-' }}"
+                                            data-subjects="{{ $reqSglTextC }}"
+                                            class="view-resource-btn hidden">
+                                    </button>
+                                    <form action="{{ route('masterlist.approve', $req->id) }}" method="POST"
+                                          onsubmit="event.stopPropagation(); return confirm('Approve this resource request?')"
+                                          onclick="event.stopPropagation()">
+                                        @csrf
+                                        @method('PATCH')
+                                        <button type="submit"
+                                                class="inline-flex items-center gap-1 text-xs px-2 py-1 bg-green-50 text-green-700 border border-green-200 rounded-lg hover:bg-green-100 font-medium">
+                                            <svg class="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                                            Approve
+                                        </button>
+                                    </form>
+                                    <form action="{{ route('masterlist.reject', $req->id) }}" method="POST"
+                                          onsubmit="event.stopPropagation(); return confirm('Reject this request?')"
+                                          onclick="event.stopPropagation()">
+                                        @csrf
+                                        @method('DELETE')
+                                        <button type="submit"
+                                                class="inline-flex items-center gap-1 text-xs px-2 py-1 bg-red-50 text-red-700 border border-red-200 rounded-lg hover:bg-red-100 font-medium">
+                                            <svg class="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                                            Reject
+                                        </button>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                    @empty
+                        <div class="col-span-full text-center text-gray-400 py-10">
+                            <p class="text-sm font-medium">No pending requests.</p>
+                        </div>
+                    @endforelse
+                </div>
+                @if($requests && $requests->hasPages())
+                    <div class="mt-4">
+                        {{ $requests->appends(array_filter(['rq_search' => request('rq_search'), 'active_tab' => 'tab-requests', 'rq_per_page' => request('rq_per_page', 10), 'rq_view' => request('rq_view', 'table')]))->links() }}
+                    </div>
+                @endif
+            </div>{{-- end rq-card-view --}}
+
         </div>
     </div>
 
@@ -698,8 +951,7 @@
 @endif
 
 <script>
-(function () {
-    // ── PAGE-LEVEL TAB MANAGEMENT ───────────────────────────────────────
+    (function () {
     const pageTabBtns = document.querySelectorAll('.page-tab-btn');
     const isEditing   = {{ $isEditing ? 'true' : 'false' }};
 
@@ -729,6 +981,8 @@
     pageTabBtns.forEach(btn => {
         btn.addEventListener('click', () => activatePageTab(btn.dataset.pageTab));
     });
+
+
 
     window.addEventListener('pageshow', function (e) {
         const titleInput = document.getElementById('edit-title-input');
@@ -1192,6 +1446,128 @@
     }
 
     attachViewBtnListeners();
+    // Initial setup for view toggles
+    setupMasterlistViewToggle();
+    setupRequestsViewToggle();
+
+    // ── MASTERLIST VIEW TOGGLE ───────────────────────────────────────────
+    function setupMasterlistViewToggle() {
+        const ML_KEY = 'print-masterlist-view';
+        const mlInput = document.getElementById('ml-view-input');
+        if (!mlInput) return;
+
+        function applyMlView(view, persist = true) {
+            const tableEl = document.getElementById('ml-table-view');
+            const cardEl  = document.getElementById('ml-card-view');
+            if (!tableEl || !cardEl) return;
+
+            // Pure client-side switch - no reload
+            if (view === 'card') {
+                tableEl.classList.add('hidden');
+                cardEl.classList.remove('hidden');
+            } else {
+                cardEl.classList.add('hidden');
+                tableEl.classList.remove('hidden');
+            }
+
+            // Update button styles
+            document.querySelectorAll('.ml-view-toggle-btn').forEach(btn => {
+                const isActive = btn.getAttribute('data-ml-view') === view;
+                btn.classList.toggle('bg-white', isActive);
+                btn.classList.toggle('shadow', isActive);
+                btn.classList.toggle('text-blue-600', isActive);
+                btn.classList.toggle('text-gray-500', !isActive);
+                btn.classList.toggle('hover:text-gray-700', !isActive);
+            });
+
+            if (mlInput) mlInput.value = view;
+
+            // Update URL quietly (for pagination consistency)
+            try {
+                const url = new URL(window.location.href);
+                url.searchParams.set('ml_view', view);
+                history.replaceState(null, '', url.toString());
+            } catch(e) {}
+
+            if (persist) {
+                try { localStorage.setItem(ML_KEY, view); } catch(e) {}
+            }
+
+            attachViewBtnListeners();
+        }
+
+        // Re-bind listeners every time (important after AJAX)
+        document.querySelectorAll('.ml-view-toggle-btn').forEach(btn => {
+            btn.removeEventListener('click', btn._mlHandler);
+            btn._mlHandler = () => applyMlView(btn.getAttribute('data-ml-view'));
+            btn.addEventListener('click', btn._mlHandler);
+        });
+
+        // Initial apply
+        let initialView = 'table';
+        const fromUrl = mlInput.value;
+        try { initialView = localStorage.getItem(ML_KEY) || 'table'; } catch(e) {}
+        if (fromUrl && ['table','card'].includes(fromUrl)) initialView = fromUrl;
+
+        applyMlView(initialView, false);
+    }
+
+    // ── REQUESTS VIEW TOGGLE ─────────────────────────────────────────────
+    function setupRequestsViewToggle() {
+        const RQ_KEY = 'print-masterlist-rq-view';
+        const rqInput = document.getElementById('rq-view-input');
+        if (!rqInput) return;
+
+        function applyRqView(view, persist = true) {
+            const tableEl = document.getElementById('rq-table-view');
+            const cardEl  = document.getElementById('rq-card-view');
+            if (!tableEl || !cardEl) return;
+
+            if (view === 'card') {
+                tableEl.classList.add('hidden');
+                cardEl.classList.remove('hidden');
+            } else {
+                cardEl.classList.add('hidden');
+                tableEl.classList.remove('hidden');
+            }
+
+            document.querySelectorAll('.rq-view-toggle-btn').forEach(btn => {
+                const isActive = btn.getAttribute('data-rq-view') === view;
+                btn.classList.toggle('bg-white', isActive);
+                btn.classList.toggle('shadow', isActive);
+                btn.classList.toggle('text-blue-600', isActive);
+                btn.classList.toggle('text-gray-500', !isActive);
+                btn.classList.toggle('hover:text-gray-700', !isActive);
+            });
+
+            if (rqInput) rqInput.value = view;
+
+            try {
+                const url = new URL(window.location.href);
+                url.searchParams.set('rq_view', view);
+                history.replaceState(null, '', url.toString());
+            } catch(e) {}
+
+            if (persist) {
+                try { localStorage.setItem(RQ_KEY, view); } catch(e) {}
+            }
+
+            attachViewBtnListeners();
+        }
+
+        document.querySelectorAll('.rq-view-toggle-btn').forEach(btn => {
+            btn.removeEventListener('click', btn._rqHandler);
+            btn._rqHandler = () => applyRqView(btn.getAttribute('data-rq-view'));
+            btn.addEventListener('click', btn._rqHandler);
+        });
+
+        let initialView = 'table';
+        const fromUrl = rqInput.value;
+        try { initialView = localStorage.getItem(RQ_KEY) || 'table'; } catch(e) {}
+        if (fromUrl && ['table','card'].includes(fromUrl)) initialView = fromUrl;
+
+        applyRqView(initialView, false);
+    }
 
     // ── DELETE CONFIRMATION ──────────────────────────────────────────────
     function attachDeleteListeners() {
@@ -1284,11 +1660,20 @@
             attachDeleteListeners();
             attachPaginationListeners();
             attachSearchFormListeners();
+
+            // Re-setup toggles after AJAX
+            if (tabId === 'tab-masterlist') {
+                setupMasterlistViewToggle();
+            }
+            if (tabId === 'tab-requests') {
+                setupRequestsViewToggle();
+            }
+
             const tab = document.getElementById(tabId);
             if (!tab) return;
+
             tab.querySelectorAll('a[href*="masterlist"]').forEach(link => {
-                if (link.href.includes('/edit')) return;
-                if (link.dataset.ajaxBound) return;
+                if (link.href.includes('/edit') || link.dataset.ajaxBound) return;
                 link.dataset.ajaxBound = '1';
                 link.addEventListener('click', function (e) {
                     e.preventDefault();
@@ -1296,6 +1681,30 @@
                 });
             });
         }
+                // ── PER PAGE CHANGE (AJAX — only reloads the table) ─────────────────────
+        window.handlePerPageChange = function(selectEl, tabId, perPageParam, viewInputId) {
+            const viewInput = document.getElementById(viewInputId);
+            const currentView = viewInput ? viewInput.value : 'table';
+
+            const url = new URL(window.location.href);
+            
+            url.searchParams.set(perPageParam, selectEl.value);
+            url.searchParams.set('active_tab', tabId);
+            
+            if (tabId === 'tab-masterlist') {
+                url.searchParams.set('ml_view', currentView);
+            } else if (tabId === 'tab-requests') {
+                url.searchParams.set('rq_view', currentView);
+            }
+
+            // Use AJAX to reload only the tab content
+            if (typeof ajaxFetch === 'function') {
+                ajaxFetch(url.toString(), tabId);
+            } else {
+                console.warn('ajaxFetch not found - falling back');
+                window.location.href = url.toString();
+            }
+        };
 
         function ajaxFetch(url, tabId) {
             if (currentController) currentController.abort();
@@ -1348,6 +1757,18 @@
                         e.preventDefault();
                         const url = new URL(this.href, window.location.origin);
                         url.searchParams.set('active_tab', tabId);
+                        // Carry view and per-page so server echoes them back into the hidden inputs
+                        if (tabId === 'tab-masterlist') {
+                            const mlInput = document.getElementById('ml-view-input');
+                            if (mlInput) url.searchParams.set('ml_view', mlInput.value || 'table');
+                            const mlPp = document.getElementById('ml-per-page-select');
+                            if (mlPp) url.searchParams.set('ml_per_page', mlPp.value);
+                        } else if (tabId === 'tab-requests') {
+                            const rqInput = document.getElementById('rq-view-input');
+                            if (rqInput) url.searchParams.set('rq_view', rqInput.value || 'table');
+                            const rqPp = document.getElementById('rq-per-page-select');
+                            if (rqPp) url.searchParams.set('rq_per_page', rqPp.value);
+                        }
                         ajaxFetch(url.toString(), tabId);
                     });
                 });
@@ -1412,7 +1833,6 @@ function hideImageModal() {
     // Restore body scrolling
     document.body.style.overflow = '';
 }
-
 // Close modal with Escape key
 document.addEventListener('keydown', function(event) {
     if (event.key === 'Escape') {
@@ -1422,9 +1842,6 @@ document.addEventListener('keydown', function(event) {
         }
     }
 });
-
 </script>
-
-@vite(['resources/js/add-print-resource.js'])
 
 @endsection

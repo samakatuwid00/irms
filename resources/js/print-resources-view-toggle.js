@@ -63,6 +63,25 @@
             contexts.forEach(context => {
                 this.restoreViewForContext(context);
             });
+
+            // Restore per-page selector from localStorage (only when the URL doesn't already
+            // have an explicit per_page param — the server-rendered selected option takes precedence)
+            const urlPerPage = new URLSearchParams(window.location.search).get('per_page');
+            if (!urlPerPage) {
+                try {
+                    const saved = localStorage.getItem('print-resources-per-page');
+                    if (saved) {
+                        document.querySelectorAll('.per-page-select').forEach(select => {
+                            if ([...select.options].some(o => o.value === saved)) {
+                                select.value = saved;
+                            }
+                        });
+                        document.querySelectorAll('.per-page-hidden-input').forEach(input => {
+                            input.value = saved;
+                        });
+                    }
+                } catch (_) {}
+            }
         },
 
         /**
@@ -105,7 +124,7 @@
             // Determine view (default to 'table')
             const view = (fromUrl && ['table', 'card'].includes(fromUrl)) ? fromUrl :
                         (fromStorage && ['table', 'card'].includes(fromStorage)) ? fromStorage :
-                        'table';
+                        'card';
             
             this.applyView(context, view, false);
             
@@ -263,28 +282,104 @@
                 }
             });
             
-            // Listen for form submissions to preserve view
+            // Per-page selector: AJAX-reload only the results container, same as pagination clicks
+            document.addEventListener('change', (e) => {
+                const select = e.target.closest('.per-page-select');
+                if (!select) return;
+
+                const perPage = select.value;
+
+                // Sync all hidden per-page inputs so subsequent form submits carry the value
+                document.querySelectorAll('.per-page-hidden-input').forEach(input => {
+                    input.value = perPage;
+                });
+
+                // Persist choice
+                try {
+                    localStorage.setItem('print-resources-per-page', perPage);
+                } catch (_) {}
+
+                // Determine which results container this selector belongs to
+                const contextKey = select.dataset.context; // 'division' | 'school' | etc.
+                const contextConfig = this.config.viewContexts[contextKey];
+                const containerId = contextConfig
+                    ? contextConfig.containerId
+                    : (select.closest('[data-view-context]')?.getAttribute('data-view-context')
+                        ? this.config.viewContexts[select.closest('[data-view-context]').getAttribute('data-view-context')]?.containerId
+                        : null);
+
+                // Build fetch URL from the nearest form, resetting to page 1
+                const form = select.closest('form[data-ajax]') || document.querySelector('form[data-ajax]');
+                if (!form) return;
+
+                const params = new URLSearchParams(new FormData(form));
+                params.set('per_page', perPage);
+                // Reset pagination to page 1 when entries-per-page changes
+                params.delete('page');
+                params.delete('division_page');
+
+                this._fetchIntoContainer(
+                    `${form.action || window.location.pathname}?${params.toString()}`,
+                    containerId
+                );
+            });
+
+            
+            // Intercept data-ajax form submissions — fetch instead of full reload
             document.addEventListener('submit', (e) => {
                 const form = e.target;
-                if (form.hasAttribute('data-ajax')) {
-                    // For AJAX forms, ensure view input is up to date
-                    const activeContexts = this.detectActiveContexts();
-                    activeContexts.forEach(context => {
-                        const input = document.getElementById(context.config.viewInputId);
-                        if (input) {
-                            const currentView = localStorage.getItem(context.config.storageKey) || 'table';
-                            if (input.value !== currentView) {
-                                input.value = currentView;
-                            }
-                        }
-                    });
-                }
+                if (!form.hasAttribute('data-ajax')) return;
+
+                e.preventDefault();
+
+                // Ensure view inputs are up to date before serialising
+                const activeContexts = this.detectActiveContexts();
+                activeContexts.forEach(context => {
+                    const input = document.getElementById(context.config.viewInputId);
+                    if (input) {
+                        const currentView = (() => {
+                            try { return localStorage.getItem(context.config.storageKey); } catch(_) { return null; }
+                        })() || 'card';
+                        if (input.value !== currentView) input.value = currentView;
+                    }
+                });
+
+                const params = new URLSearchParams(new FormData(form));
+                const url = `${form.action || window.location.pathname}?${params.toString()}`;
+
+                // Determine target container: explicit attribute > nearest tab's container > null
+                const targetId = form.dataset.targetContainer
+                    || form.closest('.tab-content')?.querySelector('[id$="-results-container"]')?.id
+                    || null;
+
+                this._fetchIntoContainer(url, targetId);
+            });
+
+            // Intercept pagination link clicks — same AJAX swap used by per-page changes
+            document.addEventListener('click', (e) => {
+                const link = e.target.closest('nav[role="navigation"] a, .pagination a');
+                if (!link) return;
+
+                const href = link.getAttribute('href');
+                if (!href || href === '#') return;
+
+                e.preventDefault();
+
+                // Walk up to find the results container that owns this paginator
+                const container = link.closest('[id$="-results-container"]');
+                const containerId = container ? container.id : null;
+
+                // Preserve the current per-page value in the paginated URL
+                const url = new URL(href, window.location.href);
+                const savedPerPage = (() => {
+                    try { return localStorage.getItem('print-resources-per-page'); } catch(_) { return null; }
+                })();
+                if (savedPerPage) url.searchParams.set('per_page', savedPerPage);
+
+                this._fetchIntoContainer(url.toString(), containerId);
             });
         },
-
-        /**
-         * Legacy fallback: update all views (for pages without context detection)
-         */
+         
         updateAllViews: function(view) {
             const allTableViews = document.querySelectorAll('[id$="-table-view"], [id="table-view"]');
             const allCardViews = document.querySelectorAll('[id$="-card-view"], [id="card-view"]');
@@ -333,7 +428,64 @@
         },
 
         /**
-         * Setup mutation observers to restore views after AJAX content updates
+         * Fetch a URL via AJAX and swap only the given results container.
+         * The server returns the full partial view; we extract the container's
+         * innerHTML from the response HTML so the surrounding chrome (tabs,
+         * toolbar) is never re-rendered.
+         */
+        _fetchIntoContainer: function(url, containerId) {
+            const container = containerId ? document.getElementById(containerId) : null;
+
+            // Show a subtle loading state
+            if (container) container.style.opacity = '0.5';
+
+            fetch(url, {
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'Accept': 'text/html',
+                }
+            })
+            .then(res => {
+                if (!res.ok) throw new Error(`HTTP ${res.status}`);
+                return res.text();
+            })
+            .then(html => {
+                // Parse the partial HTML returned by the server
+                const parser = new DOMParser();
+                const doc = parser.parseFromString(html, 'text/html');
+
+                if (container && containerId) {
+                    // Extract only the matching container from the response
+                    const incoming = doc.getElementById(containerId);
+                    if (incoming) {
+                        container.innerHTML = incoming.innerHTML;
+                    } else {
+                        // Fallback: the server returned a bare fragment — use it whole
+                        container.innerHTML = html;
+                    }
+                    container.style.opacity = '';
+                } else {
+                    // No specific container — replace the whole partial wrapper
+                    const wrapper = doc.querySelector('.tab-content-wrapper');
+                    const localWrapper = document.querySelector('.tab-content-wrapper');
+                    if (wrapper && localWrapper) {
+                        localWrapper.innerHTML = wrapper.innerHTML;
+                    }
+                }
+
+                // Re-run view restoration so table/card state is preserved after the swap
+                this.detectAndRestoreViews();
+
+                // Update the browser URL without a reload so pagination links stay bookmarkable
+                window.history.pushState({}, '', url);
+            })
+            .catch(err => {
+                console.error('Print resources AJAX load failed:', err);
+                if (container) container.style.opacity = '';
+            });
+        },
+
+        /**
          */
         setupMutationObservers: function() {
             const activeContexts = this.detectActiveContexts();
@@ -381,7 +533,7 @@
                     }
                 }
             } catch (e) {}
-            return 'table';
+            return 'card';
         },
 
         /**

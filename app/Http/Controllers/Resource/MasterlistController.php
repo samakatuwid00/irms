@@ -314,6 +314,13 @@ class MasterlistController extends BaseController
     // Shared between index() and editForm() to avoid duplicating the tab queries
     private function buildTabData(Request $request, $user, int $level): array
     {
+        $allowedPerPage = [5, 10, 15, 20];
+
+        $mlPerPage = (int) $request->input('ml_per_page', 10);
+        if (!in_array($mlPerPage, $allowedPerPage)) {
+            $mlPerPage = 10;
+        }
+
         $mlSearch        = trim($request->input('ml_search', ''));
         $masterlistQuery = PrintResource::with(['printTitle.authors', 'type'])
             ->where('status', 1);
@@ -331,7 +338,7 @@ class MasterlistController extends BaseController
                     ->whereColumn('print_titles.id', 'print_resources.print_title_id')
                     ->limit(1)
             )
-            ->paginate(15, ['*'], 'ml_page');
+            ->paginate($mlPerPage, ['*'], 'ml_page');
 
         // Append thumb_url + cover_url to every masterlist row
         $this->resolveCoverUrls($masterlist);
@@ -339,6 +346,11 @@ class MasterlistController extends BaseController
         // Region users don't have an approval queue, so $requests stays null
         $requests = null;
         if ($level === 3) {
+            $rqPerPage = (int) $request->input('rq_per_page', 10);
+            if (!in_array($rqPerPage, $allowedPerPage)) {
+                $rqPerPage = 10;
+            }
+
             $rqSearch      = trim($request->input('rq_search', ''));
             $requestsQuery = PrintResource::with(['printTitle.authors', 'type', 'encodedBy'])
                 ->where('status', 0)
@@ -357,7 +369,7 @@ class MasterlistController extends BaseController
                         ->whereColumn('print_titles.id', 'print_resources.print_title_id')
                         ->limit(1)
                 )
-                ->paginate(15, ['*'], 'rq_page');
+                ->paginate($rqPerPage, ['*'], 'rq_page');
 
             // Append thumb_url + cover_url to every request row
             $this->resolveCoverUrls($requests);

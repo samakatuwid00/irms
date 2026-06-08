@@ -83,43 +83,66 @@
     </div>
 
     <!-- Hidden view input – carries current view through search/pagination -->
-    <input type="hidden" name="view" id="view-input" value="{{ request('view', 'table') }}">
+    <input type="hidden" name="view" id="view-input" value="{{ request('view', 'card') }}">
+    <!-- Hidden per-page input – kept in sync by the entries selector -->
+    <input type="hidden" name="per_page" value="{{ $perPage }}" class="per-page-hidden-input">
 </form>
 
 <div id="table-results-container">
     @if (request()->has('division') || request()->has('district') || request()->has('school'))
 
-        <!-- Toolbar: Export + View Toggle -->
-        <div class="flex items-center justify-between mt-4">
+        <!-- Toolbar: Export + Per Page + View Toggle -->
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mt-4">
+            
+            <!-- Export Button -->
             <a href="{{ route('print-resources.export', request()->query()) }}"
-                class="inline-flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors text-sm">
+                class="inline-flex items-center justify-center sm:justify-start gap-2 px-5 py-2.5 bg-green-600 hover:bg-green-700 text-white rounded-xl transition-colors text-sm font-medium w-full sm:w-auto">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                         d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                 </svg>
-                Export to Excel
+                <span class="hidden xs:inline">Export to Excel</span>
+                <span class="xs:hidden">Export to Excel</span>
             </a>
 
-            <!-- View Toggle Buttons -->
-            <div class="flex items-center gap-1 bg-gray-100 p-1 rounded-lg">
-                <button type="button"
-                    class="view-toggle-btn px-3 py-1.5 rounded-md text-sm font-medium transition-all flex items-center gap-1.5 bg-white shadow text-blue-600"
-                    data-view="table">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                            d="M3 10h18M3 6h18M3 14h18M3 18h18" />
-                    </svg>
-                    Table
-                </button>
-                <button type="button"
-                    class="view-toggle-btn px-3 py-1.5 rounded-md text-sm font-medium transition-all flex items-center gap-1.5 text-gray-500 hover:text-gray-700"
-                    data-view="card">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                            d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
-                    </svg>
-                    Cards
-                </button>
+            <div class="flex items-center justify-between sm:justify-end gap-3 w-full sm:w-auto">
+                
+                <!-- Per Page Selector -->
+                <div class="flex items-center gap-2 text-sm text-gray-600">
+                    <label for="region-per-page" class="whitespace-nowrap font-medium hidden sm:inline">Show entries:</label>
+                    <label for="region-per-page" class="whitespace-nowrap font-medium sm:hidden">Show:</label>
+                    <select id="region-per-page"
+                        class="per-page-select border border-gray-300 rounded-xl px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
+                        data-context="region">
+                        @foreach ($perPageOptions as $opt)
+                            <option value="{{ $opt }}" {{ $perPage == $opt ? 'selected' : '' }}>{{ $opt }}</option>
+                        @endforeach
+                    </select>
+                </div>
+
+                <!-- View Toggle Buttons -->
+                <div class="flex items-center bg-gray-100 p-1 rounded-xl">
+                                        <button type="button"
+                        class="view-toggle-btn px-4 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-1.5 text-gray-500 hover:text-gray-700"
+                        data-view="card">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
+                        </svg>
+                        <span class="hidden md:inline">Cards</span>
+                    <button type="button"
+                        class="view-toggle-btn px-4 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-1.5 bg-white shadow text-blue-600"
+                        data-view="table">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M3 10h18M3 6h18M3 14h18M3 18h18" />
+                        </svg>
+                        <span class="hidden md:inline">Table</span>
+                    </button>
+                    
+
+                    </button>
+                </div>
             </div>
         </div>
 

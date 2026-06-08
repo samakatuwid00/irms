@@ -55,43 +55,67 @@
     </div>
 
     <!-- Hidden view input – carries current view through search/pagination -->
-    <input type="hidden" name="view" id="view-input" value="{{ request('view', 'table') }}">
+    <input type="hidden" name="view" id="view-input" value="{{ request('view', 'card') }}">
+    <!-- Hidden per-page input – kept in sync by the entries selector -->
+    <input type="hidden" name="per_page" value="{{ $perPage }}" class="per-page-hidden-input">
 </form>
 
 <div id="table-results-container">
     @if (request()->has('school'))
 
-        <!-- Toolbar: Export + View Toggle -->
-        <div class="flex items-center justify-between mt-4">
+        <!-- Toolbar: Export + Per Page + View Toggle -->
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mt-4">
+            
+            <!-- Export Button -->
             <a href="{{ route('print-resources.export', request()->query()) }}"
-                class="inline-flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors">
+                class="inline-flex items-center justify-center sm:justify-start gap-2 px-5 py-2.5 bg-green-600 hover:bg-green-700 text-white rounded-xl transition-colors text-sm font-medium w-full sm:w-auto">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                         d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                 </svg>
-                Export to Excel
+                <span class="hidden xs:inline">Export to Excel</span>
+                <span class="xs:hidden">Export to Excel</span>
             </a>
 
-            <!-- View Toggle Buttons -->
-            <div class="flex items-center gap-1 bg-gray-100 p-1 rounded-lg">
-                <button type="button"
-                    class="view-toggle-btn px-3 py-1.5 rounded-md text-sm font-medium transition-all flex items-center gap-1.5 bg-white shadow text-blue-600"
-                    data-view="table">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                            d="M3 10h18M3 6h18M3 14h18M3 18h18" />
-                    </svg>
-                    Table
-                </button>
-                <button type="button"
-                    class="view-toggle-btn px-3 py-1.5 rounded-md text-sm font-medium transition-all flex items-center gap-1.5 text-gray-500 hover:text-gray-700"
-                    data-view="card">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                            d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
-                    </svg>
-                    Cards
-                </button>
+            <div class="flex items-center justify-between sm:justify-end gap-3 w-full sm:w-auto">
+                
+                <!-- Per Page Selector -->
+                <div class="flex items-center gap-2 text-sm text-gray-600">
+                    <label for="district-per-page" class="whitespace-nowrap font-medium hidden sm:inline">Show entries:</label>
+                    <label for="district-per-page" class="whitespace-nowrap font-medium sm:hidden">Show:</label>
+                    <select id="district-per-page"
+                        class="per-page-select border border-gray-300 rounded-xl px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
+                        data-context="default">
+                        @foreach ($perPageOptions as $opt)
+                            <option value="{{ $opt }}" {{ $perPage == $opt ? 'selected' : '' }}>{{ $opt }}</option>
+                        @endforeach
+                    </select>
+                </div>
+
+                <!-- View Toggle Buttons -->
+                <div class="flex items-center bg-gray-100 p-1 rounded-xl">                               
+                
+                    <button type="button"
+                        class="view-toggle-btn px-4 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-1.5 text-gray-500 hover:text-gray-700"
+                        data-view="card">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
+                        </svg>
+                        <span class="hidden md:inline">Cards</span>
+                    </button>
+                    
+                    <button type="button"
+                        class="view-toggle-btn px-4 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-1.5 bg-white shadow text-blue-600"
+                        data-view="table">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M3 10h18M3 6h18M3 14h18M3 18h18" />
+                        </svg>
+                        <span class="hidden md:inline">Table</span>
+                    </button>
+                    
+                </div>
             </div>
         </div>
 
@@ -295,75 +319,3 @@
         </div>
     @endif
 </div>
-
-<script>
-(function () {
-    const STORAGE_KEY = 'print-resources-district-view';
-
-    function applyView(view, persist) {
-        const tableEl = document.getElementById('table-view');
-        const cardEl  = document.getElementById('card-view');
-
-        if (tableEl && cardEl) {
-            if (view === 'card') {
-                tableEl.classList.add('hidden');
-                cardEl.classList.remove('hidden');
-            } else {
-                cardEl.classList.add('hidden');
-                tableEl.classList.remove('hidden');
-            }
-        }
-
-        // Keep hidden input in sync so form submissions carry the correct value
-        const input = document.getElementById('view-input');
-        if (input) input.value = view;
-
-        // Persist to localStorage so the preference survives pagination/search
-        if (persist !== false) {
-            try { localStorage.setItem(STORAGE_KEY, view); } catch (_) {}
-        }
-
-        // Update toggle button styles
-        document.querySelectorAll('.view-toggle-btn').forEach(btn => {
-            const isActive = btn.dataset.view === view;
-            btn.classList.toggle('bg-white',            isActive);
-            btn.classList.toggle('shadow',              isActive);
-            btn.classList.toggle('text-blue-600',       isActive);
-            btn.classList.toggle('text-gray-500',      !isActive);
-            btn.classList.toggle('hover:text-gray-700',!isActive);
-        });
-    }
-
-    // View toggle button click
-    document.addEventListener('click', function (e) {
-        const btn = e.target.closest('.view-toggle-btn');
-        if (btn) applyView(btn.dataset.view);
-    });
-
-    // Restore view on load / after AJAX updates
-    function restoreView() {
-        // Priority 1: URL/request param via hidden input (set by Blade)
-        const input   = document.getElementById('view-input');
-        const fromUrl = input && input.value ? input.value : null;
-
-        // Priority 2: localStorage (survives pagination when param might be absent)
-        let fromStorage = null;
-        try { fromStorage = localStorage.getItem(STORAGE_KEY); } catch (_) {}
-
-        const view = fromUrl || fromStorage || 'table';
-
-        applyView(view, false); // don't re-persist during restore
-
-        // Sync hidden input so any subsequent form submit sends the correct value
-        if (input) input.value = view;
-    }
-
-    restoreView();
-
-    // Re-run after AJAX content swaps
-    const container = document.getElementById('table-results-container');
-    if (container) {
-        new MutationObserver(restoreView).observe(container, { childList: true, subtree: true });
-    }
-})();
-</script>

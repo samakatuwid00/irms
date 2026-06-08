@@ -17,7 +17,8 @@ use Illuminate\Support\Facades\Cache;
 
 class PrintResourceService
 {
-    private const PER_PAGE            = 5;
+    private const PER_PAGE_DEFAULT    = 10;
+    private const PER_PAGE_ALLOWED    = [5, 10, 15, 20];
     private const CACHE_TTL           = 3600;
     private const CACHE_TTL_LIBRARIES = 1800;
     private const CACHE_TTL_HIERARCHY = 7200;
@@ -50,7 +51,16 @@ class PrintResourceService
             'mainLibraryIds'     => $libraryIds['main']->values()->all(),
             'filteredLibraryIds' => $libraryIds['filtered']->values()->all(),
             'divisionLibraryIds' => $divisionLibraryIds,
+            'perPage'            => $this->resolvePerPage($request),
+            'perPageOptions'     => self::PER_PAGE_ALLOWED,
         ], $dropdownData);
+    }
+
+    /** Validate and return the requested per-page value, falling back to the default. */
+    private function resolvePerPage(Request $request): int
+    {
+        $requested = (int) $request->input('per_page', self::PER_PAGE_DEFAULT);
+        return in_array($requested, self::PER_PAGE_ALLOWED, true) ? $requested : self::PER_PAGE_DEFAULT;
     }
 
     // Walk school → district → division to find which division libraries to show
@@ -83,7 +93,7 @@ class PrintResourceService
         // Separate search param so it doesn't collide with the school tab's 'search'
         $this->applySearch($query, (string) $request->input('division_search', ''));
 
-        $paginated = $query->paginate(self::PER_PAGE, ['*'], 'division_page')->withQueryString();
+        $paginated = $query->paginate($this->resolvePerPage($request), ['*'], 'division_page')->withQueryString();
         $this->attachLibraryNames($paginated);
 
         // Return both the paginator and the raw IDs so the blade can scope
@@ -432,7 +442,7 @@ class PrintResourceService
         $query = $this->buildLibraryQuery($libraryIds);
         $this->applySearch($query, (string) $request->input('search', ''));
 
-        $paginated = $query->paginate(self::PER_PAGE)->withQueryString();
+        $paginated = $query->paginate($this->resolvePerPage($request))->withQueryString();
         $this->attachLibraryNames($paginated);
         return $paginated;
     }
@@ -446,7 +456,7 @@ class PrintResourceService
         $query = $this->buildLibraryQuery($libraryIds);
         $this->applySearch($query, (string) $request->input('division_search', ''));
 
-        $paginated = $query->paginate(self::PER_PAGE)->withQueryString();
+        $paginated = $query->paginate($this->resolvePerPage($request))->withQueryString();
         $this->attachLibraryNames($paginated);
         return $paginated;
     }
@@ -463,7 +473,7 @@ class PrintResourceService
         $searchParam = $level === self::LEVEL_DIVISION ? 'school_search' : 'search';
         $this->applySearch($query, (string) $request->input($searchParam, ''));
 
-        $paginated = $query->paginate(self::PER_PAGE)->withQueryString();
+        $paginated = $query->paginate($this->resolvePerPage($request))->withQueryString();
         $this->attachLibraryNames($paginated);
         return $paginated;
     }
@@ -550,7 +560,7 @@ class PrintResourceService
     // links render correctly even when there's nothing to show
     private function emptyPaginator(Request $request)
     {
-        return new LengthAwarePaginator([], 0, self::PER_PAGE, 1, [
+        return new LengthAwarePaginator([], 0, self::PER_PAGE_DEFAULT, 1, [
             'path'  => $request->url(),
             'query' => $request->query(),
         ]);
