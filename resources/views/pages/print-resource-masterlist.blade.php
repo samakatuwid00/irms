@@ -8,7 +8,7 @@
 
 @section('content')
 
-<div class="p-6 space-y-6">
+<div id="print-resources-wrapper" class="space-y-4">
     <!-- Page Header -->
     <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <h1 class="text-2xl font-bold text-gray-800">Print Masterlist</h1>
@@ -250,7 +250,7 @@
 
             @if($masterlist->hasPages())
                 <div class="mt-4">
-                    {{ $masterlist->appends(array_filter(['ml_search' => request('ml_search'), 'active_tab' => 'tab-masterlist', 'ml_per_page' => request('ml_per_page', 10), 'ml_view' => request('ml_view', 'table')]))->links() }}
+                    {{ $masterlist->appends(array_filter(['ml_search' => request('ml_search'), 'active_tab' => 'tab-masterlist', 'ml_per_page' => request('ml_per_page', 10), 'ml_view' => request('ml_view', 'table')]))->links('pagination::print-resource') }}
                 </div>
             @endif
         </div>{{-- end ml-table-view --}}
@@ -321,7 +321,7 @@
                 </div>
                 @if($masterlist->hasPages())
                     <div class="mt-4">
-                        {{ $masterlist->appends(array_filter(['ml_search' => request('ml_search'), 'active_tab' => 'tab-masterlist', 'ml_per_page' => request('ml_per_page', 10), 'ml_view' => request('ml_view', 'table')]))->links() }}
+                        {{ $masterlist->appends(array_filter(['ml_search' => request('ml_search'), 'active_tab' => 'tab-masterlist', 'ml_per_page' => request('ml_per_page', 10), 'ml_view' => request('ml_view', 'table')]))->links('pagination::print-resource') }}
                     </div>
                 @endif
             </div>{{-- end ml-card-view --}}
@@ -577,19 +577,19 @@
                 <div class="flex items-center bg-gray-100 p-1 rounded-xl">
                     <button type="button"
                         class="rq-view-toggle-btn px-4 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-1.5"
-                        data-rq-view="table">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M3 6h18M3 14h18M3 18h18"/>
-                        </svg>
-                        <span class="hidden md:inline">Table</span>
-                    </button>
-                    <button type="button"
-                        class="rq-view-toggle-btn px-4 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-1.5"
                         data-rq-view="card">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"/>
                         </svg>
                         <span class="hidden md:inline">Cards</span>
+                    </button>
+                    <button type="button"
+                        class="rq-view-toggle-btn px-4 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-1.5"
+                        data-rq-view="table">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M3 6h18M3 14h18M3 18h18"/>
+                        </svg>
+                        <span class="hidden md:inline">Table</span>
                     </button>
                 </div>
             </div>
@@ -724,7 +724,7 @@
 
             @if($requests && $requests->hasPages())
                 <div class="mt-4">
-                    {{ $requests->appends(array_filter(['rq_search' => request('rq_search'), 'active_tab' => 'tab-requests', 'rq_per_page' => request('rq_per_page', 10), 'rq_view' => request('rq_view', 'table')]))->links() }}
+                    {{ $requests->appends(array_filter(['rq_search' => request('rq_search'), 'active_tab' => 'tab-requests', 'rq_per_page' => request('rq_per_page', 10), 'rq_view' => request('rq_view', 'table')]))->links('pagination::print-resource') }}
                 </div>
             @endif
             </div>{{-- end rq-table-view --}}
@@ -808,7 +808,7 @@
                 </div>
                 @if($requests && $requests->hasPages())
                     <div class="mt-4">
-                        {{ $requests->appends(array_filter(['rq_search' => request('rq_search'), 'active_tab' => 'tab-requests', 'rq_per_page' => request('rq_per_page', 10), 'rq_view' => request('rq_view', 'table')]))->links() }}
+                        {{ $requests->appends(array_filter(['rq_search' => request('rq_search'), 'active_tab' => 'tab-requests', 'rq_per_page' => request('rq_per_page', 10), 'rq_view' => request('rq_view', 'table')]))->links('pagination::print-resource') }}
                     </div>
                 @endif
             </div>{{-- end rq-card-view --}}

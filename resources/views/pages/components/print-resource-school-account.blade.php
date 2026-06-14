@@ -291,7 +291,7 @@
                 </div>
 
                 <div class="p-4">
-                    {{ $resources->appends(request()->query())->links() }}
+                    {{ $resources->appends(request()->query())->links('pagination::print-resource') }}
                 </div>
             </div>
 
@@ -356,7 +356,7 @@
                 </div>
 
                 <div class="bg-white rounded-xl shadow p-4 mt-4">
-                    {{ $resources->appends(request()->query())->links() }}
+                    {{ $resources->appends(request()->query())->links('pagination::print-resource') }}
                 </div>
             </div>
 
@@ -591,7 +591,7 @@
                 </div>
 
                 <div class="p-4">
-                    {{ $divisionResources->appends(array_merge(request()->query(), ['tab' => 'division']))->links() }}
+                    {{ $divisionResources->appends(array_merge(request()->query(), ['tab' => 'division']))->links('pagination::print-resource') }}
                 </div>
             </div>
 
@@ -645,7 +645,7 @@
                 </div>
 
                 <div class="bg-white rounded-xl shadow p-4 mt-4">
-                    {{ $divisionResources->appends(array_merge(request()->query(), ['tab' => 'division']))->links() }}
+                    {{ $divisionResources->appends(array_merge(request()->query(), ['tab' => 'division']))->links('pagination::print-resource') }}
                 </div>
             </div>
 

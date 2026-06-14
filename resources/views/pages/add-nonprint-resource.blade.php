@@ -80,13 +80,13 @@
             <div>
                 <h2 class="text-base font-semibold text-gray-800">Search Existing Non-Print Resources</h2>
                 <p class="text-sm text-gray-500 mt-1">
-                    Search the masterlist by title or author, then add your acquisition records to an existing entry.
+                    Search the masterlist by title, brand, model, code, or subject, then add your acquisition records to an existing entry.
                 </p>
             </div>
             <div>
                 <div class="flex gap-3">
                     <div class="relative flex-1">
-                        <input type="text" id="searchInput" placeholder="Type a title..."
+                        <input type="text" id="searchInput" placeholder="Search title, author, ISBN..."
                             class="w-full border border-gray-300 rounded-lg px-4 py-3 pr-10 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                             autocomplete="off">
                         <span id="searchSpinner" class="absolute right-3 top-3.5 hidden">
@@ -118,7 +118,7 @@
                 <svg class="mx-auto mb-4 h-14 w-14 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M21 21l-4.35-4.35M17 11A6 6 0 1 0 5 11a6 6 0 0 0 12 0z"/>
                 </svg>
-                <p class="font-medium">Start by searching for a non-print resource title</p>
+                <p class="font-medium">Start by searching the masterlist</p>
             </div>
         </div>
     </div>
@@ -785,10 +785,25 @@
         if (searchInput.value.trim().length >= 2) searchTimeout = setTimeout(performSearch, 450);
     });
 
+    function highlight(str, tokens) {
+        let result = esc(str);
+        tokens.forEach(token => {
+            if (!token) return;
+            const safe  = token.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+            const regex = new RegExp('(' + safe + ')', 'gi');
+            result = result.replace(regex, '<mark class="bg-yellow-200 text-gray-900 rounded px-0.5">$1</mark>');
+        });
+        return result;
+    }
+
     function renderResults(titles) {
         resultsList.innerHTML = '';
         resultCount.textContent = `${titles.length} title(s) found`;
         resultsArea.classList.remove('hidden');
+
+        const tokens = searchInput.value.trim()
+            .split(/\s+/)
+            .filter(t => t.length >= 1);
 
         titles.forEach(title => {
             const editionBadges = title.editions.map(e => {
@@ -803,9 +818,9 @@
                 <div class="flex items-start gap-4">
                     <img src="${esc(title.cover)}" alt="cover" class="w-12 h-16 object-cover rounded shadow-sm flex-shrink-0 border border-gray-200">
                     <div class="flex-1 min-w-0 space-y-1.5">
-                        <p class="font-semibold text-gray-900">${esc(title.title)}</p>
+                        <p class="font-semibold text-gray-900">${highlight(title.title, tokens)}</p>
                         <p class="text-xs text-gray-600 leading-relaxed">
-                            <span class="font-medium">Subjects:</span> ${esc(title.subjects)}
+                            <span class="font-medium">Subjects:</span> ${highlight(title.subjects, tokens)}
                         </p>
                         <div class="flex flex-wrap gap-1.5 pt-0.5">
                             ${editionBadges || '<span class="text-xs text-gray-400">No variants</span>'}

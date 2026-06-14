@@ -81,13 +81,13 @@
             <div>
                 <h2 class="text-base font-semibold text-gray-800">Search Existing Print Resources</h2>
                 <p class="text-sm text-gray-500 mt-1">
-                    Search the masterlist by title or author, then add your acquisition records to an existing entry.
+                    Search the masterlist by title, author, ISBN, publisher, or subject, then add your acquisition records to an existing entry.
                 </p>
             </div>
             <div>
                 <div class="flex gap-3">
                     <div class="relative flex-1">
-                        <input type="text" id="searchInput" placeholder="Type a title or author name..."
+                        <input type="text" id="searchInput" placeholder="Search title, author, ISBN..."
                             class="w-full border border-gray-300 rounded-lg px-4 py-3 pr-10 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                             autocomplete="off">
                         <span id="searchSpinner" class="absolute right-3 top-3.5 hidden">
@@ -119,7 +119,7 @@
                 <svg class="mx-auto mb-4 h-14 w-14 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M21 21l-4.35-4.35M17 11A6 6 0 1 0 5 11a6 6 0 0 0 12 0z"/>
                 </svg>
-                <p class="font-medium">Start by searching for a title or author</p>
+                <p class="font-medium">Start by searching the masterlist</p>
             </div>
         </div>
     </div>
@@ -518,7 +518,7 @@
                 </table>
             </div>
             @if(method_exists($myRequests, 'hasPages') && $myRequests->hasPages())
-                <div class="mt-4">{{ $myRequests->appends(['active_tab' => 'tab-requests'])->links() }}</div>
+                <div class="mt-4">{{ $myRequests->appends(['active_tab' => 'tab-requests'])->links('pagination::print-resource') }}</div>
             @endif
         </div>
     </div>
@@ -902,13 +902,10 @@
         resultCount.textContent = `${titles.length} title(s) found`;
         resultsArea.classList.remove('hidden');
 
-        // Tokenize the same way the backend does:
-        // lowercase, split on whitespace, strip trailing 's' for plural tolerance
+        // Tokenize the query for yellow highlight marks in result cards
         const tokens = searchInput.value.trim()
-            .toLowerCase()
             .split(/\s+/)
-            .filter(t => t.length >= 1)
-            .map(t => t.replace(/s$/, ''));
+            .filter(t => t.length >= 1);
 
         titles.forEach(title => {
             const editionBadges = title.editions.map(e => {

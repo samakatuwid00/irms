@@ -28,33 +28,42 @@ class PrintResourceService
     public const LEVEL_DIVISION = 3;
     public const LEVEL_REGION   = 4;
 
-    public function getResourcesData(Request $request, int $level, string $stationId): array
-    {
-        $dropdownData = $this->getDropdownData($level, $stationId);
-        $libraryIds   = $this->getLibraryIds($request, $level, $stationId, $dropdownData);
-
-        $resources         = $this->getResources($request, $level, $libraryIds['main']);
-        $filteredResources = $this->getFilteredResources($request, $level, $libraryIds['filtered']);
-
-        // School users also see a read-only division tab showing their parent division's resources
-        $divisionResources  = null;
-        $divisionLibraryIds = [];
-        if ($level === self::LEVEL_SCHOOL) {
-            [$divisionResources, $divisionLibraryIds] = $this->getDivisionResourcesForSchool($request, $stationId);
-        }
-
-        return array_merge([
-            'level'              => $level,
-            'resources'          => $resources,
-            'filteredResources'  => $filteredResources,
-            'divisionResources'  => $divisionResources,
-            'mainLibraryIds'     => $libraryIds['main']->values()->all(),
-            'filteredLibraryIds' => $libraryIds['filtered']->values()->all(),
-            'divisionLibraryIds' => $divisionLibraryIds,
-            'perPage'            => $this->resolvePerPage($request),
-            'perPageOptions'     => self::PER_PAGE_ALLOWED,
-        ], $dropdownData);
+public function getResourcesData(Request $request, int $level, string $stationId): array
+{
+    $dropdownData = $this->getDropdownData($level, $stationId);
+    $libraryIds   = $this->getLibraryIds($request, $level, $stationId, $dropdownData);
+ 
+    $resources         = $this->getResources($request, $level, $libraryIds['main']);
+    $filteredResources = $this->getFilteredResources($request, $level, $libraryIds['filtered']);
+ 
+    $divisionResources  = null;
+    $divisionLibraryIds = [];
+    if ($level === self::LEVEL_SCHOOL) {
+        [$divisionResources, $divisionLibraryIds] = $this->getDivisionResourcesForSchool($request, $stationId);
     }
+ 
+    // NEW: Library Hub data for region-level users
+    $hubData = [];
+    if ($level === self::LEVEL_REGION) {
+        $hubData = $this->getHubData($request);
+    }
+ 
+    return array_merge([
+        'level'              => $level,
+        'resources'          => $resources,
+        'filteredResources'  => $filteredResources,
+        'divisionResources'  => $divisionResources,
+        'mainLibraryIds'     => $libraryIds['main']->values()->all(),
+        'filteredLibraryIds' => $libraryIds['filtered']->values()->all(),
+        'divisionLibraryIds' => $divisionLibraryIds,
+        // Hub defaults so the blade never needs isset() guards
+        'hubResources'       => null,
+        'hubLibraryIds'      => [],
+        'perPage'            => $this->resolvePerPage($request),
+        'perPageOptions'     => self::PER_PAGE_ALLOWED,
+    ], $dropdownData, $hubData);
+}
+
 
     /** Validate and return the requested per-page value, falling back to the default. */
     private function resolvePerPage(Request $request): int
@@ -167,24 +176,34 @@ class PrintResourceService
                 $data['divisions'] = Cache::remember(
                     "divisions_region_{$stationId}",
                     self::CACHE_TTL,
-                    fn() => Division::where('region_id', $stationId)
-                        ->orderBy('division_name')
-                        ->get()
+                    fn() => Division::where('region_id', $stationId)->orderBy('division_name')->get()
                 );
-
-                // Region loads all districts/schools globally — the JS filters client-side
+            
                 $data['allDistricts'] = Cache::remember(
                     'all_districts',
                     self::CACHE_TTL,
                     fn() => District::orderBy('district_name')->get()
                 );
-
+            
                 $data['allSchools'] = Cache::remember(
                     'all_schools',
                     self::CACHE_TTL,
                     fn() => School::orderBy('school_name')->get(['id', 'school_name', 'district_id'])
                 );
+            
+                // NEW: map of division_id → DivisionLibrary collection (id + library_name)
+                // Used by the Library Hub tab to populate the library dropdown client-side.
+                $divisionIds = $data['divisions']->pluck('id');
+                $data['divisionLibrariesMap'] = Cache::remember(
+                    "division_libraries_map_region_{$stationId}",
+                    self::CACHE_TTL_LIBRARIES,
+                    fn() => DivisionLibrary::whereIn('division_id', $divisionIds)
+                        ->orderBy('library_name')
+                        ->get(['id', 'division_id', 'library_name'])
+                        ->groupBy('division_id')
+                );
                 break;
+
         }
 
         return $data;
@@ -600,5 +619,51 @@ class PrintResourceService
     public function clearLibraryCache(): void
     {
         Cache::flush();
+    }
+
+    public function getHubData(Request $request): array
+    {
+        $selectedDivision = $request->input('hub_division', '');
+        $selectedLibrary  = $request->input('hub_library', '');
+    
+        // No division selected yet → return empty state
+        if (!$selectedDivision) {
+            return [
+                'hubResources'  => $this->emptyPaginator($request),
+                'hubLibraryIds' => [],
+            ];
+        }
+    
+        // Resolve which DivisionLibrary IDs to query
+        if ($selectedLibrary && $selectedLibrary !== 'all') {
+            // Specific library
+            $libraryIds = collect([$selectedLibrary]);
+        } else {
+            // All libraries in the selected division
+            $libraryIds = Cache::remember(
+                "division_libraries_{$selectedDivision}",
+                self::CACHE_TTL_LIBRARIES,
+                fn() => DivisionLibrary::where('division_id', $selectedDivision)->pluck('id')
+            );
+        }
+    
+        if ($libraryIds->isEmpty()) {
+            return [
+                'hubResources'  => $this->emptyPaginator($request),
+                'hubLibraryIds' => [],
+            ];
+        }
+    
+        $query = $this->buildLibraryQuery($libraryIds);
+        $this->applySearch($query, (string) $request->input('hub_search', ''));
+    
+        $paginated = $query->paginate($this->resolvePerPage($request), ['*'], 'hub_page')
+                        ->withQueryString();
+        $this->attachLibraryNames($paginated);
+    
+        return [
+            'hubResources'  => $paginated,
+            'hubLibraryIds' => $libraryIds->values()->all(),
+        ];
     }
 }

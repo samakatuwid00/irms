@@ -36,14 +36,15 @@ class SearchNonPrintResourceController extends BaseController
             return response()->json([]);
         }
 
-        $titleIds = NonprintTitle::where('title', 'ILIKE', '%' . $query . '%')
-            ->pluck('id');
-
-        // Group by uniqueness_hash so we show one card per variant group,
-        // not one card per title (a title can have many different type/brand combos)
+        // Same FTS approach as the non-print masterlist — searches title, brand,
+        // model, code, subjects, type, and other indexed fields together.
         $resources = NonprintResource::with(['nonprintTitle', 'type'])
-            ->whereIn('nonprint_title_id', $titleIds)
             ->where('status', 1)
+            ->whereRaw(
+                "search_vector @@ plainto_tsquery('english', ?)",
+                [$query]
+            )
+            ->orderByDesc('created_at')
             ->get()
             ->groupBy('uniqueness_hash');
 

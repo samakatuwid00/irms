@@ -288,38 +288,230 @@
 
         </div>
 
-        <x-chart-card id="bosy-status" title="BOSY Status" class="chart-container">
-
-            <!-- Period & CY Header -->
+<x-chart-card id="bosy-status" title="BOSY Status" class="chart-container">
+ 
+            {{-- ── Period & CY Header ── --}}
             <div class="space-y-1.5">
                 <p class="text-m font-bold mb-0">Inventory Status/Monitoring</p>
             </div>
+ 
             <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
-                
+ 
+                {{-- Left: Period --}}
                 <div>
                     <p class="text-xs font-medium tracking-wide text-gray-500">
                         PERIOD: Beginning-Of-School Year
                     </p>
-                    <p class="text-lg font-semibold text-gray-900 period-display">
-                        05 June – 25 Dec
+                    {{-- Populated from DB; JS will keep it fresh after an update --}}
+                    <p class="text-lg font-semibold text-gray-900" id="bosyPeriodDisplay">
+                        {{ $bosySettings->period_display }}
                     </p>
                 </div>
-
-                <div class="text-left sm:text-right">
-                    <p class="text-xs font-medium uppercase tracking-wide text-gray-500">
-                        Calendar Year
-                    </p>
-                    <p class="text-2xl font-bold text-cyan-600 year-display">
-                        CY {{ now()->month }}
-                    </p>
+ 
+                {{-- Right: Calendar Year + optional edit button --}}
+                <div class="text-left sm:text-right flex items-center gap-3">
+                    <div>
+                        <p class="text-xs font-medium uppercase tracking-wide text-gray-500">
+                            Calendar Year
+                        </p>
+                        <p class="text-2xl font-bold text-cyan-600" id="bosyYearDisplay">
+                            CY {{ $bosySettings->calendar_year }}
+                        </p>
+                    </div>
+ 
+                    {{-- Edit button — rendered only for Regional Accounts --}}
+                    @if($userLevel >= 4)
+                        <button
+                            type="button"
+                            id="openBosySettingsBtn"
+                            class="mt-5 sm:mt-0 inline-flex items-center justify-center w-9 h-9
+                                   text-cyan-700 hover:text-cyan-800 hover:bg-cyan-50
+                                   rounded-xl border border-cyan-200 transition-colors
+                                   focus:outline-none focus:ring-2 focus:ring-cyan-300"
+                            title="Update BOSY Period & Calendar Year"
+                        >
+                            <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none"
+                                 viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                      d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v14a2 2 0 002 2" />
+                            </svg>
+                        </button>
+                    @endif
                 </div>
             </div>
-
-            <!-- BOSY Search Bar -->
+ 
+            {{-- ── BOSY Edit Modal (only rendered for regional accounts) ── --}}
+            @if($userLevel >= 4)
+            <div
+                id="bosySettingsModal"
+                class="fixed inset-0 z-50 hidden items-center justify-center
+                       bg-black/40 backdrop-blur-sm p-4"
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby="bosyModalTitle"
+            >
+                <div class="bg-white rounded-2xl shadow-xl w-full max-w-md
+                            ring-1 ring-gray-200 overflow-hidden">
+ 
+                    {{-- Modal header --}}
+                    <div class="flex items-center justify-between px-6 py-4
+                                border-b border-gray-100 bg-cyan-50/60">
+                        <h2 id="bosyModalTitle"
+                            class="text-base font-semibold text-gray-800 flex items-center gap-2">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 text-cyan-600"
+                                 fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                      d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v14a2 2 0 002 2"/>
+                            </svg>
+                            Update BOSY Period & Calendar Year
+                        </h2>
+                        <button type="button" id="closeBosyModalBtn"
+                                class="text-gray-400 hover:text-gray-600 rounded-lg
+                                       focus:outline-none focus:ring-2 focus:ring-cyan-300 p-1"
+                                aria-label="Close modal">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none"
+                                 viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                      d="M6 18L18 6M6 6l12 12"/>
+                            </svg>
+                        </button>
+                    </div>
+ 
+                    {{-- Modal body --}}
+                    <div class="px-6 py-5 space-y-5">
+ 
+                        {{-- Alert area (hidden until needed) --}}
+                        <div id="bosyModalAlert" class="hidden rounded-lg px-4 py-3 text-sm font-medium"></div>
+ 
+                        {{-- Calendar Year --}}
+                        <div>
+                            <label for="bosyCalendarYear"
+                                   class="block text-sm font-medium text-gray-700 mb-1.5">
+                                Calendar Year
+                                <span class="text-red-500">*</span>
+                            </label>
+                            <input
+                                type="number"
+                                id="bosyCalendarYear"
+                                min="2000" max="2100"
+                                value="{{ $bosySettings->calendar_year }}"
+                                class="w-full rounded-lg border border-gray-300 px-3.5 py-2.5 text-sm
+                                       text-gray-800 shadow-sm
+                                       focus:border-cyan-400 focus:ring-2 focus:ring-cyan-200
+                                       focus:outline-none transition"
+                                placeholder="e.g. 2025"
+                            >
+                        </div>
+ 
+                        {{-- Period Start --}}
+                        <div>
+                            <label for="bosyPeriodStart"
+                                   class="block text-sm font-medium text-gray-700 mb-1.5">
+                                Period Start
+                                <span class="text-red-500">*</span>
+                            </label>
+                            <input
+                                type="date"
+                                id="bosyPeriodStart"
+                                value="{{ $bosySettings->period_start ? $bosySettings->period_start->format('Y-m-d') : '' }}"
+                                class="w-full rounded-lg border border-gray-300 px-3.5 py-2.5 text-sm
+                                       text-gray-800 shadow-sm
+                                       focus:border-cyan-400 focus:ring-2 focus:ring-cyan-200
+                                       focus:outline-none transition"
+                            >
+                        </div>
+ 
+                        {{-- Period End --}}
+                        <div>
+                            <label for="bosyPeriodEnd"
+                                   class="block text-sm font-medium text-gray-700 mb-1.5">
+                                Period End
+                                <span class="text-red-500">*</span>
+                            </label>
+                            <input
+                                type="date"
+                                id="bosyPeriodEnd"
+                                value="{{ $bosySettings->period_end ? $bosySettings->period_end->format('Y-m-d') : '' }}"
+                                class="w-full rounded-lg border border-gray-300 px-3.5 py-2.5 text-sm
+                                       text-gray-800 shadow-sm
+                                       focus:border-cyan-400 focus:ring-2 focus:ring-cyan-200
+                                       focus:outline-none transition"
+                            >
+                        </div>
+ 
+                        {{-- Optional custom label --}}
+                        <div>
+                            <label for="bosyPeriodLabel"
+                                   class="block text-sm font-medium text-gray-700 mb-1.5">
+                                Custom Period Label
+                                <span class="text-xs text-gray-400 font-normal">(optional — auto-generated if blank)</span>
+                            </label>
+                            <input
+                                type="text"
+                                id="bosyPeriodLabel"
+                                maxlength="60"
+                                value="{{ $bosySettings->period_label ?? '' }}"
+                                placeholder="e.g. 05 June – 25 Dec"
+                                class="w-full rounded-lg border border-gray-300 px-3.5 py-2.5 text-sm
+                                       text-gray-800 shadow-sm
+                                       focus:border-cyan-400 focus:ring-2 focus:ring-cyan-200
+                                       focus:outline-none transition"
+                            >
+                        </div>
+ 
+                        {{-- Info note --}}
+                        <p class="text-xs text-gray-500 bg-amber-50 border border-amber-200
+                                  rounded-lg px-3 py-2.5 leading-relaxed">
+                            <span class="font-semibold text-amber-700">⚠ Regional Account only.</span>
+                            This update is global — the new period and calendar year will be displayed
+                            to <strong>all stations</strong> on their next page load.
+                        </p>
+                    </div>
+ 
+                    {{-- Modal footer --}}
+                    <div class="flex justify-end gap-3 px-6 py-4
+                                border-t border-gray-100 bg-gray-50/60">
+                        <button
+                            type="button"
+                            id="cancelBosyModalBtn"
+                            class="px-4 py-2 rounded-lg text-sm font-medium text-gray-600
+                                   bg-white border border-gray-300 hover:bg-gray-50
+                                   focus:outline-none focus:ring-2 focus:ring-gray-200 transition"
+                        >
+                            Cancel
+                        </button>
+                        <button
+                            type="button"
+                            id="saveBosySettingsBtn"
+                            class="px-5 py-2 rounded-lg text-sm font-semibold text-white
+                                   bg-cyan-600 hover:bg-cyan-700
+                                   focus:outline-none focus:ring-2 focus:ring-cyan-400 transition
+                                   disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                        >
+                            {{-- Spinner (hidden by default) --}}
+                            <svg id="bosySaveSpinner"
+                                 class="hidden animate-spin w-4 h-4 text-white"
+                                 xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                <circle class="opacity-25" cx="12" cy="12" r="10"
+                                        stroke="currentColor" stroke-width="4"/>
+                                <path class="opacity-75" fill="currentColor"
+                                      d="M4 12a8 8 0 018-8v8H4z"/>
+                            </svg>
+                            <span id="bosySaveBtnLabel">Save Changes</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+            @endif
+            {{-- ── End Modal ── --}}
+ 
+            {{-- ── BOSY Search Bar ── --}}
             <div class="bosy-search-wrapper mb-4">
                 <div class="bosy-search-bar">
-                    <svg class="bosy-search-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z" />
+                    <svg class="bosy-search-icon" xmlns="http://www.w3.org/2000/svg" fill="none"
+                         viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round"
+                              d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z"/>
                     </svg>
                     <input
                         type="text"
@@ -330,41 +522,203 @@
                     >
                     <span id="bosySearchCount" class="bosy-search-count hidden"></span>
                 </div>
-                <button type="button" id="bosySearchClear" class="bosy-search-clear hidden" title="Clear search">
-                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="w-4 h-4">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12" />
+                <button type="button" id="bosySearchClear"
+                        class="bosy-search-clear hidden" title="Clear search">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
+                         stroke-width="2.5" stroke="currentColor" class="w-4 h-4">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12"/>
                     </svg>
                 </button>
             </div>
-
-            <!-- Scroll Wrapper -->
+ 
+            {{-- ── Scroll Wrapper ── --}}
             <div class="overflow-x-auto overflow-y-hidden scroll-smooth pb-1 -mb-1">
-
-                <!-- Scroll Container (max 5 items visible) -->
-                <div id="bosy-divisions-container" class="max-h-[360px] overflow-y-auto overflow-x-visible scroll-smooth
+                <div id="bosy-divisions-container"
+                     class="max-h-[360px] overflow-y-auto overflow-x-visible scroll-smooth
                             min-h-[200px] min-w-[480px] pr-1 space-y-1">
-
-                    <!-- Skeleton loaders -->
                     @include('pages.partials.bosy-skeleton')
-
                 </div>
-
             </div>
-
-            <!-- Notes Section -->
+ 
+            {{-- ── Notes ── --}}
             <div class="mt-8 pt-6 border-t border-gray-200
                         text-sm text-gray-600 leading-relaxed space-y-3">
-
                 <p>
                     <span class="font-bold text-red-600">Note:</span>
                     <span class="font-semibold text-gray-800"> Status</span>
                     = Progress based on total LR vs estimated resources. BOSY / EOSY is set by the Regional Account.
-                    It automatically RESETS ALL to 0 when period changes. Finalized data from past period becomes permanent
+                    It automatically RESETS ALL to 0 when period changes. Finalized data from past period becomes permanent.
                 </p>
-                
             </div>
-
+ 
         </x-chart-card>
 
+        @if($userLevel >= 4)
+<script>
+(function () {
+    'use strict';
+ 
+    // ── Element refs ──────────────────────────────────────────────────────────
+    const openBtn       = document.getElementById('openBosySettingsBtn');
+    const modal         = document.getElementById('bosySettingsModal');
+    const closeBtn      = document.getElementById('closeBosyModalBtn');
+    const cancelBtn     = document.getElementById('cancelBosyModalBtn');
+    const saveBtn       = document.getElementById('saveBosySettingsBtn');
+    const spinner       = document.getElementById('bosySaveSpinner');
+    const saveBtnLabel  = document.getElementById('bosySaveBtnLabel');
+    const alertBox      = document.getElementById('bosyModalAlert');
+ 
+    const yearInput     = document.getElementById('bosyCalendarYear');
+    const startInput    = document.getElementById('bosyPeriodStart');
+    const endInput      = document.getElementById('bosyPeriodEnd');
+    const labelInput    = document.getElementById('bosyPeriodLabel');
+ 
+    // ── Display refs (in the card header) ────────────────────────────────────
+    const yearDisplay   = document.getElementById('bosyYearDisplay');
+    const periodDisplay = document.getElementById('bosyPeriodDisplay');
+ 
+    // ── CSRF token (Laravel standard) ────────────────────────────────────────
+    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content ?? '';
+ 
+    // ── Helpers ───────────────────────────────────────────────────────────────
+ 
+    function openModal() {
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
+        hideAlert();
+        setSaving(false);
+    }
+ 
+    function closeModal() {
+        modal.classList.add('hidden');
+        modal.classList.remove('flex');
+        hideAlert();
+    }
+ 
+    function showAlert(message, type = 'error') {
+        alertBox.textContent = message;
+        alertBox.className = [
+            'rounded-lg px-4 py-3 text-sm font-medium',
+            type === 'success'
+                ? 'bg-green-50 border border-green-200 text-green-700'
+                : 'bg-red-50 border border-red-200 text-red-700',
+        ].join(' ');
+        alertBox.classList.remove('hidden');
+    }
+ 
+    function hideAlert() {
+        alertBox.classList.add('hidden');
+        alertBox.textContent = '';
+    }
+ 
+    function setSaving(isSaving) {
+        saveBtn.disabled = isSaving;
+        spinner.classList.toggle('hidden', !isSaving);
+        saveBtnLabel.textContent = isSaving ? 'Saving…' : 'Save Changes';
+    }
+ 
+    // ── Open / Close ──────────────────────────────────────────────────────────
+ 
+    openBtn.addEventListener('click', openModal);
+    closeBtn.addEventListener('click', closeModal);
+    cancelBtn.addEventListener('click', closeModal);
+ 
+    // Close on backdrop click
+    modal.addEventListener('click', function (e) {
+        if (e.target === modal) closeModal();
+    });
+ 
+    // Close on Escape key
+    document.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape' && !modal.classList.contains('hidden')) {
+            closeModal();
+        }
+    });
+ 
+    // ── Save ──────────────────────────────────────────────────────────────────
+ 
+    saveBtn.addEventListener('click', async function () {
+        hideAlert();
+ 
+        // ── Client-side validation ────────────────────────────────────────
+        const year  = parseInt(yearInput.value, 10);
+        const start = startInput.value;
+        const end   = endInput.value;
+        const label = labelInput.value.trim();
+ 
+        if (!year || year < 2000 || year > 2100) {
+            showAlert('Please enter a valid calendar year between 2000 and 2100.');
+            yearInput.focus();
+            return;
+        }
+        if (!start) {
+            showAlert('Please select a period start date.');
+            startInput.focus();
+            return;
+        }
+        if (!end) {
+            showAlert('Please select a period end date.');
+            endInput.focus();
+            return;
+        }
+        if (end < start) {
+            showAlert('Period end date must be on or after the start date.');
+            endInput.focus();
+            return;
+        }
+ 
+        // ── POST to backend ───────────────────────────────────────────────
+        setSaving(true);
+ 
+        try {
+            const response = await fetch('{{ route("dashboard.bosy-settings.update") }}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept':       'application/json',
+                    'X-CSRF-TOKEN': csrfToken,
+                },
+                body: JSON.stringify({
+                    calendar_year: year,
+                    period_start:  start,
+                    period_end:    end,
+                    period_label:  label || null,
+                }),
+            });
+ 
+            const data = await response.json();
+ 
+            if (!response.ok) {
+                // Show Laravel validation errors if present
+                if (data.errors) {
+                    const messages = Object.values(data.errors).flat().join(' ');
+                    showAlert(messages);
+                } else {
+                    showAlert(data.error ?? data.message ?? 'Failed to save. Please try again.');
+                }
+                setSaving(false);
+                return;
+            }
+ 
+            // ── Update header display immediately ─────────────────────
+            yearDisplay.textContent   = `CY ${data.calendar_year}`;
+            periodDisplay.textContent = data.period_display;
+ 
+            showAlert('BOSY settings updated successfully.', 'success');
+ 
+            // Auto-close after a short delay so the user sees the toast
+            setTimeout(closeModal, 1500);
+ 
+        } catch (err) {
+            console.error('BOSY settings update error:', err);
+            showAlert('A network error occurred. Please check your connection and try again.');
+        } finally {
+            setSaving(false);
+        }
+    });
+ 
+})();
+</script>
+@endif
     </div>
 @endsection

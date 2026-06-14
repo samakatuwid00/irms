@@ -7,7 +7,7 @@
 @section('breadcrumb', 'Masterlist')
 
 @section('content')
-    <div class="p-6 space-y-6">
+    <div id="print-resources-wrapper" class="space-y-4">
         <!-- Page Header -->
         <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
             <h1 class="text-2xl font-bold text-gray-800">Non-Print Masterlist</h1>

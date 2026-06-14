@@ -40,6 +40,13 @@
                     containerId: 'table-results-container',
                     viewInputId: 'view-input',
                     viewTargets: ['table-view', 'card-view']
+                },
+                // For Library Hub tab in print-resource-region-account.blade.php
+                hub: {
+                    storageKey: 'print-resources-hub-view',
+                    containerId: 'hub-results-container',
+                    viewInputId: 'hub-view-input',
+                    viewTargets: ['hub-table-view', 'hub-card-view']
                 }
             }
         },
@@ -347,10 +354,26 @@
                 const params = new URLSearchParams(new FormData(form));
                 const url = `${form.action || window.location.pathname}?${params.toString()}`;
 
-                // Determine target container: explicit attribute > nearest tab's container > null
-                const targetId = form.dataset.targetContainer
-                    || form.closest('.tab-content')?.querySelector('[id$="-results-container"]')?.id
-                    || null;
+                // Determine target container: explicit attribute > tab hidden input map > nearest DOM fallback
+                let targetId = form.dataset.targetContainer || null;
+
+                if (!targetId) {
+                    // Map the form's tab value to its results container id
+                    const tabInput = form.querySelector('input[name="tab"]');
+                    const tabValue = tabInput ? tabInput.value : null;
+                    const tabContainerMap = {
+                        'school':      'school-results-container',
+                        'library-hub': 'hub-results-container',
+                        'division':    'division-results-container',
+                        'region':      'table-results-container',
+                    };
+                    targetId = (tabValue && tabContainerMap[tabValue]) ? tabContainerMap[tabValue] : null;
+                }
+
+                // Last-resort: walk up the DOM from the form
+                if (!targetId) {
+                    targetId = form.closest('.tab-content')?.querySelector('[id$="-results-container"]')?.id || null;
+                }
 
                 this._fetchIntoContainer(url, targetId);
             });
@@ -474,7 +497,12 @@
                 }
 
                 // Re-run view restoration so table/card state is preserved after the swap
-                this.detectAndRestoreViews();
+                // Use a short delay to let the DOM settle before restoring views
+                setTimeout(() => {
+                    this.detectAndRestoreViews();
+                    // Re-attach observers for any newly injected containers
+                    this.setupMutationObservers();
+                }, 0);
 
                 // Update the browser URL without a reload so pagination links stay bookmarkable
                 window.history.pushState({}, '', url);
@@ -494,14 +522,20 @@
                 const container = document.getElementById(context.config.containerId);
                 if (container && !container.hasAttribute('data-view-observer')) {
                     container.setAttribute('data-view-observer', 'true');
-                    
+
+                    let debounceTimer = null;
                     const observer = new MutationObserver(() => {
-                        this.restoreViewForContext(context);
+                        // Skip if the container is in the middle of an AJAX swap (opacity dimmed)
+                        if (container.style.opacity === '0.5') return;
+                        clearTimeout(debounceTimer);
+                        debounceTimer = setTimeout(() => {
+                            this.restoreViewForContext(context);
+                        }, 50);
                     });
                     
                     observer.observe(container, {
                         childList: true,
-                        subtree: true
+                        subtree: false  // only direct children — avoids re-firing on every inner DOM change
                     });
                 }
             });

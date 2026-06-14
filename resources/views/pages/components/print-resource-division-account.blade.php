@@ -224,7 +224,7 @@
 
                 @if ($resources instanceof \Illuminate\Pagination\LengthAwarePaginator)
                     <div class="p-4">
-                        {{ $resources->appends(request()->query())->links() }}
+                        {{ $resources->appends(request()->query())->links('pagination::print-resource') }}
                     </div>
                 @endif
             </div>
@@ -291,7 +291,7 @@
 
                 @if ($resources instanceof \Illuminate\Pagination\LengthAwarePaginator)
                     <div class="bg-white rounded-xl shadow p-4 mt-4">
-                        {{ $resources->appends(request()->query())->links() }}
+                        {{ $resources->appends(request()->query())->links('pagination::print-resource') }}
                     </div>
                 @endif
             </div>
@@ -561,7 +561,7 @@
 
                     @if ($filteredResources instanceof \Illuminate\Pagination\LengthAwarePaginator)
                         <div class="p-4">
-                            {{ $filteredResources->appends(request()->query())->links() }}
+                            {{ $filteredResources->appends(request()->query())->links('pagination::print-resource') }}
                         </div>
                     @endif
                 </div>
@@ -617,7 +617,7 @@
 
                     @if ($filteredResources instanceof \Illuminate\Pagination\LengthAwarePaginator)
                         <div class="bg-white rounded-xl shadow p-4 mt-4">
-                            {{ $filteredResources->appends(request()->query())->links() }}
+                            {{ $filteredResources->appends(request()->query())->links('pagination::print-resource') }}
                         </div>
                     @endif
                 </div>

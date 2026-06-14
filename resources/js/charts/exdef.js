@@ -10,6 +10,73 @@ const KEY_STAGE_RANGES = {
 let _exdefFullData = null;
 let _exdefChart    = null;
 
+// Get currently visible (filtered by Key Stage) data
+function getCurrentExdefData() {
+    if (!_exdefFullData || !_exdefChart) return null;
+
+    const ksSelect = document.getElementById('schoolYearFilter');
+    const keyStage = ksSelect ? ksSelect.value : null;
+    
+    const allowedGrades = KEY_STAGE_RANGES[keyStage] ?? null;
+
+    const filtered = allowedGrades
+        ? _exdefFullData.filter(item => allowedGrades.includes(item.grade))
+        : _exdefFullData;
+
+    // Return sorted copy (same as chart)
+    return [...filtered].sort((a, b) => b.exdef - a.exdef);
+}
+
+// Export current filtered data to real Excel (.xlsx)
+function exportToExcel() {
+    const data = getCurrentExdefData();
+    if (!data || data.length === 0) {
+        alert('No chart data available');
+        return;
+    }
+
+    if (typeof XLSX === 'undefined') {
+        const script = document.createElement('script');
+        script.src = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
+        script.onload = () => performExdefExcelExport(data);
+        script.onerror = () => alert('Failed to load Excel library');
+        document.head.appendChild(script);
+        return;
+    }
+
+    performExdefExcelExport(data);
+}
+
+function performExdefExcelExport(data) {
+    const wb = XLSX.utils.book_new();
+    
+    const rows = [];
+    const header = ['Subject', 'Grade', 'ExDef (Difference)'];
+    rows.push(header);
+
+    data.forEach(item => {
+        rows.push([
+            item.subject,
+            item.grade,
+            item.exdef
+        ]);
+    });
+
+    const ws = XLSX.utils.aoa_to_sheet(rows);
+    ws['!cols'] = [
+        { wch: 25 },  // Subject
+        { wch: 15 },  // Grade
+        { wch: 20 }   // ExDef
+    ];
+
+    XLSX.utils.book_append_sheet(wb, ws, "ExDef");
+
+    const ksSelect = document.getElementById('schoolYearFilter');
+    const suffix = ksSelect && ksSelect.value ? `_${ksSelect.value}` : '';
+    XLSX.writeFile(wb, `LR_ExDef${suffix}_${new Date().toISOString().slice(0,10)}.xlsx`);
+}
+
+// Filter and re-render chart based on Key Stage
 function filterAndRenderExdefChart(keyStage) {
     if (!_exdefFullData || !_exdefChart) return;
 
@@ -83,10 +150,91 @@ function buildExdefOption(result, chartDom, myChart) {
             right: 10,
             feature: {
                 mark: { show: true },
-                dataView: { show: true, readOnly: false },
+                dataView: {
+                    show: true,
+                    readOnly: false,
+                    title: 'Data View',
+                    lang: ['Data View', 'Close', 'Refresh'],
+                    
+                    // Excel-style Data View Table
+                    optionToContent: function (opt) {
+                        const data = getCurrentExdefData();
+                        if (!data || data.length === 0) {
+                            return '<div style="padding:20px;color:#666;">No data available</div>';
+                        }
+
+                        let tableHTML = `
+                            <style>
+                                #exdef-excel-table {
+                                    width: 100%;
+                                    border-collapse: collapse;
+                                    font-family: 'Segoe UI', Arial, sans-serif;
+                                    font-size: 14px;
+                                    margin: 10px 0;
+                                    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+                                }
+                                #exdef-excel-table th, #exdef-excel-table td {
+                                    border: 1px solid #999;
+                                    padding: 10px 12px;
+                                    text-align: center;
+                                    white-space: nowrap;
+                                }
+                                #exdef-excel-table th {
+                                    background: linear-gradient(#f8f8f8, #e8e8e8);
+                                    font-weight: bold;
+                                    color: #333;
+                                    position: sticky;
+                                    top: 0;
+                                    z-index: 1;
+                                }
+                                #exdef-excel-table tr:nth-child(even) {
+                                    background-color: #f9f9f9;
+                                }
+                                #exdef-excel-table td:first-child {
+                                    text-align: left;
+                                    font-weight: bold;
+                                }
+                            </style>
+                            <table id="exdef-excel-table">
+                                <thead>
+                                    <tr>
+                                        <th>Subject</th>
+                                        <th>Grade</th>
+                                        <th>ExDef (Difference)</th>
+                                    </tr>
+                                </thead>
+                                <tbody>`;
+
+                        data.forEach(item => {
+                            const color = item.exdef >= 0 ? '#4CAF50' : '#F44336';
+                            tableHTML += `
+                                <tr>
+                                    <td>${item.subject}</td>
+                                    <td>${item.grade}</td>
+                                    <td style="color:${color}; font-weight:600;">
+                                        ${item.exdef}
+                                    </td>
+                                </tr>`;
+                        });
+
+                        tableHTML += `</tbody></table>`;
+                        return tableHTML;
+                    }
+                },
                 magicType: { show: true, type: ['line', 'bar', 'stack'] },
                 restore: { show: true },
                 saveAsImage: { show: true },
+
+                // Dedicated Excel Export Button
+                myExportExcel: {
+                    show: true,
+                    title: 'Export Excel',
+                    icon: 'path://M704 64H256c-35.3 0-64 28.7-64 64v768c0 35.3 28.7 64 64 64h512c35.3 0 64-28.7 64-64V320L704 64zM704 160l64 64h-64v-64zM352 448h96l64 96 64-96h96L576 576l96 128h-96l-64-96-64 96h-96l96-128-96-128z',
+                    onclick: function () {
+                        exportToExcel();
+                    }
+                },
+
                 myFullScreen: {
                     show: true,
                     title: 'Fullscreen',
@@ -136,7 +284,7 @@ function buildExdefOption(result, chartDom, myChart) {
         },
         yAxis: {
             type: 'value',
-            name: 'Difference (LR \u2013 Population)',
+            name: 'Difference (LR – Population)',
             nameLocation: 'middle',
             nameGap: 50,
             nameTextStyle: { color: '#666', fontWeight: 'bold' }
@@ -173,8 +321,7 @@ function buildExdefOption(result, chartDom, myChart) {
 async function reloadExdefChart() {
     if (!_exdefChart) return;
 
-    // showLoading before async work — never mid-render
-    _exdefChart.showLoading({ text: 'Loading\u2026', maskColor: 'rgba(255,255,255,0.7)' });
+    _exdefChart.showLoading({ text: 'Loading…', maskColor: 'rgba(255,255,255,0.7)' });
 
     try {
         const result = await fetchExdefData();
@@ -190,9 +337,8 @@ async function reloadExdefChart() {
 
         _exdefFullData = fullData;
 
-        // Defer setOption to next task — avoids "setOption during main process"
         setTimeout(() => {
-            _exdefChart.setOption(option, /* notMerge */ true);
+            _exdefChart.setOption(option, true);
             _exdefChart.hideLoading();
 
             const ksSelect = document.getElementById('schoolYearFilter');
@@ -234,12 +380,10 @@ async function initExdefChart() {
 
         const { option, fullData } = buildExdefOption(result, chartDom, myChart);
 
-        // Cache full sorted dataset for key-stage slicing
         _exdefFullData = fullData;
 
         myChart.setOption(option, true);
 
-        // Apply default key stage filter on first load
         const ksSelect = document.getElementById('schoolYearFilter');
         if (ksSelect) {
             filterAndRenderExdefChart(ksSelect.value);
@@ -249,7 +393,6 @@ async function initExdefChart() {
             });
         }
 
-        // Re-fetch when print type filter changes
         const printTypeSelect = document.getElementById('printTypeFilter');
         if (printTypeSelect) {
             printTypeSelect.addEventListener('change', () => {

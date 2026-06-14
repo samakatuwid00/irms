@@ -10,6 +10,94 @@ const KEY_STAGE_RANGES = {
 let _heatmapFullData = null;
 let _heatmapChart    = null;
 
+// Get currently visible (filtered by Key Stage) data
+function getCurrentHeatmapData() {
+    if (!_heatmapFullData || !_heatmapChart) return null;
+
+    const { subjects, gradeLevels, rawData, maxValue } = _heatmapFullData;
+    const ksSelect = document.getElementById('schoolYearFilter');
+    const keyStage = ksSelect ? ksSelect.value : null;
+
+    const allowedGrades = KEY_STAGE_RANGES[keyStage] ?? gradeLevels;
+
+    const allowedGradeIndices = gradeLevels
+        .map((g, i) => ({ g, i }))
+        .filter(({ g }) => allowedGrades.includes(g))
+        .map(({ i }) => i);
+
+    const filteredGradeLevels = allowedGradeIndices.map(i => gradeLevels[i]);
+
+    const gradeIndexMap = new Map(
+        allowedGradeIndices.map((origIdx, newIdx) => [origIdx, newIdx])
+    );
+
+    const filteredRawData = rawData
+        .filter(([subjIdx, gradeIdx]) => gradeIndexMap.has(gradeIdx))
+        .map(([subjIdx, gradeIdx, qty]) => ({
+            subject: subjects[subjIdx],
+            grade: gradeLevels[gradeIdx],
+            qty: qty
+        }));
+
+    return {
+        subjects,
+        grades: filteredGradeLevels,
+        data: filteredRawData,
+        maxValue
+    };
+}
+
+// Export current filtered data to real Excel (.xlsx)
+function exportToExcel() {
+    const data = getCurrentHeatmapData();
+    if (!data || !data.data.length) {
+        alert('No chart data available');
+        return;
+    }
+
+    if (typeof XLSX === 'undefined') {
+        const script = document.createElement('script');
+        script.src = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
+        script.onload = () => performHeatmapExcelExport(data);
+        script.onerror = () => alert('Failed to load Excel library');
+        document.head.appendChild(script);
+        return;
+    }
+
+    performHeatmapExcelExport(data);
+}
+
+function performHeatmapExcelExport(data) {
+    const wb = XLSX.utils.book_new();
+    
+    const rows = [];
+    const header = ['Subject', 'Grade', 'Quantity'];
+    rows.push(header);
+
+    const sortedData = [...data.data].sort((a, b) => {
+        if (a.subject !== b.subject) return a.subject.localeCompare(b.subject);
+        return a.grade.localeCompare(b.grade);
+    });
+
+    sortedData.forEach(item => {
+        rows.push([item.subject, item.grade, item.qty]);
+    });
+
+    const ws = XLSX.utils.aoa_to_sheet(rows);
+    ws['!cols'] = [
+        { wch: 30 },  // Subject
+        { wch: 18 },  // Grade
+        { wch: 15 }   // Quantity
+    ];
+
+    XLSX.utils.book_append_sheet(wb, ws, "Heatmap");
+
+    const ksSelect = document.getElementById('schoolYearFilter');
+    const suffix = ksSelect && ksSelect.value ? `_${ksSelect.value}` : '';
+    XLSX.writeFile(wb, `LR_Heatmap${suffix}_${new Date().toISOString().slice(0,10)}.xlsx`);
+}
+
+// Filter and re-render chart based on Key Stage
 function filterAndRenderHeatmapChart(keyStage) {
     if (!_heatmapFullData || !_heatmapChart) return;
 
@@ -62,7 +150,6 @@ function buildHeatmapOption(result) {
     const gradeLevels = result.y_axis;
     const rawData     = result.series_data;
     const maxValue    = result.max_value || 100;
-    const printLabel  = document.getElementById('printTypeFilter')?.selectedOptions[0]?.text || 'All Print Types';
 
     return {
         title: {
@@ -87,10 +174,94 @@ function buildHeatmapOption(result) {
             right: 10,
             feature: {
                 mark: { show: true },
-                dataView: { show: true, readOnly: false },
+                dataView: {
+                    show: true,
+                    readOnly: false,
+                    title: 'Data View',
+                    lang: ['Data View', 'Close', 'Refresh'],
+                    
+                    // Excel-style Data View Table
+                    optionToContent: function (opt) {
+                        const data = getCurrentHeatmapData();
+                        if (!data || !data.data.length) {
+                            return '<div style="padding:20px;color:#666;">No data available</div>';
+                        }
+
+                        let tableHTML = `
+                            <style>
+                                #heatmap-excel-table {
+                                    width: 100%;
+                                    border-collapse: collapse;
+                                    font-family: 'Segoe UI', Arial, sans-serif;
+                                    font-size: 14px;
+                                    margin: 10px 0;
+                                    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+                                }
+                                #heatmap-excel-table th, #heatmap-excel-table td {
+                                    border: 1px solid #999;
+                                    padding: 10px 12px;
+                                    text-align: center;
+                                    white-space: nowrap;
+                                }
+                                #heatmap-excel-table th {
+                                    background: linear-gradient(#f8f8f8, #e8e8e8);
+                                    font-weight: bold;
+                                    color: #333;
+                                    position: sticky;
+                                    top: 0;
+                                    z-index: 1;
+                                }
+                                #heatmap-excel-table tr:nth-child(even) {
+                                    background-color: #f9f9f9;
+                                }
+                                #heatmap-excel-table td:first-child {
+                                    text-align: left;
+                                    font-weight: bold;
+                                }
+                            </style>
+                            <table id="heatmap-excel-table">
+                                <thead>
+                                    <tr>
+                                        <th>Subject</th>
+                                        <th>Grade</th>
+                                        <th>Quantity</th>
+                                    </tr>
+                                </thead>
+                                <tbody>`;
+
+                        const sorted = [...data.data].sort((a, b) => {
+                            if (a.subject !== b.subject) return a.subject.localeCompare(b.subject);
+                            return a.grade.localeCompare(b.grade);
+                        });
+
+                        sorted.forEach(item => {
+                            tableHTML += `
+                                <tr>
+                                    <td>${item.subject}</td>
+                                    <td>${item.grade}</td>
+                                    <td>${item.qty}</td>
+                                </tr>`;
+                        });
+
+                        tableHTML += `</tbody></table>`;
+                        return tableHTML;
+                    }
+                },
                 magicType: { show: true, type: ['line', 'bar', 'stack'] },
                 restore: { show: true },
                 saveAsImage: { show: true },
+
+                // Dedicated Excel Export Button
+                myExportExcel: {
+                    show: true,
+                    title: 'Export Excel',
+                    icon: 'path://M704 64H256c-35.3 0-64 28.7-64 64v768c0 35.3 28.7 64 64 64h512c35.3 0 64-28.7 64-64V320L704 64zM704 160l64 64h-64v-64zM352 448h96l64 96 64-96h96L576 576l96 128h-96l-64-96-64 96h-96l96-128-96-128z',
+                    onclick: function () {
+                        exportToExcel();
+                    }
+                },
+
+                // Fullscreen with white background (updated as requested)
                 myFullScreen: {
                     show: true,
                     title: 'Fullscreen',
@@ -98,9 +269,19 @@ function buildHeatmapOption(result) {
                     onclick: function () {
                         const chartDom = document.getElementById('heatmap');
                         if (!document.fullscreenElement) {
-                            chartDom.requestFullscreen().then(() => _heatmapChart.resize());
+                            chartDom.dataset.originalBg = chartDom.style.backgroundColor || '';
+                            chartDom.style.backgroundColor = '#ffffff';
+                            chartDom.requestFullscreen()
+                                .then(() => _heatmapChart.resize())
+                                .catch(err => {
+                                    console.error('Fullscreen failed:', err);
+                                    chartDom.style.backgroundColor = chartDom.dataset.originalBg;
+                                });
                         } else {
-                            document.exitFullscreen().then(() => _heatmapChart.resize());
+                            document.exitFullscreen().then(() => {
+                                chartDom.style.backgroundColor = chartDom.dataset.originalBg || '';
+                                _heatmapChart.resize();
+                            });
                         }
                     }
                 }
@@ -208,9 +389,8 @@ function reloadHeatmapChart() {
             _heatmapFullData = { subjects, gradeLevels, rawData, maxValue };
 
             const option = buildHeatmapOption(result);
-            _heatmapChart.setOption(option, true); // notMerge = true
+            _heatmapChart.setOption(option, true);
 
-            // Re-apply key stage filter
             const ksSelect = document.getElementById('schoolYearFilter');
             if (ksSelect) {
                 filterAndRenderHeatmapChart(ksSelect.value);

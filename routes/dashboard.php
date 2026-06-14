@@ -29,4 +29,12 @@ Route::middleware('auth')->group(function () {
 
     Route::get('/dashboard/bosy-status', [DashboardController::class, 'getBosyStatusData'])
         ->name('dashboard.bosy-status');
+
+            Route::get('/dashboard/bosy-settings', [DashboardController::class, 'getBosySettings'])
+        ->name('dashboard.bosy-settings.get');
+ 
+    // POST — only Regional Accounts (level ≥ 4); controller enforces this
+    Route::post('/dashboard/bosy-settings', [DashboardController::class, 'updateBosySettings'])
+        ->name('dashboard.bosy-settings.update');
+ 
 });

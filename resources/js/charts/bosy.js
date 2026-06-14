@@ -293,14 +293,14 @@ function createItemElement(item) {
     if (isSchoolItem) {
         // Division account: school name → Print Resources school tab, pre-filtered (blue)
         schoolNameHtml = `<a href="/print-resources?tab=school&district=${encodeURIComponent(item.district.id)}&school=${encodeURIComponent(item.id)}"
-              class="text-sm sm:text-base font-semibold text-gray-900 hover:text-gray-600 hover:underline truncate block transition-colors cursor-pointer"
+              class="text-sm sm:text-base font-semibold text-gray-900 hover:text-blue-600 truncate block transition-colors cursor-pointer"
               title="View ${escapeHtml(item.name)} resources in Print Resources">
                ${escapeHtml(item.shortname || item.name)}
            </a>`;
     } else if (isDivisionItem) {
         // Region account: division name → Print Resources, pre-filtered by division (black)
-        schoolNameHtml = `<a href="/print-resources?division=${encodeURIComponent(item.id)}"
-              class="text-sm sm:text-base font-semibold text-gray-900 hover:text-gray-600 hover:underline truncate block transition-colors cursor-pointer"
+        schoolNameHtml = `<a href="print-resources?tab=library-hub?tab=library-hub&hub_view=card&per_page=10&hub_search=&hub_division=${encodeURIComponent(item.id)}&hub_library=all"
+              class="text-sm sm:text-base font-semibold text-gray-900 hover:text-blue-600 truncate block transition-colors cursor-pointer"
               title="View ${escapeHtml(item.name)} resources in Print Resources">
                ${escapeHtml(item.shortname || item.name)}
            </a>`;

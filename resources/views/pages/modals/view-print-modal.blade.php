@@ -1,9 +1,12 @@
 <!-- Print Resource View Modal -->
 <div id="viewPrintModal" class="fixed inset-0 bg-black/50 z-50 hidden flex items-center justify-center p-4">
-    <div class="bg-white rounded-xl shadow-2xl max-w-7xl w-full max-h-[90vh] overflow-y-auto">
-        <div class="flex justify-between items-center p-6 border-b border-gray-300 bg-blue-50 sticky top-0 z-10">
+    <div class="bg-white rounded-2xl shadow-2xl max-w-7xl w-full max-h-[92vh] overflow-hidden flex flex-col">
+        
+        <!-- Header -->
+        <div class="flex justify-between items-center p-5 md:p-6 border-b border-gray-200 bg-blue-50 sticky top-0 z-20">
             <h2 class="text-2xl font-bold text-gray-800">Print Resource Details</h2>
-            <button type="button" onclick="closePrintModal()" class="text-gray-500 hover:text-gray-700 transition-colors">
+            <button type="button" onclick="closePrintModal()" 
+                    class="text-gray-500 hover:text-gray-700 transition-colors p-2 -mr-2">
                 <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
                 </svg>
@@ -11,128 +14,136 @@
         </div>
 
         <!-- Body -->
-        <div class="p-6 space-y-8">
+        <div class="flex-1 overflow-y-auto p-5 md:p-6 space-y-8">
+            
             <!-- Image + Basic Info -->
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div class="shrink-0 flex justify-center" style="width:290px;">
-                    <img id="printImage"
-                         src=""
-                         alt="Book Cover"
-                         onerror="this.src='{{ asset('assets/images/default.jpg') }}'"
-                         class="w-full max-h-[460px] object-contain rounded-lg border border-gray-300 shadow-md bg-gray-100">
-                </div>
-                <div class="md:col-span-2 space-y-5">
-                    <div>
-                        <label class="text-sm font-medium text-gray-500">Title</label>
-                        <p id="printTitle" class="text-xl font-semibold text-gray-900 mt-1"></p>
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8">
+                <!-- Image -->
+                <div class="lg:col-span-4 xl:col-span-3 flex justify-center lg:justify-start">
+                    <div class="w-full max-w-[280px] lg:max-w-none">
+                        <img id="printImage"
+                             src=""
+                             alt="Book Cover"
+                             onerror="this.src='{{ asset('assets/images/default.jpg') }}'"
+                             class="w-full h-auto max-h-[420px] object-contain rounded-xl border border-gray-200 shadow-md bg-gray-50">
                     </div>
-                    <div class="grid grid-cols-2 gap-4">
+                </div>
+
+                <!-- Basic Info -->
+                <div class="lg:col-span-8 xl:col-span-9 space-y-6">
+                    <div>
+                        <label class="text-sm font-medium text-gray-500 block mb-1">Title</label>
+                        <p id="printTitle" class="text-2xl font-semibold text-gray-900 leading-tight"></p>
+                    </div>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-5 text-sm">
                         <div>
-                            <label class="text-sm font-medium text-gray-500">Author</label>
-                            <p id="printAuthor" class="text-gray-900 mt-1"></p>
+                            <label class="text-gray-500">Author</label>
+                            <p id="printAuthor" class="font-medium text-gray-900 mt-0.5"></p>
                         </div>
                         <div>
-                            <label class="text-sm font-medium text-gray-500">Publisher</label>
-                            <p id="printPublisher" class="text-gray-900 mt-1"></p>
+                            <label class="text-gray-500">Publisher</label>
+                            <p id="printPublisher" class="font-medium text-gray-900 mt-0.5"></p>
                         </div>
                         <div>
-                            <label class="text-sm font-medium text-gray-500">Type</label>
-                            <p id="printType" class="text-gray-900 mt-1"></p>
+                            <label class="text-gray-500">Type</label>
+                            <p id="printType" class="font-medium text-gray-900 mt-0.5"></p>
                         </div>
                         <div>
-                            <label class="text-sm font-medium text-gray-500">ISBN</label>
-                            <p id="printISBN" class="font-mono text-gray-900 mt-1"></p>
+                            <label class="text-gray-500">ISBN</label>
+                            <p id="printISBN" class="font-mono text-gray-900 mt-0.5"></p>
                         </div>
                         <div>
-                            <label class="text-sm font-medium text-gray-500">Copyright Year</label>
-                            <p id="printCopyright" class="text-gray-900 mt-1"></p>
+                            <label class="text-gray-500">Copyright Year</label>
+                            <p id="printCopyright" class="font-medium text-gray-900 mt-0.5"></p>
                         </div>
                         <div>
-                            <label class="text-sm font-medium text-gray-500">Pages</label>
-                            <p id="printPages" class="text-gray-900 mt-1"></p>
+                            <label class="text-gray-500">Pages</label>
+                            <p id="printPages" class="font-medium text-gray-900 mt-0.5"></p>
                         </div>
                     </div>
                 </div>
             </div>
 
             <!-- Subject Assignment -->
-            <div class="border-t border-gray-300 pt-6">
+            <div class="border-t border-gray-200 pt-6">
                 <h3 class="text-lg font-semibold mb-3 text-gray-800">Subject Assignment</h3>
-                <div id="printSubjects" class="bg-gray-50 p-4 rounded-lg min-h-15">
-                    <!-- Will be filled by JS -->
+                <div id="printSubjects" class="bg-gray-50 p-5 rounded-xl min-h-[60px] text-gray-700">
+                    <!-- Filled by JS -->
                 </div>
             </div>
 
             <!-- Acquisition History -->
-            <div class="border-t border-gray-300 pt-6">
+            <div class="border-t border-gray-200 pt-6">
                 <h3 class="text-lg font-semibold mb-3 text-gray-800">Acquisition History</h3>
-                <div class="overflow-x-auto border border-gray-300 rounded-lg">
-                    <table class="w-full text-sm px-2" id="printAcquisitionTable" data-user-level="{{ $level }}">
-                        <thead class="bg-gray-100">
-                            <tr>
+                <div class="overflow-x-auto border border-gray-200 rounded-xl shadow-sm">
+                    <table class="w-full text-sm divide-y divide-gray-200 min-w-[900px]" id="printAcquisitionTable" data-user-level="{{ $level }}">
+                        <thead class="bg-gray-100 sticky top-0 z-10">
+                            <tr class="text-xs uppercase tracking-wider text-gray-600">
                                 @if($level == 4)
-                                    <th class="border-b border-gray-300 px-1.5 py-.5 text-left">Division</th>
+                                    <th class="px-3 py-3 text-left font-medium whitespace-nowrap">Division</th>
                                 @endif
-                                <th class="border-b border-gray-300 px-.5 py-.5 text-left">Station</th>
-                                <th class="border-b border-gray-300 px-.5 py-.5 text-left">Source</th>
-                                <th class="border-b border-gray-300 px-.5 py-.5 text-left">Date Acquired</th>
-                                <th class="border-b border-gray-300 px-.5 py-.5 text-left">Cost</th>
-                                <th class="border-b border-gray-300 px-.5 py-.5 text-left">IAR No.</th>
-                                <th class="border-b border-gray-300 px-.5 py-.5 text-left">Remarks</th>
-                                <th class="border-b border-gray-300 px-.5 py-.5 text-center">Usable</th>
-                                <th class="border-b border-gray-300 px-.5 py-.5 text-center">PD</th>
-                                <th class="border-b border-gray-300 px-.5 py-.5 text-center">Damaged</th>
-                                <th class="border-b border-gray-300 px-.5 py-.5 text-center">Lost</th>
-                                <th class="border-b border-gray-300 px-.5 py-.5 text-center">Cond.</th>
-                                <th class="border-b border-gray-300 px-.5 py-.5 text-center">Total</th>
+                                <th class="px-3 py-3 text-left font-medium whitespace-nowrap">Station</th>
+                                <th class="px-3 py-3 text-left font-medium whitespace-nowrap">Source</th>
+                                <th class="px-3 py-3 text-left font-medium whitespace-nowrap">Date Acquired</th>
+                                <th class="px-3 py-3 text-left font-medium whitespace-nowrap">Cost</th>
+                                <th class="px-3 py-3 text-left font-medium whitespace-nowrap">IAR No.</th>
+                                <th class="px-3 py-3 text-left font-medium whitespace-nowrap">Remarks</th>
+                                <th class="px-2 py-3 text-center font-medium">Usable</th>
+                                <th class="px-2 py-3 text-center font-medium">PD</th>
+                                <th class="px-2 py-3 text-center font-medium">Damaged</th>
+                                <th class="px-2 py-3 text-center font-medium">Lost</th>
+                                <th class="px-2 py-3 text-center font-medium">Cond.</th>
+                                <th class="px-2 py-3 text-center font-medium bg-blue-50">Total</th>
+                            </tr>
                         </thead>
-                        <tbody id="printAcquisitionBody" class="divide-y">
-                            <!-- Will be filled by JS -->
+                        <tbody id="printAcquisitionBody" class="divide-y divide-gray-100 text-gray-700">
+                            <!-- Filled by JS -->
                         </tbody>
                     </table>
                 </div>
             </div>
 
             <!-- Quantity Summary -->
-            <div class="bg-linear-to-br from-blue-50 to-indigo-50 rounded-lg p-6 border-t border-gray-300">
-                <h4 class="font-semibold text-gray-700 mb-4 text-lg">Overall Quantity Summary</h4>
-                <div class="grid grid-cols-3 md:grid-cols-6 gap-2 text-center">
-                    <div class="bg-white pt-1 rounded-lg shadow-sm">
-                        <strong class="text-2xl text-green-600 block" id="printUsable">0</strong>
+            <div class="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-2xl p-6 border border-blue-100">
+                <h4 class="font-semibold text-gray-700 mb-5 text-lg">Overall Quantity Summary</h4>
+                <div class="grid grid-cols-3 sm:grid-cols-6 gap-4 text-center">
+                    <div class="bg-white rounded-xl py-3 shadow-sm">
+                        <strong id="printUsable" class="text-3xl text-green-600 block">0</strong>
                         <span class="text-xs text-gray-600 mt-1 block">Usable</span>
                     </div>
-                    <div class="bg-white pt-1 rounded-lg shadow-sm">
-                        <strong class="text-2xl text-yellow-600 block" id="printPD">0</strong>
+                    <div class="bg-white rounded-xl py-3 shadow-sm">
+                        <strong id="printPD" class="text-3xl text-yellow-600 block">0</strong>
                         <span class="text-xs text-gray-600 mt-1 block">Partially Damaged</span>
                     </div>
-                    <div class="bg-white pt-1 rounded-lg shadow-sm">
-                        <strong class="text-2xl text-red-600 block" id="printDamaged">0</strong>
+                    <div class="bg-white rounded-xl py-3 shadow-sm">
+                        <strong id="printDamaged" class="text-3xl text-red-600 block">0</strong>
                         <span class="text-xs text-gray-600 mt-1 block">Damaged</span>
                     </div>
-                    <div class="bg-white pt-1 rounded-lg shadow-sm">
-                        <strong class="text-2xl text-purple-600 block" id="printLost">0</strong>
+                    <div class="bg-white rounded-xl py-3 shadow-sm">
+                        <strong id="printLost" class="text-3xl text-purple-600 block">0</strong>
                         <span class="text-xs text-gray-600 mt-1 block">Lost</span>
                     </div>
-                    <div class="bg-white pt-1 rounded-lg shadow-sm">
-                        <strong class="text-2xl text-gray-800 block" id="printCondemnable">0</strong>
+                    <div class="bg-white rounded-xl py-3 shadow-sm">
+                        <strong id="printCondemnable" class="text-3xl text-gray-700 block">0</strong>
                         <span class="text-xs text-gray-600 mt-1 block">Condemnable</span>
                     </div>
-                    <div class="bg-white pt-1 rounded-lg shadow-sm md:col-span-1 border-2 border-blue-200">
-                        <strong class="text-3xl text-blue-600 block" id="printTotal">0</strong>
-                        <span class="text-sm font-bold text-blue-600 mt-1 block">Total</span>
+                    <div class="bg-white rounded-xl py-3 shadow-sm border-2 border-blue-200">
+                        <strong id="printTotal" class="text-4xl text-blue-600 block">0</strong>
+                        <span class="text-sm font-bold text-blue-600 mt-1 block">TOTAL</span>
                     </div>
                 </div>
             </div>
         </div>
-        
+
         <!-- Footer -->
-        <div class="flex justify-end p-6 border-t border-gray-300 gap-3 bg-gray-50 sticky bottom-0">
-            <button type="button"
-                    onclick="closePrintModal()"
-                    class="px-5 py-2 border border-gray-600 rounded-lg hover:bg-gray-300 transition-colors">
+        <div class="border-t border-gray-200 bg-gray-50 p-5 md:p-6 flex justify-end sticky bottom-0 z-20">
+            <button type="button" onclick="closePrintModal()"
+                    class="px-6 py-3 border border-gray-400 rounded-xl hover:bg-gray-100 transition-colors font-medium">
                 Close
             </button>
         </div>
     </div>
 </div>
+
 @vite('resources/js/view-print-modal.js')
