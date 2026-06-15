@@ -71,7 +71,7 @@
 
         /* Before Alpine boots: show skeleton, hide real content */
         #sidebar-skeleton      { display: flex; flex-direction: column; flex: 1; overflow: hidden; }
-        #sidebar-real-content  { display: none; flex-direction: column; flex: 1; }
+        #sidebar-real-content  { display: none; flex-direction: column; flex: 1; min-height: 0; overflow: hidden; }
 
         /* After Alpine adds .sidebar-ready: swap them */
         #desktop-sidebar.sidebar-ready #sidebar-skeleton      { display: none; }
@@ -505,7 +505,7 @@
             <!-- ══ END SIDEBAR SKELETON ══════════════════════════════════════ -->
 
             <!-- ══ REAL SIDEBAR CONTENT (hidden until Alpine ready) ══════════ -->
-            <div id="sidebar-real-content">
+            <div id="sidebar-real-content" class="flex flex-col h-full overflow-hidden">
             <div class="flex items-center border-b border-gray-300 shrink-0 p-4"
                  :class="collapsed ? 'flex-col gap-3 py-4 px-2' : 'justify-between'">
                 <div class="flex items-center gap-3">
@@ -527,7 +527,7 @@
                 </button>
             </div>
 
-            <nav class="p-3 flex-1 overflow-y-auto overflow-x-hidden">
+            <nav class="p-3 flex-1 overflow-y-auto overflow-x-hidden min-h-0">
                 <ul class="space-y-1">
 
                     <!-- Dashboard -->
@@ -882,17 +882,17 @@
                 </ul>
             </nav>
 
-            <div x-show="!collapsed" x-cloak x-transition.opacity.duration.200ms class="p-8">
+            <div x-show="!collapsed" x-cloak x-transition.opacity.duration.200ms class="p-8 shrink-0">
                 <div class="flex items-center justify-center">
                     <img src="{{ Auth::user()?->station_logo_url ?? asset('assets/images/logo.png') }}" alt="Logo" class="h-20 w-auto">
                 </div>
             </div>
-            <div x-show="collapsed" x-cloak x-transition.opacity.duration.200ms class="py-4 flex items-center justify-center">
+            <div x-show="collapsed" x-cloak x-transition.opacity.duration.200ms class="py-4 flex items-center justify-center shrink-0">
                 <img src="{{ Auth::user()?->station_logo_url ?? asset('assets/images/logo.png') }}" alt="Logo" class="h-8 w-8 object-contain">
             </div>
 
             <!-- User Menu -->
-            <footer class="mt-auto border-t border-gray-300 p-2 mb-5 relative"
+            <footer class="shrink-0 border-t border-gray-300 p-2 mb-5 relative"
                     x-data="{ accountOpen: false }" @click.outside="accountOpen = false">
 
                 {{-- ── COLLAPSED: avatar-only button + fixed portal flyout ──
