@@ -573,7 +573,7 @@
                     </select>
                 </div>
                 {{-- Hidden input so JS and per-page onchange can always read the current view --}}
-                <input type="hidden" id="rq-view-input" value="{{ request('rq_view', 'table') }}">
+                <input type="hidden" id="rq-view-input" value="{{ request('rq_view', 'card') }}">
                 <div class="flex items-center bg-gray-100 p-1 rounded-xl">
                     <button type="button"
                         class="rq-view-toggle-btn px-4 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-1.5"
