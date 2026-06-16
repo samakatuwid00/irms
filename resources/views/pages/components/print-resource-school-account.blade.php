@@ -54,13 +54,11 @@
             </form>
         </div>
 
-        <!-- Button row: estimated resource + export + per page + view toggle -->
+        <!-- Button row: export + per page + view toggle -->
         <div class="flex flex-col lg:flex-row lg:items-start justify-between gap-4 mt-4">
 
-            <!-- Left side: Export + Estimated Resources -->
+            <!-- Left side: Export -->
             <div class="flex flex-col sm:flex-row sm:items-center gap-3 w-full lg:w-auto">
-                
-                <!-- Export Button -->
                 <a href="{{ route('print-resources.export', array_merge(request()->query(), ['tab' => 'school'])) }}"
                     class="inline-flex items-center justify-center sm:justify-start gap-2 px-5 py-2.5 bg-green-600 hover:bg-green-700 text-white rounded-xl transition-colors text-sm font-medium w-full sm:w-auto whitespace-nowrap">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -70,43 +68,6 @@
                     <span class="hidden xs:inline">Export to Excel</span>
                     <span class="xs:hidden">Export to Excel</span>
                 </a>
-
-                <!-- Estimated Resources Form -->
-                <form action="{{ route('school-library.update-estimated-resource') }}" method="POST"
-                    class="flex flex-wrap items-center gap-2 bg-gray-50 rounded-xl px-4 py-3 border border-gray-200 w-full sm:w-auto">
-                    @csrf
-                    @method('PATCH')
-
-                    <label for="estimated_resource" class="text-sm font-medium text-gray-700 whitespace-nowrap">
-                        Estimated Resources:
-                    </label>
-
-                    <input type="number" name="estimated_resource" id="estimated_resource" min="0"
-                        value="{{ $schoolLibrary->estimated_resource ?? 0 }}"
-                        class="w-24 h-9 px-3 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                        required>
-
-                    <button type="submit"
-                        class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-colors whitespace-nowrap">
-                        Save
-                    </button>
-
-                    <span class="text-gray-600 text-xs border-l border-gray-300 pl-3 ml-1 whitespace-nowrap hidden sm:inline">
-                        ({{ $countPercent->pct_of_estimated ?? 0 }}% of estimated)
-                    </span>
-
-                    @if (session('success'))
-                        <div x-data="{ show: true }" x-show="show" x-transition x-init="setTimeout(() => show = false, 3000)"
-                            class="flex items-center gap-1 px-2 py-1 text-xs text-green-800 bg-green-100 rounded-lg whitespace-nowrap">
-                            <span>{{ session('success') }}</span>
-                            <button type="button" @click="show = false" class="font-bold">✕</button>
-                        </div>
-                    @endif
-
-                    @error('estimated_resource')
-                        <span class="text-xs text-red-600">{{ $message }}</span>
-                    @enderror
-                </form>
             </div>
 
             <!-- Right side: Per Page + View Toggle -->

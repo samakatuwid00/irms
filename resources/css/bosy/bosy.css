@@ -301,6 +301,22 @@
         background-color: #f59e0b;
     }
 
+    /* ── Inline pre-inventory editor (SDO supply officers) ── */
+    .bosy-pre-inventory-btn:focus-visible {
+        outline: 2px solid #6366f1;
+        outline-offset: 1px;
+    }
+
+    .bosy-pre-inventory-input::-webkit-outer-spin-button,
+    .bosy-pre-inventory-input::-webkit-inner-spin-button {
+        -webkit-appearance: none;
+        margin: 0;
+    }
+
+    .bosy-pre-inventory-input {
+        -moz-appearance: textfield;
+    }
+
     /* ── Row grid layout ── */
         .bosy-row-grid {
             display: grid;

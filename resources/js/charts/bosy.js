@@ -8,6 +8,11 @@ let bosyAllItems = [];
 let currentBosyLevel = 'region'; // 'region' or 'division'
 let bosySearchTerm = '';
 let bosySearchDebounceTimer = null;
+let canEditPreInventory = false;
+let preInventoryBaseUrl = '/dashboard/school';
+let preInventoryHandlersBound = false;
+// Add near the top with other variables
+let currentUserTypeId = null;
 
 // Cache for universal search at division level (all schools across all districts)
 let bosyFullDivisionItems = null;
@@ -15,6 +20,14 @@ let bosyFullDivisionPrintType = null;
 let bosyFullDivisionFetching = false;
 
 function initBosyStatus() {
+    const bosyCard = document.getElementById('bosy-status');
+    if (bosyCard) {
+        canEditPreInventory = bosyCard.dataset.canEditPreInventory === '1';
+        currentUserTypeId = bosyCard.dataset.userTypeId || null;
+    }
+
+    bindPreInventoryHandlers();
+
     const regionSelect = document.getElementById('regionFilter');
     const districtSelect = document.getElementById('divisionFilter'); // level 3 district dropdown
     const printTypeSelect = document.getElementById('bosyPrintTypeFilter');
@@ -147,6 +160,7 @@ function fetchBosyStatus(isFullRefresh = false, hubFilter = '', districtFilter =
 
             currentBosyLevel = data.level || 'region';
             bosyAllItems = data.items || [];
+            canEditPreInventory = data.can_edit_pre_inventory === true || canEditPreInventory;
 
             // Update title based on level
             updateBosyTitle(currentBosyLevel, data.station_name, data.district_name);
@@ -272,14 +286,11 @@ function renderAllItems(container) {
 function createItemElement(item) {
     const div = document.createElement('div');
     div.className = 'flex items-center gap-3 bosy-item';
+    div.dataset.itemId = String(item.id);
 
     const statusClass = getStatusClass(item.status);
     const statusLabel = item.status || 'Unknown';
-
-    // For school level, show role under name instead of pre-inventory count
-    const subtitleHtml = item.role
-        ? `<p class="text-xs text-indigo-500 mt-0.5 truncate">${escapeHtml(item.role)}</p>`
-        : `<p class="text-xs text-indigo-500 mt-0.5 truncate">Pre-Inventory: ${formatNumber(item.estimated_resource || 0)}</p>`;
+    const subtitleHtml = buildSubtitleHtml(item);
 
     // Determine initial logo source
     const logoSource = item.logo || '/assets/images/no_image.jpg';
@@ -357,6 +368,225 @@ function createItemElement(item) {
     `;
 
     return div;
+}
+
+function buildSubtitleHtml(item) {
+    if (item.role) {
+        return `<p class="text-xs text-indigo-500 mt-0.5 truncate">${escapeHtml(item.role)}</p>`;
+    }
+
+    const targetUserType = 'fd43d1da-64c7-4be2-9f2c-d419f599404f';
+    const isSdoSupplyOfficer = String(currentUserTypeId || '').trim() === targetUserType;
+    const isEditableSchoolRow = isSdoSupplyOfficer && currentBosyLevel === 'division';
+
+    const displayValue = isEditableSchoolRow
+        ? (item.estimated_print ?? item.estimated_resource ?? 0)
+        : (item.estimated_resource || 0);
+
+    if (isEditableSchoolRow) {
+        return `
+            <div class="bosy-pre-inventory flex items-center gap-1.5 mt-0.5 min-w-0" data-school-id="${escapeHtml(String(item.id))}">
+                <span class="text-xs text-indigo-500 whitespace-nowrap">Pre-Inventory:</span>
+                <span class="bosy-pre-inventory-display text-xs font-semibold text-indigo-700 truncate">${formatNumber(displayValue)}</span>
+                <input
+                    type="number"
+                    min="0"
+                    class="bosy-pre-inventory-input hidden w-20 h-6 px-1.5 text-xs border border-indigo-300 rounded focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500"
+                    value="${displayValue}"
+                    aria-label="Pre-inventory count for ${escapeHtml(item.shortname || item.name)}"
+                />
+            <button
+                type="button"
+                class="bosy-pre-inventory-btn flex-shrink-0 p-0.5 text-indigo-600 hover:text-indigo-800 hover:bg-indigo-50 rounded transition-colors disabled:opacity-50 cursor-pointer"
+                title="Edit pre-inventory"
+                aria-label="Edit pre-inventory"
+            >
+                <!-- Edit Icon (Flaticon) -->
+                <img 
+                    src="https://cdn-icons-png.flaticon.com/512/1827/1827933.png" 
+                    alt="Edit"
+                    class="w-3.5 h-3.5 bosy-pre-inventory-icon-edit"
+                >
+
+                <!-- Save Icon (Check mark in black) -->
+                <svg class="w-3.5 h-3.5 bosy-pre-inventory-icon-save hidden" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" stroke="black"/>
+                </svg>
+            </button>
+            </div>
+        `;
+    }
+
+    return `<p class="text-xs text-indigo-500 mt-0.5 truncate">Pre-Inventory: ${formatNumber(displayValue)}</p>`;
+}
+
+function bindPreInventoryHandlers() {
+    if (preInventoryHandlersBound) return;
+
+    const container = document.getElementById('bosy-divisions-container');
+    if (!container) return;
+
+    container.addEventListener('click', handlePreInventoryClick);
+    preInventoryHandlersBound = true;
+}
+
+async function handlePreInventoryClick(event) {
+    const btn = event.target.closest('.bosy-pre-inventory-btn');
+    if (!btn) return;
+
+    event.preventDefault();
+    event.stopPropagation();
+
+    const wrapper = btn.closest('.bosy-pre-inventory');
+    if (!wrapper) return;
+
+    const display = wrapper.querySelector('.bosy-pre-inventory-display');
+    const input = wrapper.querySelector('.bosy-pre-inventory-input');
+    const editIcon = btn.querySelector('.bosy-pre-inventory-icon-edit');
+    const saveIcon = btn.querySelector('.bosy-pre-inventory-icon-save');
+    const isEditing = input && !input.classList.contains('hidden');
+
+    if (!isEditing) {
+        display.classList.add('hidden');
+        input.classList.remove('hidden');
+        input.focus();
+        input.select();
+        editIcon.classList.add('hidden');
+        saveIcon.classList.remove('hidden');
+        btn.title = 'Save pre-inventory';
+        btn.setAttribute('aria-label', 'Save pre-inventory');
+        return;
+    }
+
+    const schoolId = wrapper.dataset.schoolId;
+    const newValue = parseInt(input.value, 10);
+
+    if (Number.isNaN(newValue) || newValue < 0) {
+        window.alert('Please enter a valid non-negative number.');
+        return;
+    }
+
+    const token = document.querySelector('meta[name="csrf-token"]')?.content;
+    btn.disabled = true;
+
+    try {
+        const response = await fetch(`${preInventoryBaseUrl}/${encodeURIComponent(schoolId)}/pre-inventory`, {
+            method: 'PATCH',
+            headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json',
+                'X-CSRF-TOKEN': token || '',
+                'X-Requested-With': 'XMLHttpRequest',
+            },
+            body: JSON.stringify({ estimated_resource: newValue }),
+        });
+
+        const data = await response.json();
+        if (!response.ok) {
+            throw new Error(data.error || data.message || 'Failed to save pre-inventory.');
+        }
+
+        updateCachedPreInventory(schoolId, data, newValue);
+        updateRowAfterPreInventorySave(wrapper.closest('.bosy-item'), schoolId, data);
+
+        display.textContent = formatNumber(newValue);
+        display.classList.remove('hidden');
+        input.classList.add('hidden');
+        editIcon.classList.remove('hidden');
+        saveIcon.classList.add('hidden');
+        btn.title = 'Edit pre-inventory';
+        btn.setAttribute('aria-label', 'Edit pre-inventory');
+    } catch (err) {
+        window.alert(err.message || 'Failed to save pre-inventory.');
+    } finally {
+        btn.disabled = false;
+    }
+}
+
+function updateCachedPreInventory(schoolId, data, printValue) {
+    const patchItem = (item) => {
+        if (String(item.id) !== String(schoolId)) return item;
+
+        return {
+            ...item,
+            estimated_print: printValue,
+            estimated_resource: data.estimated_resource ?? item.estimated_resource,
+            estimated_nonprint: data.estimated_nonprint ?? item.estimated_nonprint,
+            percentage: calculateBosyPercentage(item.total_lr, data.estimated_resource ?? item.estimated_resource),
+            status: determineBosyStatus(calculateBosyPercentage(item.total_lr, data.estimated_resource ?? item.estimated_resource)),
+            color: determineBosyColor(calculateBosyPercentage(item.total_lr, data.estimated_resource ?? item.estimated_resource)),
+        };
+    };
+
+    bosyAllItems = bosyAllItems.map(patchItem);
+
+    if (bosyFullDivisionItems) {
+        bosyFullDivisionItems = bosyFullDivisionItems.map(patchItem);
+    }
+}
+
+function updateRowAfterPreInventorySave(row, schoolId, data) {
+    if (!row) return;
+
+    const item = bosyAllItems.find(entry => String(entry.id) === String(schoolId));
+    const totalLr = item?.total_lr ?? 0;
+    const percentage = calculateBosyPercentage(totalLr, data.estimated_resource ?? 0);
+    const status = determineBosyStatus(percentage);
+    const color = determineBosyColor(percentage);
+    const statusClass = getStatusClass(status);
+
+    const progressBar = row.querySelector('.bosy-col-bar .origin-left');
+    if (progressBar) {
+        progressBar.className = `${color} h-full rounded-full origin-left transition-transform duration-300 ease-out`;
+        progressBar.style.setProperty('--progress', `${percentage / 100}`);
+        progressBar.style.transform = 'scaleX(var(--progress))';
+    }
+
+    const percentageEl = row.querySelector('.bosy-col-pct p:last-child');
+    if (percentageEl) {
+        percentageEl.textContent = `${percentage}%`;
+    }
+
+    const statusBadge = row.querySelector('.status-badge');
+    if (statusBadge) {
+        statusBadge.className = `status-badge ${statusClass}`;
+        statusBadge.title = status;
+        statusBadge.setAttribute('aria-label', status);
+
+        const statusLabel = statusBadge.querySelector('.status-label');
+        if (statusLabel) {
+            statusLabel.textContent = status;
+        }
+    }
+}
+
+function calculateBosyPercentage(total, estimated) {
+    const totalLr = Number(total) || 0;
+    const estimatedTotal = Number(estimated) || 0;
+
+    if (estimatedTotal > 0) {
+        return Math.min(100, Math.round((totalLr / estimatedTotal) * 100));
+    }
+
+    return totalLr > 0 ? 100 : 0;
+}
+
+function determineBosyStatus(percentage) {
+    if (percentage === 0) return 'Not Started';
+    if (percentage < 25) return 'Partial';
+    if (percentage < 50) return 'In-progress';
+    if (percentage < 75) return 'Advanced';
+    if (percentage < 100) return 'In-review';
+    return 'Complete';
+}
+
+function determineBosyColor(percentage) {
+    if (percentage === 0) return 'bg-gray-400';
+    if (percentage < 25) return 'bg-red-600';
+    if (percentage < 50) return 'bg-green-600';
+    if (percentage < 75) return 'bg-purple-500';
+    if (percentage < 100) return 'bg-yellow-500';
+    return 'bg-emerald-500';
 }
 
 function getStatusClass(status) {

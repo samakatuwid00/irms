@@ -288,7 +288,15 @@
 
         </div>
 
-<x-chart-card id="bosy-status" title="BOSY Status" class="chart-container">
+        <x-chart-card
+            id="bosy-status"
+            title="BOSY Status"
+            class="chart-container"
+            data-user-level="{{ $userLevel }}"
+            data-user-type-id="{{ $userTypeId ?? '' }}"           
+            data-can-edit-pre-inventory="{{ $userLevel == 3 ? '1' : '0' }}"
+            data-pre-inventory-base-url="{{ url('/dashboard/school') }}"
+        >
  
             {{-- ── Period & CY Header ── --}}
             <div class="space-y-1.5">

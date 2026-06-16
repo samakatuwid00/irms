@@ -67,7 +67,7 @@ class DashboardController extends BaseController
         $user      = Auth::user();
         $userLevel = $this->determineUserLevel($user);
         $stationId = $this->determineStationId($user, $userLevel);
-
+        $userTypeId = $user->usertype_id ?? '';
         $totalLrData    = $this->totalLearningResourcesService->getTotalResourcesData(null, $userLevel, $stationId);
         $populationData = $this->totalPopulationService->getPopulationData(null, $userLevel, $stationId);
         $lrNeedsData    = $this->lrNeedsService->getLrNeeds(null, $userLevel, $stationId, 5); // top 5 needs
@@ -156,7 +156,8 @@ class DashboardController extends BaseController
             'stationId',
             'divisions',
             'printTypeOptions',
-            'bosySettings'   // ← new
+            'bosySettings',
+            'userTypeId'
         ));
     }
 

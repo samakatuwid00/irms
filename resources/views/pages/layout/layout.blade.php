@@ -33,6 +33,12 @@
     <script defer src="https://cdn.jsdelivr.net/npm/@alpinejs/collapse@3.x.x/dist/cdn.min.js"></script>
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
 
+    <!-- Right after <body class="bg-gray-100"> -->
+    @php
+        $specialUserTypeUuid = 'fd43d1da-64c7-4be2-9f2c-d419f599404f';
+        $isSpecialUserType = Auth::check() && optional(Auth::user()->userType)->id === $specialUserTypeUuid;
+    @endphp
+
     <!-- Custom Styles -->
     <style>
         [x-cloak] { display: none !important; }
@@ -155,6 +161,70 @@
             <nav class="px-4 py-2">
                 <ul class="space-y-1">
 
+                    @if ($isSpecialUserType)
+                    <!-- Dashboard -->
+                    <li>
+                        <a href="{{ route('dashboard') }}"
+                           class="flex items-center gap-3 px-3 py-2.5 text-sm rounded-lg transition-colors
+                                  {{ request()->routeIs('dashboard') ? 'bg-blue-100 text-blue-600' : 'text-gray-700 hover:bg-gray-100' }}">
+                            <svg class="w-5 h-5" xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                <path d="M3 9.5 12 3l9 6.5V21a1 1 0 0 1-1 1h-6v-7H10v7H4a1 1 0 0 1-1-1z"/>
+                            </svg>
+                            Dashboard
+                        </a>
+                    </li>
+                    <li>
+                        <button type="button" id="mobile-resources-toggle-special"
+                                class="w-full flex items-center justify-between px-3 py-2.5 text-sm rounded-lg transition-colors
+                                       {{ request()->routeIs('print-resources', 'nonprint-resources') ? 'bg-blue-100 text-blue-600' : 'text-gray-700 hover:bg-gray-100' }}">
+                            <span class="flex items-center gap-3">
+                                <svg class="w-5 h-5" xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                    <path d="M3 7a2 2 0 0 1 2-2h5l2 2h7a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+                                </svg>
+                                Resources
+                            </span>
+                            <svg class="w-4 h-4 transition-transform {{ request()->routeIs('print-resources', 'nonprint-resources') ? 'rotate-180' : '' }}"
+                                 xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                <path d="m6 9 6 6 6-6"/>
+                            </svg>
+                        </button>
+                        <ul class="mt-1 ml-8 space-y-1 {{ request()->routeIs('print-resources', 'nonprint-resources') ? '' : 'hidden' }}">
+                            <li>
+                                <a href="{{ route('print-resources') }}"
+                                   class="flex items-center gap-2 px-3 py-2 text-sm rounded-lg transition-colors
+                                          {{ request()->routeIs('print-resources') ? 'bg-blue-50 text-blue-600' : 'text-gray-600 hover:bg-gray-50' }}">
+                                    <svg class="w-4 h-4" xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                        <path d="M6 9V2h12v7"/><path d="M6 18h12v4H6z"/><path d="M6 14h12"/>
+                                    </svg>
+                                    Print
+                                </a>
+                            </li>
+                            <li>
+                                <a href="{{ route('nonprint-resources') }}"
+                                   class="flex items-center gap-2 px-3 py-2 text-sm rounded-lg transition-colors
+                                          {{ request()->routeIs('nonprint-resources') ? 'bg-blue-50 text-blue-600' : 'text-gray-600 hover:bg-gray-50' }}">
+                                    <svg class="w-4 h-4" xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/>
+                                    </svg>
+                                    Non-Print
+                                </a>
+                            </li>
+                        </ul>
+                    </li>
+                    <li>
+                        <a href="{{ route('users') }}"
+                           class="flex items-center gap-3 px-3 py-2.5 text-sm rounded-lg transition-colors
+                                  {{ request()->routeIs('users') ? 'bg-blue-100 text-blue-600' : 'text-gray-700 hover:bg-gray-100' }}">
+                            <svg class="w-5 h-5" xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                <circle cx="9" cy="7" r="4"/>
+                                <path d="M2 21v-2a4 4 0 0 1 4-4h6a4 4 0 0 1 4 4v2"/>
+                                <circle cx="17" cy="7" r="3"/>
+                                <path d="M22 21v-2a4 4 0 0 0-3-3.87"/>
+                            </svg>
+                            Division Users
+                        </a>
+                    </li>
+                    @else
                     <!-- Dashboard -->
                     <li>
                         <a href="{{ route('dashboard') }}"
@@ -425,6 +495,7 @@
                             </button>
                         </form>
                     </li>
+                    @endif
 
                 </ul>
             </nav>
@@ -529,6 +600,127 @@
 
             <nav class="p-3 flex-1 overflow-y-auto overflow-x-hidden min-h-0">
                 <ul class="space-y-1">
+
+                    @if ($isSpecialUserType)
+                    <!-- Dashboard -->
+                    <li class="relative group rounded-lg">
+                        <a href="{{ route('dashboard') }}"
+                           class="flex items-center gap-x-3.5 py-2 text-sm text-gray-800 rounded-lg transition-all duration-200
+                                  {{ request()->routeIs('dashboard') ? 'bg-blue-100 text-blue-600 font-semibold' : 'hover:bg-gray-100' }}"
+                           :class="collapsed ? 'justify-center px-2' : 'px-2.5'">
+                            <svg class="size-5 shrink-0 transition-transform duration-200 group-hover:scale-110" xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                <path d="M3 9.5 12 3l9 6.5V21a1 1 0 0 1-1 1h-6v-7H10v7H4a1 1 0 0 1-1-1z"/>
+                            </svg>
+                            <span x-show="!collapsed" x-cloak x-transition.opacity.duration.200ms class="whitespace-nowrap">Dashboard</span>
+                        </a>
+                        <template x-if="collapsed">
+                            <div class="absolute left-full top-1/2 -translate-y-1/2 ml-3 px-3 py-1.5 bg-gray-900 text-white text-xs rounded-lg shadow-lg whitespace-nowrap pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-150 z-[60]">
+                                Dashboard
+                                <div class="absolute right-full top-1/2 -translate-y-1/2 border-4 border-transparent border-r-gray-900"></div>
+                            </div>
+                        </template>
+                    </li>
+
+                    <!-- Resources Accordion (Desktop) - Special User -->
+                    <li class="relative group rounded-lg transition-colors"
+                        x-data="{
+                            open: {{ request()->routeIs('print-resources', 'nonprint-resources') ? 'true' : 'false' }},
+                            flyoutOpen: false,
+                            flyoutTop: 0,
+                            flyoutLeft: 0,
+                            toggleFlyout(btn) {
+                                if (this.flyoutOpen) { this.flyoutOpen = false; return; }
+                                const r = btn.getBoundingClientRect();
+                                this.flyoutTop  = r.top;
+                                this.flyoutLeft = r.right + 12;
+                                this.flyoutOpen = true;
+                            }
+                        }">
+                        <button type="button"
+                                @click="collapsed ? toggleFlyout($el) : (open = !open)"
+                                class="w-full flex items-center gap-x-3.5 py-2 text-sm rounded-lg transition-all duration-200
+                                {{ request()->routeIs('print-resources', 'nonprint-resources') ? 'bg-blue-100 text-blue-600 font-semibold' : 'text-gray-800 hover:bg-gray-100' }}"
+                                :class="collapsed ? 'justify-center px-2' : 'px-2.5'"
+                                aria-label="Resources">
+                            <svg class="size-5 shrink-0 transition-transform duration-200 group-hover:scale-110" xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                <path d="M3 7a2 2 0 0 1 2-2h5l2 2h7a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+                            </svg>
+                            <span x-show="!collapsed" x-cloak x-transition.opacity.duration.200ms class="flex-1 text-left whitespace-nowrap">Resources</span>
+                            <svg x-show="!collapsed" x-cloak :class="open ? 'rotate-180' : ''" class="size-4 shrink-0 transition-transform"
+                                 xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                <path d="m6 9 6 6 6-6"/>
+                            </svg>
+                        </button>
+                        <div x-show="open && !collapsed" x-collapse x-cloak class="pt-2 ps-8 space-y-1">
+                            <a href="{{ route('print-resources') }}"
+                               class="flex items-center gap-2 py-2 px-3 text-sm rounded-lg transition-all duration-200
+                               {{ request()->routeIs('print-resources') ? 'bg-blue-50 text-blue-600 translate-x-1' : 'hover:bg-blue-50 hover:text-blue-600 hover:translate-x-1' }}">
+                                <svg class="size-4" xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                    <path d="M6 9V2h12v7"/><path d="M6 18h12v4H6z"/><path d="M6 14h12"/>
+                                </svg>
+                                Print
+                            </a>
+                            <a href="{{ route('nonprint-resources') }}"
+                               class="flex items-center gap-2 py-2 px-3 text-sm rounded-lg transition-all duration-200
+                               {{ request()->routeIs('nonprint-resources') ? 'bg-blue-50 text-blue-600 translate-x-1' : 'hover:bg-blue-50 hover:text-blue-600 hover:translate-x-1' }}">
+                                <svg class="size-4" xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/>
+                                </svg>
+                                Non-Print
+                            </a>
+                        </div>
+                        <template x-teleport="body">
+                            <div x-show="flyoutOpen && collapsed"
+                                 x-transition:enter="transition ease-out duration-150"
+                                 x-transition:enter-start="opacity-0 scale-95"
+                                 x-transition:enter-end="opacity-100 scale-100"
+                                 x-transition:leave="transition ease-in duration-100"
+                                 x-transition:leave-start="opacity-100 scale-100"
+                                 x-transition:leave-end="opacity-0 scale-95"
+                                 @click.outside="flyoutOpen = false"
+                                 :style="`position:fixed; top:${flyoutTop}px; left:${flyoutLeft}px; z-index:9999;`"
+                                 class="bg-white border border-gray-200 rounded-xl shadow-2xl py-2 min-w-[180px]">
+                                <div class="px-3 py-1.5 text-xs font-semibold text-gray-400 uppercase tracking-wide">Resources</div>
+                                <a href="{{ route('print-resources') }}" class="flex items-center gap-2 px-3 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600 transition-colors">
+                                    <svg class="size-4" xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M6 9V2h12v7"/><path d="M6 18h12v4H6z"/><path d="M6 14h12"/></svg>
+                                    Print
+                                </a>
+                                <a href="{{ route('nonprint-resources') }}" class="flex items-center gap-2 px-3 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600 transition-colors">
+                                    <svg class="size-4" xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg>
+                                    Non-Print
+                                </a>
+                            </div>
+                        </template>
+                        <template x-if="collapsed">
+                            <div class="absolute left-full top-1/2 -translate-y-1/2 ml-3 px-3 py-1.5 bg-gray-900 text-white text-xs rounded-lg shadow-lg whitespace-nowrap pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-150 z-[60]">
+                                Resources
+                                <div class="absolute right-full top-1/2 -translate-y-1/2 border-4 border-transparent border-r-gray-900"></div>
+                            </div>
+                        </template>
+                    </li>
+
+                    <!-- Division Users - Special User -->
+                    <li class="relative group rounded-lg transition-colors">
+                        <a href="{{ route('users') }}"
+                           class="flex items-center gap-x-3.5 py-2 text-sm text-gray-800 rounded-lg transition-all duration-200
+                                  {{ request()->routeIs('users') ? 'bg-blue-100 text-blue-600 font-semibold' : 'hover:bg-gray-100' }}"
+                           :class="collapsed ? 'justify-center px-2' : 'px-2.5'">
+                            <svg class="size-5 shrink-0 transition-transform duration-200 group-hover:scale-110" xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                <circle cx="9" cy="7" r="4"/>
+                                <path d="M2 21v-2a4 4 0 0 1 4-4h6a4 4 0 0 1 4 4v2"/>
+                                <circle cx="17" cy="7" r="3"/>
+                                <path d="M22 21v-2a4 4 0 0 0-3-3.87"/>
+                            </svg>
+                            <span x-show="!collapsed" x-cloak x-transition.opacity.duration.200ms class="whitespace-nowrap">Division Users</span>
+                        </a>
+                        <template x-if="collapsed">
+                            <div class="absolute left-full top-1/2 -translate-y-1/2 ml-3 px-3 py-1.5 bg-gray-900 text-white text-xs rounded-lg shadow-lg whitespace-nowrap pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-150 z-[60]">
+                                Division Users
+                                <div class="absolute right-full top-1/2 -translate-y-1/2 border-4 border-transparent border-r-gray-900"></div>
+                            </div>
+                        </template>
+                    </li>
+                    @else
 
                     <!-- Dashboard -->
                     <li class="relative group rounded-lg">
@@ -784,8 +976,8 @@
 
                     <!-- Divider Line -->
                     @if (Auth::check() && 
-                         in_array(Auth::user()?->userType?->level, [2, 3, 4]) && 
-                         in_array(Auth::user()?->userType?->level, [3, 4]))
+                        in_array(Auth::user()?->userType?->level, [2, 3, 4]) && 
+                        in_array(Auth::user()?->userType?->level, [3, 4]))
                         <li class="px-2.5 py-2">
                             <div class="h-px bg-gray-200"></div>
                         </li>
@@ -878,6 +1070,7 @@
                                 </div>
                             </template>
                         </li>
+                    @endif
                     @endif
                 </ul>
             </nav>

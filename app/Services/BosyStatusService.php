@@ -54,8 +54,7 @@ class BosyStatusService
                 's.shortname',
                 's.logo',
                 DB::raw('COALESCE(SUM(sl.estimated_resource), 0) as estimated_print'),
-                DB::raw('COALESCE(SUM(sl.estimated_resource_np), 0) as estimated_nonprint'),
-                DB::raw('COALESCE(SUM(sl.estimated_resource), 0) + COALESCE(SUM(sl.estimated_resource_np), 0) as total_estimated_resource')
+                DB::raw('COALESCE(SUM(sl.estimated_resource), 0) as total_estimated_resource')
             )
             ->groupBy('s.id', 's.school_name', 's.shortname', 's.logo')
             ->first();
@@ -227,6 +226,8 @@ class BosyStatusService
                     : asset('assets/images/no_image.jpg'),
                 'total_lr' => $totalLr,
                 'estimated_resource' => $estimated,
+                'estimated_print' => (int) ($school->estimated_print ?? 0),
+                'estimated_nonprint' => (int) ($school->estimated_nonprint ?? 0),
                 'percentage' => $percentage,
                 'status' => $printTypeId ? $this->determineBosyStatus($percentage) : $school->status,
                 'color' => $printTypeId ? $this->determineBosyColor($percentage) : $school->color,
@@ -386,35 +387,44 @@ class BosyStatusService
 
     private function getDivisionData(string $divisionId, string $districtFilter = '', ?string $printTypeId = null): array
     {
-        $query = DB::table('lrmis.mv_bosy_division_schools_status')
-            ->where('division_id', $divisionId);
+        // Build schools list with estimated resources (real-time)
+        $schoolsQuery = DB::table('lrmis.schools as s')
+            ->join('lrmis.districts as d', 'd.id', '=', 's.district_id')
+            ->leftJoin('lrmis.school_libraries as sl', 'sl.school_id', '=', 's.id')
+            ->where('d.division_id', $divisionId);
 
-        // If a specific district is selected, filter by it
         if (!empty($districtFilter)) {
-            $query->where('district_id', $districtFilter);
+            $schoolsQuery->where('d.id', $districtFilter);
         }
 
-        $schools = $query->orderBy('school_name')->get();
-
-        // When print type is selected, overlay real-time total_lr from schema
-        $realTimeLr = [];
-        if ($printTypeId && $schools->isNotEmpty()) {
-            $schoolIds = $schools->pluck('school_id')->toArray();
-            $realTimeLr = $this->getRealTimeLrBySchool($schoolIds, $printTypeId);
-        }
+        $schools = $schoolsQuery->select(
+                's.id as school_id',
+                's.school_name',
+                's.logo',
+                DB::raw('COALESCE(SUM(sl.estimated_resource), 0) as estimated_print'),
+                DB::raw('COALESCE(SUM(sl.estimated_resource), 0) as total_estimated_resource'),
+                DB::raw('COUNT(DISTINCT sl.id) as total_libraries'),
+                'd.id as district_id',
+                'd.district_name',
+                'd.division_id'
+            )
+            ->groupBy('s.id', 's.school_name', 's.logo', 'd.id', 'd.district_name', 'd.division_id')
+            ->orderBy('s.school_name')
+            ->get();
 
         if ($schools->isEmpty()) {
             return $this->emptyResponse('division', $divisionId);
         }
 
-        $items = $schools->map(function ($school) use ($printTypeId, $realTimeLr) {
-            $totalLr = $printTypeId
-                ? (int) ($realTimeLr[$school->school_id] ?? 0)
-                : (int) $school->total_actual_lr;
+        $schoolIds = $schools->pluck('school_id')->toArray();
+
+        // Real-time LR calculation (print + nonprint or filtered)
+        $realTimeLr = $this->getRealTimeTotalLrBySchool($schoolIds, $printTypeId);
+
+        $items = $schools->map(function ($school) use ($realTimeLr) {
+            $totalLr = (int) ($realTimeLr[$school->school_id] ?? 0);
             $estimated = (int) $school->total_estimated_resource;
-            $percentage = $printTypeId
-                ? $this->calculatePercentage($totalLr, $estimated)
-                : (int) $school->percentage;
+            $percentage = $this->calculatePercentage($totalLr, $estimated);
 
             return [
                 'id' => $school->school_id,
@@ -425,16 +435,16 @@ class BosyStatusService
                     : asset('assets/images/no_image.jpg'),
                 'total_lr' => $totalLr,
                 'estimated_resource' => $estimated,
+                'estimated_print' => (int) ($school->estimated_print ?? 0),
+                'estimated_nonprint' => (int) ($school->estimated_nonprint ?? 0),
                 'percentage' => $percentage,
-                'status' => $printTypeId ? $this->determineBosyStatus($percentage) : $school->status,
-                'color' => $printTypeId ? $this->determineBosyColor($percentage) : $school->color,
-                'last_updated' => $school->last_updated_formatted,
-                'libraries' => [
-                    'total' => (int) $school->total_libraries,
-                ],
+                'status' => $this->determineBosyStatus($percentage),
+                'color' => $this->determineBosyColor($percentage),
+                'last_updated' => null,
+                'libraries' => ['total' => (int) $school->total_libraries],
                 'parent' => [
                     'id' => $school->division_id,
-                    'name' => $school->division_name,
+                    'name' => $this->getDivisionName($school->division_id),
                 ],
                 'district' => [
                     'id' => $school->district_id,
@@ -452,7 +462,6 @@ class BosyStatusService
 
         $overallPercentage = $this->calculatePercentage($totals['total_lr'], $totals['total_estimated']);
 
-        // Resolve district name for the response (used by frontend title)
         $districtName = null;
         if (!empty($districtFilter)) {
             $districtName = DB::table('lrmis.districts')
@@ -462,11 +471,12 @@ class BosyStatusService
 
         return [
             'level' => 'division',
+            'can_edit_pre_inventory' => true,
             'items' => $items->toArray(),
             'station_id' => $divisionId,
             'station_name' => $this->getDivisionName($divisionId),
             'district_id' => $districtFilter ?: null,
-            'district_name' => $districtName,           // sent to frontend for title
+            'district_name' => $districtName,
             'summary' => [
                 'total_items' => $totals['total_items'],
                 'item_label' => 'Schools',
@@ -482,7 +492,8 @@ class BosyStatusService
                 'end' => '25 Dec',
                 'year' => '2026'
             ],
-            'mv_refreshed_at' => $schools->first()->mv_refreshed_at ?? now()->format('Y-m-d H:i:s')
+            'mv_refreshed_at' => now()->format('Y-m-d H:i:s'),
+            'is_realtime' => true,
         ];
     }
 
@@ -509,6 +520,57 @@ class BosyStatusService
             ->whereIn('sl.school_id', $schoolIds)
             ->select('sl.school_id', DB::raw('COALESCE(SUM(pa.total_qty), 0)::integer as total_lr'))
             ->groupBy('sl.school_id')
+            ->pluck('total_lr', 'school_id')
+            ->all();
+    }
+
+    /**
+     * Optimized real-time total LR per school (print + nonprint or print-only).
+     * Fixed PostgreSQL strict GROUP BY + union alias issues.
+     */
+    private function getRealTimeTotalLrBySchool(array $schoolIds, ?string $printTypeId = null): array
+    {
+        if (empty($schoolIds)) {
+            return [];
+        }
+
+        if ($printTypeId) {
+            // Print-only with type filter
+            return DB::table('lrmis.school_libraries as sl')
+                ->join('lrmis.print_acquisitions as pa', 'pa.library_id', '=', 'sl.id')
+                ->join('lrmis.print_resources as pr', 'pr.id', '=', 'pa.print_id')
+                ->where('pr.print_type_id', $printTypeId)
+                ->whereIn('sl.school_id', $schoolIds)
+                ->select('sl.school_id', DB::raw('COALESCE(SUM(pa.total_qty), 0)::integer as total_lr'))
+                ->groupBy('sl.school_id')
+                ->pluck('total_lr', 'school_id')
+                ->all();
+        }
+
+        // === FULL LR (Print + Nonprint) - Fixed version ===
+        $combined = DB::table('lrmis.print_acquisitions as pa')
+            ->join('lrmis.school_libraries as sl', 'sl.id', '=', 'pa.library_id')
+            ->whereIn('sl.school_id', $schoolIds)
+            ->select([
+                'sl.school_id',
+                DB::raw('COALESCE(SUM(pa.total_qty), 0) as qty')
+            ])
+            ->groupBy('sl.school_id')
+            ->unionAll(
+                DB::table('lrmis.nonprint_acquisitions as na')
+                    ->join('lrmis.school_libraries as sl', 'sl.id', '=', 'na.library_id')
+                    ->whereIn('sl.school_id', $schoolIds)
+                    ->select([
+                        'sl.school_id',
+                        DB::raw('COALESCE(SUM(na.total_qty), 0) as qty')
+                    ])
+                    ->groupBy('sl.school_id')
+            );
+
+        return DB::query()
+            ->fromSub($combined, 'combined')
+            ->select('school_id', DB::raw('SUM(qty)::integer as total_lr'))
+            ->groupBy('school_id')
             ->pluck('total_lr', 'school_id')
             ->all();
     }
