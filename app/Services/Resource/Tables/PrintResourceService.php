@@ -440,11 +440,31 @@ public function getResourcesData(Request $request, int $level, string $stationId
     // resources with no acquisitions at any level shouldn't appear in any view
     private function buildLibraryQuery(Collection $libraryIds)
     {
-        return PrintResource::with(['printTitle.authors', 'type', 'printAcquisitions'])
+        $query = PrintResource::with(['printTitle.authors', 'type', 'printAcquisitions'])
             ->whereHas('printAcquisitions', function ($q) use ($libraryIds) {
                 $q->whereIn('library_id', $libraryIds->toArray());
             })
             ->whereHas('printAcquisitions');
+
+        $this->applyLatestAcquisitionOrder($query, $libraryIds);
+
+        return $query;
+    }
+
+    // Most recently acquired resources appear first (scoped to the active library filter).
+    private function applyLatestAcquisitionOrder($query, Collection $libraryIds): void
+    {
+        if ($libraryIds->isEmpty()) {
+            return;
+        }
+
+        $libraryIdArray = $libraryIds->values()->all();
+        $placeholders   = implode(',', array_fill(0, count($libraryIdArray), '?'));
+
+        $query->orderByRaw(
+            "(SELECT MAX(pa.date_acquired) FROM print_acquisitions pa WHERE pa.print_id = print_resources.id AND pa.library_id IN ($placeholders)) DESC NULLS LAST",
+            $libraryIdArray
+        );
     }
 
     private function getResources(Request $request, int $level, Collection $libraryIds)

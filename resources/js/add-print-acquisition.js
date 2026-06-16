@@ -172,7 +172,12 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        acquisitions.forEach((acq, idx) => {
+        const sortedAcquisitions = [...acquisitions].sort(
+            (a, b) => (b.date_acquired || '').localeCompare(a.date_acquired || '')
+        );
+
+        sortedAcquisitions.forEach((acq) => {
+            const idx = acquisitions.indexOf(acq);
             const shortRemark  = (acq.remarks?.length > 30)
                 ? acq.remarks.substring(0, 27) + '...'
                 : (acq.remarks || '-');

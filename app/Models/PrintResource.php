@@ -56,7 +56,8 @@ class PrintResource extends Model
     // Relationship to acquisitions
     public function printAcquisitions(): HasMany
     {
-        return $this->hasMany(PrintAcquisition::class, 'print_id');
+        return $this->hasMany(PrintAcquisition::class, 'print_id')
+            ->orderByDesc('date_acquired');
     }
 
     // Quantities summed from acquisitions
@@ -154,6 +155,8 @@ class PrintResource extends Model
                 $rows = $rows->whereIn('library_id', $libraryIds);
             }
 
+            $rows = $rows->sortByDesc(fn ($acquisition) => $acquisition->date_acquired ?? '');
+
             foreach ($rows as $acquisition) {
                 $acquisitions[] = [
                     'division_name'  => $acquisition->division_name,
@@ -162,6 +165,7 @@ class PrintResource extends Model
                     'date_acquired' => $acquisition->date_acquired
                         ? date('M d, Y', strtotime($acquisition->date_acquired))
                         : '-',
+                    'date_acquired_raw' => $acquisition->date_acquired,
                     'cost' => $acquisition->cost ?? null,
                     'iar' => $acquisition->iar ?? '-',
                     'remarks' => $acquisition->remarks ?? '-',

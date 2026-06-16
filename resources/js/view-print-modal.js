@@ -70,7 +70,13 @@ export function openPrintModal(resource) {
     const totals = { usable: 0, pd: 0, damaged: 0, lost: 0, condemnable: 0 };
 
     if (resource.acquisitions && resource.acquisitions.length > 0) {
-        resource.acquisitions.forEach(aq => {
+        const sortedAcquisitions = [...resource.acquisitions].sort((a, b) => {
+            const dateA = Date.parse(a.date_acquired_raw || a.date_acquired) || 0;
+            const dateB = Date.parse(b.date_acquired_raw || b.date_acquired) || 0;
+            return dateB - dateA;
+        });
+
+        sortedAcquisitions.forEach(aq => {
             const usable     = safeInt(aq.usable);
             const pd         = safeInt(aq.partially_damaged);
             const damaged    = safeInt(aq.damaged);
