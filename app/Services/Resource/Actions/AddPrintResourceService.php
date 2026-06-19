@@ -82,7 +82,7 @@ class AddPrintResourceService
                 ? ucwords(strtolower($data['publisher']))
                 : null;
 
-            $resource->update([
+            $updateData = [
                 'print_title_id'          => $title->id,
                 'print_type_id'           => $data['type'],
                 'publisher'               => $publisherName,
@@ -94,7 +94,16 @@ class AddPrintResourceService
                 'subject_grade_level_ids' => $gradeLevelIds,
                 'cover'                   => $coverPath,
                 'uniqueness_hash'         => $uniquenessHash,
-            ]);
+            ];
+
+            if (array_key_exists('verified', $data)) {
+                $isVerified = !empty($data['verified']);
+                $updateData['verified']    = $isVerified;
+                $updateData['verified_by'] = $isVerified ? Auth::id() : null;
+                $updateData['verified_at'] = $isVerified ? now() : null;
+            }
+
+            $resource->update($updateData);
         });
 
         $this->updateSearchVector($resource->id);

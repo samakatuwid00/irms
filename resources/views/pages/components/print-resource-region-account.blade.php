@@ -181,7 +181,7 @@
                                                 onclick='openPrintModal(@json($item->showDetails($hubLibraryIds ?? [])))'
                                                 title="Click to view details">
                                         </td>
-                                        <td class="px-2 py-3 font-medium text-gray-800 max-w-xs">{{ $item->printTitle->title }}</td>
+                                        <td class="px-2 py-3 font-medium text-gray-800 max-w-xs">@include('pages.components.verified-title', ['title' => $item->printTitle->title, 'verified' => $item->verified])</td>
                                         <td class="px-2 py-3 text-gray-600">{{ $authors }}</td>
                                         <td class="px-2 py-3 text-gray-600">{{ $item->publisher }}</td>
                                         <td class="px-2 py-3">
@@ -294,7 +294,10 @@
                                     </span>
                                 </div>
                                 <div class="p-3 flex flex-col gap-1 flex-1">
-                                    <h3 class="text-xs font-semibold text-gray-900 leading-tight line-clamp-2">{{ $item->printTitle->title }}</h3>
+                                    <h3 class="text-xs font-semibold text-gray-900 leading-tight line-clamp-2 inline-flex items-start gap-1">
+                                        @include('pages.components.verified-badge', ['verified' => $item->verified, 'class' => 'w-3.5 h-3.5 text-blue-600 shrink-0 mt-0.5'])
+                                        <span>{{ $item->printTitle->title }}</span>
+                                    </h3>
                                     @if ($authors)
                                         <p class="text-xs text-gray-500 truncate">{{ $authors }}</p>
                                     @endif
@@ -494,7 +497,7 @@
                                                 onclick='openPrintModal(@json($item->showDetails($filteredLibraryIds)))'
                                                 title="Click to view details">
                                         </td>
-                                        <td class="px-2 py-3 font-medium text-gray-800 max-w-xs">{{ $item->printTitle->title }}</td>
+                                        <td class="px-2 py-3 font-medium text-gray-800 max-w-xs">@include('pages.components.verified-title', ['title' => $item->printTitle->title, 'verified' => $item->verified])</td>
                                         <td class="px-2 py-3 text-gray-600">{{ $authors }}</td>
                                         <td class="px-2 py-3 text-gray-600">{{ $item->publisher }}</td>
                                         <td class="px-2 py-3">
@@ -607,7 +610,10 @@
                                     </span>
                                 </div>
                                 <div class="p-3 flex flex-col gap-1 flex-1">
-                                    <h3 class="text-xs font-semibold text-gray-900 leading-tight line-clamp-2">{{ $item->printTitle->title }}</h3>
+                                    <h3 class="text-xs font-semibold text-gray-900 leading-tight line-clamp-2 inline-flex items-start gap-1">
+                                        @include('pages.components.verified-badge', ['verified' => $item->verified, 'class' => 'w-3.5 h-3.5 text-blue-600 shrink-0 mt-0.5'])
+                                        <span>{{ $item->printTitle->title }}</span>
+                                    </h3>
                                     @if ($authors)
                                         <p class="text-xs text-gray-500 truncate">{{ $authors }}</p>
                                     @endif

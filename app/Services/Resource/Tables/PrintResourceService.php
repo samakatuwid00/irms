@@ -451,9 +451,12 @@ public function getResourcesData(Request $request, int $level, string $stationId
         return $query;
     }
 
-    // Most recently acquired resources appear first (scoped to the active library filter).
+    // Verified resources appear first, then by most recent acquisition (scoped to the active library filter).
     private function applyLatestAcquisitionOrder($query, Collection $libraryIds): void
     {
+        $query->orderByDesc('print_resources.verified')
+              ->orderByDesc('print_resources.verified_at');
+
         if ($libraryIds->isEmpty()) {
             return;
         }

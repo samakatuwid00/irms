@@ -52,11 +52,11 @@ class MasterlistController extends BaseController
 
         abort_unless(in_array($level, [3, 4]), 403, 'Unauthorized access.');
 
-        $resource = PrintResource::with(['printTitle.authors', 'type'])
+        $resource = PrintResource::with(['printTitle.authors', 'type', 'verifiedBy'])
             ->where('id', $id)
             ->where('status', 1)
             ->firstOrFail()
-            ->fresh(['printTitle.authors', 'type']);
+            ->fresh(['printTitle.authors', 'type', 'verifiedBy']);
 
         $subjectGradeLevels = $this->getSubjectGradeLevels();
         $printTypes         = PrintType::all();
@@ -103,6 +103,7 @@ class MasterlistController extends BaseController
             ->firstOrFail();
 
         $validated = $this->validateResourceRequest($request);
+        $validated['verified'] = $request->boolean('verified');
 
         if ($resource->printTitle) {
             $resource->printTitle->update(['title' => $validated['title']]);
@@ -197,6 +198,8 @@ class MasterlistController extends BaseController
         }
 
         $results = $query
+            ->orderByDesc('verified')
+            ->orderByDesc('verified_at')
             ->orderBy(
                 PrintTitle::select('title')
                     ->whereColumn('print_titles.id', 'print_resources.print_title_id')
@@ -235,6 +238,8 @@ class MasterlistController extends BaseController
         }
 
         $results = $query
+            ->orderByDesc('verified')
+            ->orderByDesc('verified_at')
             ->orderBy(
                 PrintTitle::select('title')
                     ->whereColumn('print_titles.id', 'print_resources.print_title_id')
@@ -333,6 +338,8 @@ class MasterlistController extends BaseController
         }
 
         $masterlist = $masterlistQuery
+            ->orderByDesc('verified')
+            ->orderByDesc('verified_at')
             ->orderBy(
                 PrintTitle::select('title')
                     ->whereColumn('print_titles.id', 'print_resources.print_title_id')
@@ -400,6 +407,7 @@ class MasterlistController extends BaseController
             'status'    => $r->status,
             'submitted' => $r->created_at?->format('M d, Y'),
             'subjects'  => $this->formatSubjects($r),
+            'verified'  => (bool) $r->verified,
         ];
     }
 
@@ -450,6 +458,7 @@ class MasterlistController extends BaseController
             'pages'                => 'nullable|integer',
             'subject_grade_levels' => 'nullable|array',
             'image'                => 'nullable|image|mimes:jpeg,png,jpg|max:5120',
+            'verified'             => 'nullable|boolean',
         ]);
 
         if ($request->hasFile('image')) {
