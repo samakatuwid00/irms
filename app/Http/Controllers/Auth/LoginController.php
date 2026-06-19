@@ -32,7 +32,6 @@ class LoginController extends Controller
         $request->validate([
             'username' => 'required|string',
             'password' => 'required|string',
-            'notRobot' => 'accepted',
         ]);
 
         $this->ensureIsNotRateLimited($request);
