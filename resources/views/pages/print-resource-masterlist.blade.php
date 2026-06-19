@@ -169,7 +169,10 @@
                                          class="w-14 h-18 object-cover rounded border border-gray-200 shadow-sm" loading="lazy">
                                 </td>
                                 <td class="px-2 py-2 font-medium text-gray-900 max-w-75">
-                                    <span title="{{ $row->printTitle->title ?? '' }}">{{ Str::limit($row->printTitle->title ?? '-', 40) }}</span>
+                                    <span class="inline-flex items-center gap-1.5" title="{{ $row->verified ? 'Verified by SDO / Division librarian' : ($row->printTitle->title ?? '') }}">
+                                        @include('pages.components.verified-badge', ['verified' => $row->verified])
+                                        <span>{{ Str::limit($row->printTitle->title ?? '-', 40) }}</span>
+                                    </span>
                                 </td>
                                 <td class="px-2 py-2 text-gray-600 max-w-35">
                                     {{ Str::limit($row->printTitle->authors->pluck('author_name')->join(', ') ?: '-', 35) }}
@@ -197,6 +200,7 @@
                                                 data-isbn="{{ $row->isbn ?? '-' }}"
                                                 data-pages="{{ $row->pages ?? '-' }}"
                                                 data-subjects="{{ $sglText }}"
+                                                data-verified="{{ $row->verified ? '1' : '0' }}"
                                                 class="view-resource-btn inline-flex items-center gap-1 text-xs px-3 py-1.5 bg-indigo-50 text-indigo-600 border border-indigo-200 rounded-lg hover:bg-indigo-100 transition-colors whitespace-nowrap font-medium">
                                             <svg class="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
@@ -281,7 +285,10 @@
                                 </span>
                             </div>
                             <div class="p-3 flex flex-col gap-1 flex-1">
-                                <h3 class="text-xs font-semibold text-gray-900 leading-tight line-clamp-2">{{ $row->printTitle->title ?? '-' }}</h3>
+                                <h3 class="text-xs font-semibold text-gray-900 leading-tight line-clamp-2 inline-flex items-start gap-1">
+                                    @include('pages.components.verified-badge', ['verified' => $row->verified, 'class' => 'w-3.5 h-3.5 text-blue-600 shrink-0 mt-0.5'])
+                                    <span>{{ $row->printTitle->title ?? '-' }}</span>
+                                </h3>
                                 <p class="text-xs text-gray-500 truncate">{{ $row->printTitle->authors->pluck('author_name')->join(', ') ?: '-' }}</p>
                                 <p class="text-xs text-gray-400 truncate">{{ $row->publisher ?? '-' }}</p>
                                 <div class="mt-auto pt-2 flex items-center justify-between gap-1">
@@ -299,6 +306,7 @@
                                             data-isbn="{{ $row->isbn ?? '-' }}"
                                             data-pages="{{ $row->pages ?? '-' }}"
                                             data-subjects="{{ $sglTextC }}"
+                                            data-verified="{{ $row->verified ? '1' : '0' }}"
                                             class="view-resource-btn hidden">
                                     </button>
                                     <span class="text-xs text-gray-400 whitespace-nowrap">{{ $row->copyright ?? '' }}</span>
@@ -452,6 +460,32 @@
                             </div>
                         </div>
                     </div>
+
+                    @if(in_array($level, [3, 4]))
+                    <div class="border border-blue-100 rounded-lg px-4 py-3 bg-blue-50/40">
+                        <label class="flex items-start gap-3 cursor-pointer">
+                            <input type="checkbox"
+                                   name="verified"
+                                   value="1"
+                                   {{ old('verified', $resource->verified) ? 'checked' : '' }}
+                                   class="mt-1 rounded border-gray-300 text-blue-600 focus:ring-blue-500">
+                            <span>
+                                <span class="block text-sm font-medium text-gray-800">Verified learning resource</span>
+                                <span class="block text-xs text-gray-500 mt-0.5">
+                                    Mark this LR as reviewed and trusted by the SDO librarian or division office.
+                                </span>
+                                @if($resource->verified && $resource->verified_at)
+                                    <span class="block text-xs text-blue-600 mt-1">
+                                        Verified on {{ $resource->verified_at->format('M d, Y') }}
+                                        @if($resource->verifiedBy)
+                                            by {{ $resource->verifiedBy->firstname }} {{ $resource->verifiedBy->lastname }}
+                                        @endif
+                                    </span>
+                                @endif
+                            </span>
+                        </label>
+                    </div>
+                    @endif
                 </div>
             </div>
 
@@ -883,8 +917,16 @@
 
                             {{-- Title & Authors --}}
                             <div class="rounded-xl border border-dashed border-gray-300 bg-gray-50 px-5 py-4">
-                                <h4 id="vm-title" class="text-lg sm:text-xl font-bold text-gray-900 leading-tight"></h4>
-                                <p id="vm-authors" class="text-sm text-gray-500 mt-1"></p>
+                                <div class="flex items-start gap-2">
+                                    <span id="vm-verified-badge" class="hidden mt-1 shrink-0">
+                                        @include('pages.components.verified-badge', ['verified' => true, 'class' => 'w-5 h-5 text-blue-600'])
+                                    </span>
+                                    <div class="min-w-0">
+                                        <h4 id="vm-title" class="text-lg sm:text-xl font-bold text-gray-900 leading-tight"></h4>
+                                        <p id="vm-authors" class="text-sm text-gray-500 mt-1"></p>
+                                        <p id="vm-verified-note" class="hidden text-xs text-blue-600 mt-1 font-medium">Verified by SDO / Division librarian</p>
+                                    </div>
+                                </div>
                             </div>
 
                             {{-- Type Badge --}}
@@ -1428,6 +1470,11 @@
         document.getElementById('vm-isbn').textContent       = btn.dataset.isbn;
         document.getElementById('vm-pages').textContent      = btn.dataset.pages;
         document.getElementById('vm-subjects').textContent   = btn.dataset.subjects;
+
+        const isVerified = btn.dataset.verified === '1';
+        document.getElementById('vm-verified-badge').classList.toggle('hidden', !isVerified);
+        document.getElementById('vm-verified-note').classList.toggle('hidden', !isVerified);
+
         viewModal.classList.remove('hidden');
         document.body.style.overflow = 'hidden';
     }

@@ -14,8 +14,10 @@ class PrintResource extends Model
     protected $keyType = 'string';
 
     protected $casts = [
-        'id' => 'string',
-        'library_id' => 'string',
+        'id'          => 'string',
+        'library_id'  => 'string',
+        'verified'    => 'boolean',
+        'verified_at' => 'datetime',
     ];
 
     protected $fillable = [
@@ -39,6 +41,9 @@ class PrintResource extends Model
         'station_id',
         'encoded_by',
         'approver_station',
+        'verified',
+        'verified_by',
+        'verified_at',
     ];
 
     // Relationship to PrintTitle
@@ -200,10 +205,20 @@ class PrintResource extends Model
             'quantities' => $quantities,
             'library_name' => $this->library_name ?? 'No Library Assigned',
             'edit_url' => route('update-print-resource', $this->id),
+            'verified' => (bool) $this->verified,
+            'verified_at' => $this->verified_at?->format('M d, Y'),
+            'verified_by' => $this->verifiedBy
+                ? trim(($this->verifiedBy->firstname ?? '') . ' ' . ($this->verifiedBy->lastname ?? ''))
+                : null,
         ];
     }
     public function encodedBy()
     {
         return $this->belongsTo(User::class, 'encoded_by', 'id');
+    }
+
+    public function verifiedBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'verified_by', 'id');
     }
 }

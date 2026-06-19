@@ -167,7 +167,6 @@ class BosyStatusService
                 'shortname'          => $school->shortname ?? $school->school_name,
                 'logo'               => $school->logo ?? null,
                 'estimated_print'    => (int) $school->estimated_print,
-                'estimated_nonprint' => (int) $school->estimated_nonprint,
                 'total_estimated'    => $totalEstimated,
             ],
             'summary' => [
@@ -227,7 +226,6 @@ class BosyStatusService
                 'total_lr' => $totalLr,
                 'estimated_resource' => $estimated,
                 'estimated_print' => (int) ($school->estimated_print ?? 0),
-                'estimated_nonprint' => (int) ($school->estimated_nonprint ?? 0),
                 'percentage' => $percentage,
                 'status' => $printTypeId ? $this->determineBosyStatus($percentage) : $school->status,
                 'color' => $printTypeId ? $this->determineBosyColor($percentage) : $school->color,
@@ -436,7 +434,6 @@ class BosyStatusService
                 'total_lr' => $totalLr,
                 'estimated_resource' => $estimated,
                 'estimated_print' => (int) ($school->estimated_print ?? 0),
-                'estimated_nonprint' => (int) ($school->estimated_nonprint ?? 0),
                 'percentage' => $percentage,
                 'status' => $this->determineBosyStatus($percentage),
                 'color' => $this->determineBosyColor($percentage),
