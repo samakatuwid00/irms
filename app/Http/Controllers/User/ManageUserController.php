@@ -34,7 +34,7 @@ class ManageUserController extends BaseController
             $activeTab = $request->input('active_tab', 'main');
 
             [$tableUsers, $emptyMessage] = match($activeTab) {
-                'sub'    => [$users['subUsers'],    'No users found.'],
+                'sub', 'division' => [$users['subUsers'],    'No users found.'],
                 'subsub' => [$users['subSubUsers'], 'No users found.'],
                 default  => [$users['mainUsers'],   'No users found.'],
             };
@@ -43,7 +43,7 @@ class ManageUserController extends BaseController
                 'users'            => $tableUsers,
                 'emptyMessage'     => $emptyMessage,
                 'activeTab'        => $activeTab,
-                'allowStationEdit' => $activeTab === 'sub' && $level === 3, // ← ADD
+                'allowStationEdit' => in_array($activeTab, ['sub', 'division']) && $level === 3, // ← ADD
             ]);
         }
 

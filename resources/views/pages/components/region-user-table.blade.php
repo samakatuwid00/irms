@@ -33,7 +33,7 @@
                 hx-indicator="#region-spinner"
                 class="grid grid-cols-1 md:grid-cols-4 gap-4 items-end mb-4"
             >
-                <input type="hidden" name="active_tab" value="main">
+                <input type="hidden" name="active_tab" value="region">
                 
                 <div class="md:col-span-2">
                     <label class="text-xs text-gray-500">Search Region Users</label>
@@ -127,7 +127,7 @@
                 hx-indicator="#division-spinner"
                 class="grid grid-cols-1 md:grid-cols-4 gap-4 items-end mb-4"
             >
-                <input type="hidden" name="active_tab" value="sub">
+                <input type="hidden" name="active_tab" value="division">
                 
                 <div class="md:col-span-2">
                     <label class="text-xs text-gray-500">Search Division Users</label>
@@ -241,16 +241,76 @@
         window.history.pushState({}, '', url);
     }
 
-    // On page load, check if there's an active tab parameter
-    document.addEventListener('DOMContentLoaded', function() {
+    /**
+     * Patch all pagination links inside a table container so they:
+     *  1. Swap only the correct container (not a full page reload)
+     *  2. Always carry active_tab in the URL so the server knows which
+     *     dataset to return and so the tab stays selected after the swap.
+     *
+     * @param {string} containerId  – e.g. 'region-table-container'
+     * @param {string} tabValue     – the active_tab value for this container
+     * @param {string} spinnerId    – e.g. 'region-spinner'
+     */
+    function patchPaginationLinks(containerId, tabValue, spinnerId) {
+        const container = document.getElementById(containerId);
+        if (!container) return;
+
+        container.querySelectorAll('a[href]').forEach(link => {
+            // Only target links that look like pagination (contain a "page" param
+            // or live inside a nav/ul that is a pagination component).
+            // We patch ALL internal links inside the container to be safe.
+            const href = link.getAttribute('href');
+            if (!href || href.startsWith('#') || href.startsWith('javascript')) return;
+
+            // Avoid double-patching
+            if (link.dataset.paginationPatched) return;
+            link.dataset.paginationPatched = '1';
+
+            // Build the final URL: keep all existing query params but force active_tab
+            let patchedUrl;
+            try {
+                patchedUrl = new URL(href, window.location.origin);
+            } catch {
+                return; // malformed URL – leave it alone
+            }
+            patchedUrl.searchParams.set('active_tab', tabValue);
+
+            // Apply HTMX attributes so the link does an AJAX swap instead of
+            // navigating away (which would destroy the tab state).
+            link.setAttribute('hx-get', patchedUrl.toString());
+            link.setAttribute('hx-target', '#' + containerId);
+            link.setAttribute('hx-swap', 'innerHTML');
+            link.setAttribute('hx-push-url', 'true');
+            link.setAttribute('hx-indicator', '#' + spinnerId);
+
+            // Let HTMX process the newly-added attributes
+            htmx.process(link);
+        });
+    }
+
+    // Patch on initial load
+    document.addEventListener('DOMContentLoaded', function () {
+        patchPaginationLinks('region-table-container',   'region',   'region-spinner');
+        patchPaginationLinks('division-table-container', 'division', 'division-spinner');
+
         const urlParams = new URLSearchParams(window.location.search);
         const activeTab = urlParams.get('active_tab');
 
         if (activeTab && ['region', 'division'].includes(activeTab)) {
             switchTab(activeTab);
         } else {
-            // Default to region tab if no parameter
             switchTab('region');
+        }
+    });
+
+    // Re-patch every time HTMX swaps new content into either container,
+    // because the old pagination links are replaced with new ones.
+    document.addEventListener('htmx:afterSwap', function (event) {
+        const targetId = event.target.id;
+        if (targetId === 'region-table-container') {
+            patchPaginationLinks('region-table-container', 'region', 'region-spinner');
+        } else if (targetId === 'division-table-container') {
+            patchPaginationLinks('division-table-container', 'division', 'division-spinner');
         }
     });
 </script>
