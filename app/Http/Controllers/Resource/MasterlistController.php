@@ -6,6 +6,7 @@ use App\Models\PrintResource;
 use App\Models\PrintTitle;
 use App\Models\SubjectGradeLevel;
 use App\Models\PrintType;
+use App\Services\PrintResourceVerificationService;
 use App\Services\Resource\Actions\AddPrintResourceService;
 
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
@@ -22,7 +23,10 @@ class MasterlistController extends BaseController
 
     protected $printResourceService;
 
-    public function __construct(AddPrintResourceService $printResourceService)
+    public function __construct(
+        AddPrintResourceService $printResourceService,
+        private PrintResourceVerificationService $verificationService
+    )
     {
         $this->middleware('auth');
         $this->printResourceService = $printResourceService;
@@ -52,11 +56,11 @@ class MasterlistController extends BaseController
 
         abort_unless(in_array($level, [3, 4]), 403, 'Unauthorized access.');
 
-        $resource = PrintResource::with(['printTitle.authors', 'type', 'verifiedBy'])
+        $resource = PrintResource::with(['printTitle.authors', 'type', 'verifiedBy.userType', 'verificationLogs.user.userType'])
             ->where('id', $id)
             ->where('status', 1)
             ->firstOrFail()
-            ->fresh(['printTitle.authors', 'type', 'verifiedBy']);
+            ->fresh(['printTitle.authors', 'type', 'verifiedBy.userType', 'verificationLogs.user.userType']);
 
         $subjectGradeLevels = $this->getSubjectGradeLevels();
         $printTypes         = PrintType::all();
@@ -71,6 +75,7 @@ class MasterlistController extends BaseController
         $resource->cover_url = $resource->cover
             ? asset('storage/' . $resource->cover)
             : asset('assets/images/def.jpg');
+        $verificationHistory = $this->verificationService->formatHistory($resource);
 
         [$masterlist, $requests] = $this->buildTabData($request, $user, $level);
 
@@ -81,6 +86,7 @@ class MasterlistController extends BaseController
                 'printTypes',
                 'editingAuthors',
                 'editingSglIds',
+                'verificationHistory',
                 'masterlist',
                 'requests',
                 'level',
@@ -97,19 +103,64 @@ class MasterlistController extends BaseController
 
         abort_unless(in_array($level, [3, 4]), 403, 'Unauthorized access.');
 
-        $resource = PrintResource::with(['printTitle.authors'])
+        $resource = PrintResource::with(['printTitle.authors', 'type', 'verifiedBy.userType', 'verificationLogs.user.userType'])
             ->where('id', $id)
             ->where('status', 1)
             ->firstOrFail();
 
-        $validated = $this->validateResourceRequest($request);
-        $validated['verified'] = $request->boolean('verified');
+        $validated = $this->validateResourceRequest($request, $resource);
 
-        if ($resource->printTitle) {
-            $resource->printTitle->update(['title' => $validated['title']]);
-        }
+        $wasVerified = (bool) $resource->verified;
+        $shouldVerify = ! $wasVerified && $request->boolean('verified');
+        $comment = $validated['comment'] ?? null;
+        $previousMetadata = $this->verificationService->snapshot($resource);
 
-        $this->printResourceService->updatePrintResource($resource, $validated);
+        DB::transaction(function () use ($resource, $validated, $user, $wasVerified, $shouldVerify, $comment, $previousMetadata) {
+            if ($resource->printTitle) {
+                $resource->printTitle->update(['title' => $validated['title']]);
+            }
+
+            if ($shouldVerify) {
+                $resource->forceFill([
+                    'verified' => true,
+                    'verified_by' => $user->id,
+                    'verified_at' => now(),
+                ])->save();
+            }
+
+            $this->printResourceService->updatePrintResource($resource, $validated);
+
+            $resource->refresh()->load(['printTitle.authors', 'type', 'verifiedBy.userType', 'verificationLogs.user.userType']);
+            $newMetadata = $this->verificationService->snapshot($resource);
+
+            if ($wasVerified) {
+                $actionType = $resource->verified_by === $user->id
+                    ? 'first_verifier_update'
+                    : 'edit_after_verification';
+
+                $this->verificationService->log(
+                    $resource,
+                    $user,
+                    $actionType,
+                    $comment,
+                    $previousMetadata,
+                    $newMetadata
+                );
+            } elseif ($shouldVerify) {
+                $actionType = $resource->verificationLogs()->exists()
+                    ? 're_verification'
+                    : 'first_verification';
+
+                $this->verificationService->log(
+                    $resource,
+                    $user,
+                    $actionType,
+                    null,
+                    $previousMetadata,
+                    $newMetadata
+                );
+            }
+        });
 
         return redirect()
             ->route('masterlist.index', [
@@ -187,7 +238,7 @@ class MasterlistController extends BaseController
 
         $q = trim($request->input('q', ''));
 
-        $query = PrintResource::with(['printTitle.authors', 'type'])
+        $query = PrintResource::with(['printTitle.authors', 'type', 'verifiedBy.userType', 'verificationLogs.user.userType'])
             ->where('status', 1);
 
         if (strlen($q) >= 2) {
@@ -312,6 +363,8 @@ class MasterlistController extends BaseController
                 ? asset('storage/' . $row->cover)
                 : asset('assets/images/def.jpg');
 
+            $row->verification_history = $this->verificationService->formatHistory($row);
+
             return $row;
         });
     }
@@ -327,7 +380,7 @@ class MasterlistController extends BaseController
         }
 
         $mlSearch        = trim($request->input('ml_search', ''));
-        $masterlistQuery = PrintResource::with(['printTitle.authors', 'type'])
+        $masterlistQuery = PrintResource::with(['printTitle.authors', 'type', 'verifiedBy.userType', 'verificationLogs.user.userType'])
             ->where('status', 1);
 
         if (strlen($mlSearch) >= 2) {
@@ -408,6 +461,7 @@ class MasterlistController extends BaseController
             'submitted' => $r->created_at?->format('M d, Y'),
             'subjects'  => $this->formatSubjects($r),
             'verified'  => (bool) $r->verified,
+            'verification_history' => $this->verificationService->formatHistory($r),
         ];
     }
 
@@ -444,7 +498,7 @@ class MasterlistController extends BaseController
             ->get();
     }
 
-    private function validateResourceRequest(Request $request): array
+    private function validateResourceRequest(Request $request, ?PrintResource $resource = null): array
     {
         $validated = $request->validate([
             'title'                => 'required|string|max:255',
@@ -459,6 +513,11 @@ class MasterlistController extends BaseController
             'subject_grade_levels' => 'nullable|array',
             'image'                => 'nullable|image|mimes:jpeg,png,jpg|max:5120',
             'verified'             => 'nullable|boolean',
+            'comment'              => [
+                $resource?->verified ? 'required' : 'nullable',
+                'string',
+                'max:2000',
+            ],
         ]);
 
         if ($request->hasFile('image')) {

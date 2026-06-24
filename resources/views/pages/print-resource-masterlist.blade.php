@@ -201,6 +201,9 @@
                                                 data-pages="{{ $row->pages ?? '-' }}"
                                                 data-subjects="{{ $sglText }}"
                                                 data-verified="{{ $row->verified ? '1' : '0' }}"
+                                                data-verified-by-name="{{ $row->verifiedBy ? trim(($row->verifiedBy->firstname ?? '') . ' ' . ($row->verifiedBy->lastname ?? '')) : '' }}"
+                                                data-verified-by-role="{{ $row->verifiedBy?->userType?->type_name ?? '' }}"
+                                                data-verification-history="{{ e(json_encode($row->verification_history ?? [])) }}"
                                                 class="view-resource-btn inline-flex items-center gap-1 text-xs px-3 py-1.5 bg-indigo-50 text-indigo-600 border border-indigo-200 rounded-lg hover:bg-indigo-100 transition-colors whitespace-nowrap font-medium">
                                             <svg class="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
@@ -307,6 +310,9 @@
                                             data-pages="{{ $row->pages ?? '-' }}"
                                             data-subjects="{{ $sglTextC }}"
                                             data-verified="{{ $row->verified ? '1' : '0' }}"
+                                            data-verified-by-name="{{ $row->verifiedBy ? trim(($row->verifiedBy->firstname ?? '') . ' ' . ($row->verifiedBy->lastname ?? '')) : '' }}"
+                                            data-verified-by-role="{{ $row->verifiedBy?->userType?->type_name ?? '' }}"
+                                            data-verification-history="{{ e(json_encode($row->verification_history ?? [])) }}"
                                             class="view-resource-btn hidden">
                                     </button>
                                     <span class="text-xs text-gray-400 whitespace-nowrap">{{ $row->copyright ?? '' }}</span>
@@ -462,29 +468,97 @@
                     </div>
 
                     @if(in_array($level, [3, 4]))
-                    <div class="border border-blue-100 rounded-lg px-4 py-3 bg-blue-50/40">
-                        <label class="flex items-start gap-3 cursor-pointer">
-                            <input type="checkbox"
-                                   name="verified"
-                                   value="1"
-                                   {{ old('verified', $resource->verified) ? 'checked' : '' }}
-                                   class="mt-1 rounded border-gray-300 text-blue-600 focus:ring-blue-500">
-                            <span>
-                                <span class="block text-sm font-medium text-gray-800">Verified learning resource</span>
-                                <span class="block text-xs text-gray-500 mt-0.5">
-                                    Mark this LR as reviewed and trusted by the SDO librarian or division office.
-                                </span>
-                                @if($resource->verified && $resource->verified_at)
-                                    <span class="block text-xs text-blue-600 mt-1">
-                                        Verified on {{ $resource->verified_at->format('M d, Y') }}
-                                        @if($resource->verifiedBy)
-                                            by {{ $resource->verifiedBy->firstname }} {{ $resource->verifiedBy->lastname }}
+                        @if($resource->verified)
+                            <div class="border border-blue-100 rounded-lg px-4 py-3 bg-blue-50/40">
+                                <div class="flex items-start gap-3">
+                                    @include('pages.components.verified-badge', ['verified' => true, 'class' => 'w-5 h-5 text-blue-600 shrink-0 mt-0.5'])
+                                    <div class="flex-1 min-w-0">
+                                        <span class="block text-sm font-medium text-gray-800">Verified learning resource</span>
+                                        <span class="block text-xs text-gray-500 mt-0.5">
+                                            This LR remains verified. Editing it will be added to the verification history and will not replace the original verifier.
+                                        </span>
+                                        @if($resource->verified_at)
+                                            <span class="block text-xs text-blue-600 mt-1">
+                                                First verified on {{ $resource->verified_at->format('M d, Y') }}
+                                                @if($resource->verifiedBy)
+                                                    by {{ $resource->verifiedBy->firstname }} {{ $resource->verifiedBy->lastname }}
+                                                @endif
+                                            </span>
                                         @endif
+
+                                        @if(!empty($verificationHistory))
+                                            {{-- ── Verification Timeline Accordion ── --}}
+                                            <div class="mt-3 border-t border-blue-100 pt-3">
+                                                <button type="button"
+                                                        onclick="toggleVerificationTimeline(this)"
+                                                        class="flex items-center gap-2 text-xs font-semibold text-blue-700 hover:text-blue-900 transition-colors group w-full text-left">
+                                                    <svg class="timeline-chevron w-3.5 h-3.5 shrink-0 transition-transform duration-200"
+                                                         fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7"/>
+                                                    </svg>
+                                                    <span>Verification Timeline</span>
+                                                    <span class="ml-auto font-normal text-blue-500">
+                                                        {{ count($verificationHistory) }} record{{ count($verificationHistory) === 1 ? '' : 's' }}
+                                                    </span>
+                                                </button>
+
+                                                <div class="timeline-panel hidden mt-3 space-y-3">
+                                                    @foreach($verificationHistory as $historyItem)
+                                                        <div class="rounded-lg border border-blue-100 bg-white px-4 py-3">
+                                                            <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-1">
+                                                                <div>
+                                                                    <p class="text-sm font-semibold text-gray-800">{{ $historyItem['name'] ?? 'Unknown user' }}</p>
+                                                                    <p class="text-xs text-gray-500">
+                                                                        {{ $historyItem['role'] ?? 'User' }}
+                                                                    </p>
+                                                                </div>
+                                                                <div class="sm:text-right">
+                                                                    <p class="text-xs font-semibold text-blue-700">{{ $historyItem['action_label'] ?? 'Verification Action' }}</p>
+                                                                    <p class="text-xs text-gray-500 mt-0.5">{{ $historyItem['created_at'] ?? '-' }}</p>
+                                                                </div>
+                                                            </div>
+
+                                                            @if(!empty($historyItem['comment']))
+                                                                <p class="text-sm text-gray-600 mt-2 border-t border-blue-50 pt-2">{{ $historyItem['comment'] }}</p>
+                                                            @endif
+                                                        </div>
+                                                    @endforeach
+                                                </div>
+                                            </div>
+                                        @endif
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div>
+                                <label class="block text-sm font-medium mb-1">
+                                    Comment <span class="text-red-500">*</span>
+                                </label>
+                                <textarea name="comment"
+                                          id="verified-edit-comment"
+                                          required
+                                          rows="3"
+                                          class="w-full border border-gray-300 rounded px-3 py-2"
+                                          placeholder="Explain why this verified LR needs to be edited.">{{ old('comment') }}</textarea>
+                                <p class="text-xs text-gray-500 mt-1">Required for edits after verification.</p>
+                            </div>
+                        @else
+                            <div class="border border-blue-100 rounded-lg px-4 py-3 bg-blue-50/40">
+                                <label class="flex items-start gap-3 cursor-pointer">
+                                    <input type="checkbox"
+                                           name="verified"
+                                           value="1"
+                                           {{ old('verified', false) ? 'checked' : '' }}
+                                           class="mt-1 rounded border-gray-300 text-blue-600 focus:ring-blue-500">
+                                    <span>
+                                        <span class="block text-sm font-medium text-gray-800">Verified learning resource</span>
+                                        <span class="block text-xs text-gray-500 mt-0.5">
+                                            Mark this LR as reviewed and trusted by the SDO librarian or division office.
+                                        </span>
                                     </span>
-                                @endif
-                            </span>
-                        </label>
-                    </div>
+                                </label>
+                            </div>
+                        @endif
                     @endif
                 </div>
             </div>
@@ -924,7 +998,7 @@
                                     <div class="min-w-0">
                                         <h4 id="vm-title" class="text-lg sm:text-xl font-bold text-gray-900 leading-tight"></h4>
                                         <p id="vm-authors" class="text-sm text-gray-500 mt-1"></p>
-                                        <p id="vm-verified-note" class="hidden text-xs text-blue-600 mt-1 font-medium">Verified by SDO / Division librarian</p>
+                                        <p id="vm-verified-note" class="hidden text-xs text-blue-600 mt-1 font-medium"></p>
                                     </div>
                                 </div>
                             </div>
@@ -969,6 +1043,12 @@
                             <div class="rounded-xl border border-dashed border-gray-300 bg-gray-50 px-5 py-4">
                                 <p class="text-xs font-semibold uppercase tracking-widest text-gray-400 mb-2">Subjects / Grade Levels</p>
                                 <p id="vm-subjects" class="text-sm text-gray-600 leading-relaxed"></p>
+                            </div>
+
+                            {{-- Verification History --}}
+                            <div id="vm-verification-history-section" class="hidden rounded-xl border border-blue-100 bg-blue-50/40 px-5 py-4">
+                                <p class="text-xs font-semibold uppercase tracking-widest text-blue-500 mb-3">Verification History</p>
+                                <div id="vm-verification-history" class="space-y-3"></div>
                             </div>
                         </div>
                     </div>
@@ -1458,6 +1538,105 @@
     const closeViewBtn    = document.getElementById('closeViewModal');
     const closeViewFooter = document.getElementById('closeViewModalFooter');
 
+    function parseVerificationHistory(raw) {
+        if (!raw) return [];
+        try {
+            const parsed = JSON.parse(raw);
+            return Array.isArray(parsed) ? parsed : [];
+        } catch (e) {
+            return [];
+        }
+    }
+
+    function renderVerificationHistory(history) {
+        const section = document.getElementById('vm-verification-history-section');
+        const container = document.getElementById('vm-verification-history');
+        if (!section || !container) return;
+
+        container.innerHTML = '';
+        section.classList.toggle('hidden', history.length === 0);
+
+        history.forEach(item => {
+            const row = document.createElement('div');
+            row.className = 'rounded-lg border border-blue-100 bg-white px-4 py-3';
+
+            const topLine = document.createElement('div');
+            topLine.className = 'flex flex-col sm:flex-row sm:items-start sm:justify-between gap-1';
+
+            const identity = document.createElement('div');
+            const name = document.createElement('p');
+            name.className = 'text-sm font-semibold text-gray-800';
+            name.textContent = item.name || 'Unknown user';
+
+            const role = document.createElement('p');
+            role.className = 'text-xs text-gray-500';
+            const roleText = item.role || 'User';
+
+            identity.appendChild(name);
+            identity.appendChild(role);
+
+            const action = document.createElement('div');
+            action.className = 'sm:text-right';
+            const actionLabel = document.createElement('p');
+            actionLabel.className = 'text-xs font-semibold text-blue-700';
+            actionLabel.textContent = item.action_label || item.action_type || 'Verification Action';
+
+            const date = document.createElement('p');
+            date.className = 'text-xs text-gray-500 mt-0.5';
+            date.textContent = item.created_at || '-';
+
+            action.appendChild(actionLabel);
+            action.appendChild(date);
+            topLine.appendChild(identity);
+            topLine.appendChild(action);
+            row.appendChild(topLine);
+
+            if (item.comment) {
+                const comment = document.createElement('p');
+                comment.className = 'text-sm text-gray-600 mt-2 border-t border-blue-50 pt-2';
+                comment.textContent = item.comment;
+                row.appendChild(comment);
+            }
+
+            container.appendChild(row);
+        });
+    }
+
+    function verifierLabel(name, role = '', level = '') {
+        const roleText = role || 'User';
+        return level ? `${name} (${roleText}, Level ${level})` : `${name} (${roleText})`;
+    }
+
+    function verificationCaption(history, fallbackName = '', fallbackRole = '', fallbackLevel = '') {
+        const verifiers = [];
+        const seen = new Set();
+
+        if (fallbackName) {
+            const role = fallbackRole || 'User';
+            const key = `${fallbackName}|${role}|${fallbackLevel}`;
+            seen.add(key);
+            verifiers.push(verifierLabel(fallbackName, role, fallbackLevel));
+        }
+
+        history.forEach(item => {
+            const name = item.name || 'Unknown user';
+            const role = item.role || 'User';
+            const level = item.level || '';
+            const key = `${name}|${role}|${level}`;
+
+            if (!seen.has(key)) {
+                seen.add(key);
+                verifiers.push(verifierLabel(name, role, level));
+            }
+        });
+
+        if (verifiers.length === 0) {
+            return 'Verified learning resource';
+        }
+
+        return `Verified by ${verifiers.join(', ')}`;
+    }
+
     function openViewModal(btn) {
         document.getElementById('vm-cover').src              = btn.dataset.cover;
         document.getElementById('vm-title').textContent      = btn.dataset.title;
@@ -1472,8 +1651,19 @@
         document.getElementById('vm-subjects').textContent   = btn.dataset.subjects;
 
         const isVerified = btn.dataset.verified === '1';
+        const history = parseVerificationHistory(btn.dataset.verificationHistory);
+        const verifiedNote = document.getElementById('vm-verified-note');
+
         document.getElementById('vm-verified-badge').classList.toggle('hidden', !isVerified);
-        document.getElementById('vm-verified-note').classList.toggle('hidden', !isVerified);
+        verifiedNote.classList.toggle('hidden', !isVerified);
+        verifiedNote.textContent = isVerified
+            ? verificationCaption(
+                history,
+                btn.dataset.verifiedByName || '',
+                btn.dataset.verifiedByRole || '',
+            )
+            : '';
+        renderVerificationHistory(history);
 
         viewModal.classList.remove('hidden');
         document.body.style.overflow = 'hidden';
@@ -1859,6 +2049,15 @@
     })();
 
 })();
+
+function toggleVerificationTimeline(btn) {
+    const panel   = btn.closest('.mt-3').querySelector('.timeline-panel');
+    const chevron = btn.querySelector('.timeline-chevron');
+    if (!panel) return;
+    const isOpen = !panel.classList.contains('hidden');
+    panel.classList.toggle('hidden', isOpen);
+    chevron.style.transform = isOpen ? '' : 'rotate(90deg)';
+}
 
 function showImageModal(imageUrl, caption) {
     const modal = document.getElementById('imageModal');

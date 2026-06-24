@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Station;
 use App\Http\Controllers\Controller;
 
 use App\Models\Division;
+use App\Services\LibraryHubService;
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -16,15 +17,25 @@ class DivisionController extends BaseController
 {
     use AuthorizesRequests, ValidatesRequests;
 
-    public function __construct()
+    public function __construct(private LibraryHubService $libraryHubService)
     {
         $this->middleware('auth');
     }
 
-    public function index()
+    public function index(Request $request)
     {
-        $division = Division::where('id', Auth::user()->station_id)->firstOrFail();
-        return view('pages.division-profile', compact('division'));
+        $divisionId = (string) Auth::user()->station_id;
+        $division = Division::where('id', $divisionId)->firstOrFail();
+        $libraryHubSearch = $request->query('library_hub_search');
+        $libraryHubs = $this->libraryHubService->getDivisionLibraryHubs($divisionId, $libraryHubSearch);
+        $divisionLibrarians = $this->libraryHubService->getDivisionLibrarians($divisionId);
+
+        return view('pages.division-profile', compact(
+            'division',
+            'libraryHubs',
+            'divisionLibrarians',
+            'libraryHubSearch'
+        ));
     }
 
     public function update(Request $request)

@@ -5,6 +5,7 @@ use App\Http\Controllers\Station\ManageStationController;
 use App\Http\Controllers\Station\SchoolController;
 use App\Http\Controllers\Station\DistrictController;
 use App\Http\Controllers\Station\DivisionController;
+use App\Http\Controllers\Station\LibraryHubController;
 use App\Http\Controllers\Station\RegionController;
 use App\Http\Controllers\Station\ImportSF6Controller;
 
@@ -22,6 +23,8 @@ Route::middleware('auth')->group(function () {
     Route::get('/division-profile', [DivisionController::class, 'index'])->name('division-profile');
     Route::put('/division-profile', [DivisionController::class, 'update'])->name('division.profile.update');
     Route::put('/division-profile/update-logo', [DivisionController::class, 'updateLogo'])->name('division.logo.update');
+    Route::post('/division-profile/library-hubs', [LibraryHubController::class, 'store'])->name('division.library-hubs.store');
+    Route::put('/division-profile/library-hubs/{libraryHub}', [LibraryHubController::class, 'update'])->name('division.library-hubs.update');
 
     //MANAGE DISTRICT PROFILE
     Route::get('/district-profile', [DistrictController::class, 'index'])->name('district-profile');

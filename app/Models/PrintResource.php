@@ -221,4 +221,10 @@ class PrintResource extends Model
     {
         return $this->belongsTo(User::class, 'verified_by', 'id');
     }
+
+    public function verificationLogs(): HasMany
+    {
+        return $this->hasMany(PrintResourceVerificationLog::class, 'print_resource_id')
+            ->orderBy('created_at');
+    }
 }

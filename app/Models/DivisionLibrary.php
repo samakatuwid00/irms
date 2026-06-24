@@ -20,4 +20,9 @@ class DivisionLibrary extends Model
     {
         return $this->belongsTo(Division::class, 'division_id');
     }
+
+    public function librarianUser(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'librarian');
+    }
 }

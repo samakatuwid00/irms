@@ -96,13 +96,6 @@ class AddPrintResourceService
                 'uniqueness_hash'         => $uniquenessHash,
             ];
 
-            if (array_key_exists('verified', $data)) {
-                $isVerified = !empty($data['verified']);
-                $updateData['verified']    = $isVerified;
-                $updateData['verified_by'] = $isVerified ? Auth::id() : null;
-                $updateData['verified_at'] = $isVerified ? now() : null;
-            }
-
             $resource->update($updateData);
         });
 

@@ -511,7 +511,6 @@ function updateCachedPreInventory(schoolId, data, printValue) {
             ...item,
             estimated_print: printValue,
             estimated_resource: data.estimated_resource ?? item.estimated_resource,
-            estimated_nonprint: data.estimated_nonprint ?? item.estimated_nonprint,
             percentage: calculateBosyPercentage(item.total_lr, data.estimated_resource ?? item.estimated_resource),
             status: determineBosyStatus(calculateBosyPercentage(item.total_lr, data.estimated_resource ?? item.estimated_resource)),
             color: determineBosyColor(calculateBosyPercentage(item.total_lr, data.estimated_resource ?? item.estimated_resource)),
