@@ -162,6 +162,17 @@
                                     $sgls    = \App\Models\SubjectGradeLevel::with(['subject', 'gradeLevel'])->whereIn('id', $sglIds)->get();
                                     $sglText = $sgls->map(fn($s) => ($s->subject->subject_name ?? '') . ' - ' . ($s->gradeLevel->grade ?? ''))->join('; ');
                                 }
+
+                                $history = collect($row->verification_history ?? []);
+                                $currentVerifier = $history
+                                    ->reverse()
+                                    ->first(fn($item) => !empty($item['action_type']) && $item['action_type'] !== 'first_verification')
+                                    ?? $history->firstWhere('action_type', 'first_verification')
+                                    ?? $history->first();
+
+                                $currentVerifierName = $currentVerifier['name'] ?? ($row->verifiedBy ? trim(($row->verifiedBy->firstname ?? '') . ' ' . ($row->verifiedBy->lastname ?? '')) : '');
+                                $currentVerifierRole = $currentVerifier['role'] ?? ($row->verifiedBy?->userType?->type_name ?? '');
+                                $currentVerifierLevel = $currentVerifier['level'] ?? ($row->verifiedBy?->userType?->level ?? '');
                             @endphp
                             <tr class="hover:bg-gray-50 transition-colors">
                                 <td class="px-2 py-2">
@@ -203,7 +214,11 @@
                                                 data-verified="{{ $row->verified ? '1' : '0' }}"
                                                 data-verified-by-name="{{ $row->verifiedBy ? trim(($row->verifiedBy->firstname ?? '') . ' ' . ($row->verifiedBy->lastname ?? '')) : '' }}"
                                                 data-verified-by-role="{{ $row->verifiedBy?->userType?->type_name ?? '' }}"
-                                                data-verification-history="{{ e(json_encode($row->verification_history ?? [])) }}"
+                                                data-verified-by-level="{{ $row->verifiedBy?->userType?->level ?? '' }}"
+                                                data-current-verifier-name="{{ $currentVerifierName }}"
+                                                data-current-verifier-role="{{ $currentVerifierRole }}"
+                                                data-current-verifier-level="{{ $currentVerifierLevel }}"
+                                                data-verification-history='@json($row->verification_history ?? [])'
                                                 class="view-resource-btn inline-flex items-center gap-1 text-xs px-3 py-1.5 bg-indigo-50 text-indigo-600 border border-indigo-200 rounded-lg hover:bg-indigo-100 transition-colors whitespace-nowrap font-medium">
                                             <svg class="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
@@ -273,6 +288,17 @@
                                 $sglsC    = \App\Models\SubjectGradeLevel::with(['subject', 'gradeLevel'])->whereIn('id', $sglIdsC)->get();
                                 $sglTextC = $sglsC->map(fn($s) => ($s->subject->subject_name ?? '') . ' - ' . ($s->gradeLevel->grade ?? ''))->join('; ');
                             }
+
+                            $historyC = collect($row->verification_history ?? []);
+                            $currentVerifierC = $historyC
+                                ->reverse()
+                                ->first(fn($item) => !empty($item['action_type']) && $item['action_type'] !== 'first_verification')
+                                ?? $historyC->firstWhere('action_type', 'first_verification')
+                                ?? $historyC->first();
+
+                            $currentVerifierNameC = $currentVerifierC['name'] ?? ($row->verifiedBy ? trim(($row->verifiedBy->firstname ?? '') . ' ' . ($row->verifiedBy->lastname ?? '')) : '');
+                            $currentVerifierRoleC = $currentVerifierC['role'] ?? ($row->verifiedBy?->userType?->type_name ?? '');
+                            $currentVerifierLevelC = $currentVerifierC['level'] ?? ($row->verifiedBy?->userType?->level ?? '');
                         @endphp
                         <div class="bg-white rounded-xl shadow overflow-hidden flex flex-col group cursor-pointer"
                              onclick="(function(el){
@@ -312,7 +338,11 @@
                                             data-verified="{{ $row->verified ? '1' : '0' }}"
                                             data-verified-by-name="{{ $row->verifiedBy ? trim(($row->verifiedBy->firstname ?? '') . ' ' . ($row->verifiedBy->lastname ?? '')) : '' }}"
                                             data-verified-by-role="{{ $row->verifiedBy?->userType?->type_name ?? '' }}"
-                                            data-verification-history="{{ e(json_encode($row->verification_history ?? [])) }}"
+                                            data-verified-by-level="{{ $row->verifiedBy?->userType?->level ?? '' }}"
+                                            data-current-verifier-name="{{ $currentVerifierNameC }}"
+                                            data-current-verifier-role="{{ $currentVerifierRoleC }}"
+                                            data-current-verifier-level="{{ $currentVerifierLevelC }}"
+                                            data-verification-history='@json($row->verification_history ?? [])'
                                             class="view-resource-btn hidden">
                                     </button>
                                     <span class="text-xs text-gray-400 whitespace-nowrap">{{ $row->copyright ?? '' }}</span>
@@ -1045,11 +1075,6 @@
                                 <p id="vm-subjects" class="text-sm text-gray-600 leading-relaxed"></p>
                             </div>
 
-                            {{-- Verification History --}}
-                            <div id="vm-verification-history-section" class="hidden rounded-xl border border-blue-100 bg-blue-50/40 px-5 py-4">
-                                <p class="text-xs font-semibold uppercase tracking-widest text-blue-500 mb-3">Verification History</p>
-                                <div id="vm-verification-history" class="space-y-3"></div>
-                            </div>
                         </div>
                     </div>
                 </div>
@@ -1548,93 +1573,40 @@
         }
     }
 
-    function renderVerificationHistory(history) {
-        const section = document.getElementById('vm-verification-history-section');
-        const container = document.getElementById('vm-verification-history');
-        if (!section || !container) return;
-
-        container.innerHTML = '';
-        section.classList.toggle('hidden', history.length === 0);
-
-        history.forEach(item => {
-            const row = document.createElement('div');
-            row.className = 'rounded-lg border border-blue-100 bg-white px-4 py-3';
-
-            const topLine = document.createElement('div');
-            topLine.className = 'flex flex-col sm:flex-row sm:items-start sm:justify-between gap-1';
-
-            const identity = document.createElement('div');
-            const name = document.createElement('p');
-            name.className = 'text-sm font-semibold text-gray-800';
-            name.textContent = item.name || 'Unknown user';
-
-            const role = document.createElement('p');
-            role.className = 'text-xs text-gray-500';
-            const roleText = item.role || 'User';
-
-            identity.appendChild(name);
-            identity.appendChild(role);
-
-            const action = document.createElement('div');
-            action.className = 'sm:text-right';
-            const actionLabel = document.createElement('p');
-            actionLabel.className = 'text-xs font-semibold text-blue-700';
-            actionLabel.textContent = item.action_label || item.action_type || 'Verification Action';
-
-            const date = document.createElement('p');
-            date.className = 'text-xs text-gray-500 mt-0.5';
-            date.textContent = item.created_at || '-';
-
-            action.appendChild(actionLabel);
-            action.appendChild(date);
-            topLine.appendChild(identity);
-            topLine.appendChild(action);
-            row.appendChild(topLine);
-
-            if (item.comment) {
-                const comment = document.createElement('p');
-                comment.className = 'text-sm text-gray-600 mt-2 border-t border-blue-50 pt-2';
-                comment.textContent = item.comment;
-                row.appendChild(comment);
-            }
-
-            container.appendChild(row);
-        });
-    }
-
-    function verifierLabel(name, role = '', level = '') {
+    function verifierLabel(name, role = '') {
         const roleText = role || 'User';
-        return level ? `${name} (${roleText}, Level ${level})` : `${name} (${roleText})`;
+        return `${name} (${roleText})`;
     }
 
-    function verificationCaption(history, fallbackName = '', fallbackRole = '', fallbackLevel = '') {
-        const verifiers = [];
-        const seen = new Set();
+    function verificationCaption(history, currentName = '', currentRole = '', currentLevel = '', fallbackName = '', fallbackRole = '', fallbackLevel = '') {
+        if (currentName) {
+            return `Verified by ${verifierLabel(currentName, currentRole || 'User')}`;
+        }
+
+        const latestReverification = [...history]
+            .reverse()
+            .find(item => item.action_type && item.action_type !== 'first_verification');
+
+        if (latestReverification) {
+            return `Verified by ${verifierLabel(
+                latestReverification.name || 'Unknown user',
+                latestReverification.role || 'User'
+            )}`;
+        }
+
+        const firstVerification = history.find(item => item.action_type === 'first_verification') || history[0];
+        if (firstVerification) {
+            return `Verified by ${verifierLabel(
+                firstVerification.name || 'Unknown user',
+                firstVerification.role || 'User'
+            )}`;
+        }
 
         if (fallbackName) {
-            const role = fallbackRole || 'User';
-            const key = `${fallbackName}|${role}|${fallbackLevel}`;
-            seen.add(key);
-            verifiers.push(verifierLabel(fallbackName, role, fallbackLevel));
+            return `Verified by ${verifierLabel(fallbackName, fallbackRole || 'User')}`;
         }
 
-        history.forEach(item => {
-            const name = item.name || 'Unknown user';
-            const role = item.role || 'User';
-            const level = item.level || '';
-            const key = `${name}|${role}|${level}`;
-
-            if (!seen.has(key)) {
-                seen.add(key);
-                verifiers.push(verifierLabel(name, role, level));
-            }
-        });
-
-        if (verifiers.length === 0) {
-            return 'Verified learning resource';
-        }
-
-        return `Verified by ${verifiers.join(', ')}`;
+        return 'Verified learning resource';
     }
 
     function openViewModal(btn) {
@@ -1659,11 +1631,14 @@
         verifiedNote.textContent = isVerified
             ? verificationCaption(
                 history,
+                btn.dataset.currentVerifierName || '',
+                btn.dataset.currentVerifierRole || '',
+                btn.dataset.currentVerifierLevel || '',
                 btn.dataset.verifiedByName || '',
                 btn.dataset.verifiedByRole || '',
+                btn.dataset.verifiedByLevel || ''
             )
             : '';
-        renderVerificationHistory(history);
 
         viewModal.classList.remove('hidden');
         document.body.style.overflow = 'hidden';

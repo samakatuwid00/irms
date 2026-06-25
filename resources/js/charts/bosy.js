@@ -417,7 +417,7 @@ function buildSubtitleHtml(item) {
         `;
     }
 
-    return `<p class="text-xs text-indigo-500 mt-0.5 truncate">Pre-Inventory: ${formatNumber(displayValue)}</p>`;
+    return `<p class="text-xs text-indigo-500 mt-0.5 truncate">Net Expected Count: ${formatNumber(displayValue)}</p>`;
 }
 
 function bindPreInventoryHandlers() {
