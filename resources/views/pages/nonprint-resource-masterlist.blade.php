@@ -537,8 +537,7 @@
                     <div class="flex items-center justify-between flex-wrap gap-3">
                         <div>
                             <h3 class="text-base font-semibold text-gray-700">School Resource Requests</h3>
-                            <p class="text-xs text-gray-400 mt-0.5">Pending non-print requests from schools in your
-                                division. Approve to add to masterlist or reject to remove.</p>
+                            <p class="text-xs text-gray-400 mt-0.5">Pending non-print requests from all schools. Requests outside your division are view-only.</p>
                         </div>
                         <div class="flex gap-2">
                             <form method="GET" action="{{ route('nonprint-masterlist.index') }}" class="flex gap-2">
@@ -616,7 +615,9 @@
                                     <th class="px-3 py-3 text-left">Model</th>
                                     <th class="px-3 py-3 text-left">Version</th>
                                     <th class="px-3 py-3 text-left">Subjects / Grade Levels</th>
+                                    <th class="px-3 py-3 text-left">Origin</th>
                                     <th class="px-3 py-3 text-center">Date Submitted</th>
+                                    <th class="px-3 py-3 text-center">Requested by</th>
                                     <th class="px-3 py-3 text-center">Actions</th>
                                 </tr>
                             </thead>
@@ -659,8 +660,17 @@
                                         <td class="px-3 py-2 text-gray-600 text-xs max-w-50">
                                             <span title="{{ $reqSglText }}">{{ Str::limit($reqSglText, 55) }}</span>
                                         </td>
+                                        <td class="px-3 py-2 text-xs text-gray-600 min-w-56">
+                                            <div class="font-medium text-gray-800">{{ $req->request_school_name ?? '-' }}</div>
+                                            <div>{{ $req->request_district_name ?? '-' }}</div>
+                                            <div>{{ $req->request_division_name ?? '-' }}</div>
+                                            <div>{{ $req->request_region_name ?? '-' }}</div>
+                                        </td>
                                         <td class="px-3 py-2 text-center text-gray-500 text-xs whitespace-nowrap">
                                             {{ $req->created_at?->format('M d, Y') ?? '-' }}
+                                        </td>
+                                        <td class="px-3 py-2 text-gray-600 uppercase">
+                                            {{ $req->encodedBy ? trim("{$req->encodedBy->firstname} {$req->encodedBy->lastname}") : '-' }}
                                         </td>
                                         <td class="px-3 py-2 text-center">
                                             <div class="flex justify-center gap-2">
@@ -689,45 +699,49 @@
                                                     View
                                                 </button>
 
-                                                {{-- Approve --}}
-                                                <form action="{{ route('nonprint-masterlist.approve', $req->id) }}"
-                                                    method="POST"
-                                                    onsubmit="return confirm('Approve this resource request? It will be added to the masterlist.')">
-                                                    @csrf
-                                                    @method('PATCH')
-                                                    <button type="submit"
-                                                        class="inline-flex items-center gap-1 text-xs px-2.5 py-1.5 bg-green-50 text-green-700 border border-green-200 rounded-lg hover:bg-green-100 transition-colors font-medium whitespace-nowrap">
-                                                        <svg class="h-3 w-3" fill="none" stroke="currentColor"
-                                                            viewBox="0 0 24 24">
-                                                            <path stroke-linecap="round" stroke-linejoin="round"
-                                                                stroke-width="2" d="M5 13l4 4L19 7" />
-                                                        </svg>
-                                                        Approve
-                                                    </button>
-                                                </form>
+                                                @if($req->can_manage_request)
+                                                    {{-- Approve --}}
+                                                    <form action="{{ route('nonprint-masterlist.approve', $req->id) }}"
+                                                        method="POST"
+                                                        onsubmit="return confirm('Approve this resource request? It will be added to the masterlist.')">
+                                                        @csrf
+                                                        @method('PATCH')
+                                                        <button type="submit"
+                                                            class="inline-flex items-center gap-1 text-xs px-2.5 py-1.5 bg-green-50 text-green-700 border border-green-200 rounded-lg hover:bg-green-100 transition-colors font-medium whitespace-nowrap">
+                                                            <svg class="h-3 w-3" fill="none" stroke="currentColor"
+                                                                viewBox="0 0 24 24">
+                                                                <path stroke-linecap="round" stroke-linejoin="round"
+                                                                    stroke-width="2" d="M5 13l4 4L19 7" />
+                                                            </svg>
+                                                            Approve
+                                                        </button>
+                                                    </form>
 
-                                                {{-- Reject --}}
-                                                <form action="{{ route('nonprint-masterlist.reject', $req->id) }}"
-                                                    method="POST"
-                                                    onsubmit="return confirm('Reject and delete this request? The title will not be removed as it may be used by other resources.')">
-                                                    @csrf
-                                                    @method('DELETE')
-                                                    <button type="submit"
-                                                        class="inline-flex items-center gap-1 text-xs px-2.5 py-1.5 bg-red-50 text-red-700 border border-red-200 rounded-lg hover:bg-red-100 transition-colors font-medium whitespace-nowrap">
-                                                        <svg class="h-3 w-3" fill="none" stroke="currentColor"
-                                                            viewBox="0 0 24 24">
-                                                            <path stroke-linecap="round" stroke-linejoin="round"
-                                                                stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-                                                        </svg>
-                                                        Reject
-                                                    </button>
-                                                </form>
+                                                    {{-- Reject --}}
+                                                    <form action="{{ route('nonprint-masterlist.reject', $req->id) }}"
+                                                        method="POST"
+                                                        onsubmit="return confirm('Reject and delete this request? The title will not be removed as it may be used by other resources.')">
+                                                        @csrf
+                                                        @method('DELETE')
+                                                        <button type="submit"
+                                                            class="inline-flex items-center gap-1 text-xs px-2.5 py-1.5 bg-red-50 text-red-700 border border-red-200 rounded-lg hover:bg-red-100 transition-colors font-medium whitespace-nowrap">
+                                                            <svg class="h-3 w-3" fill="none" stroke="currentColor"
+                                                                viewBox="0 0 24 24">
+                                                                <path stroke-linecap="round" stroke-linejoin="round"
+                                                                    stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                                                            </svg>
+                                                            Reject
+                                                        </button>
+                                                    </form>
+                                                @else
+                                                    <span class="text-xs text-gray-400" title="{{ $req->request_scope_tooltip }}">View only</span>
+                                                @endif
                                             </div>
                                         </td>
                                     </tr>
                                 @empty
                                     <tr>
-                                        <td colspan="9" class="text-center text-gray-400 py-10">
+                                        <td colspan="11" class="text-center text-gray-400 py-10">
                                             <svg class="mx-auto mb-3 h-10 w-10 text-gray-300" fill="none"
                                                 stroke="currentColor" viewBox="0 0 24 24">
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
@@ -776,6 +790,11 @@
                                     <div class="p-3 flex flex-col gap-1 flex-1">
                                         <h3 class="text-xs font-semibold text-gray-900 leading-tight line-clamp-2">{{ $req->nonprintTitle->title ?? '-' }}</h3>
                                         <p class="text-xs text-gray-500 truncate">{{ $req->brand ?? '-' }}{{ $req->model ? ' / '.$req->model : '' }}</p>
+                                        <p class="text-xs text-gray-400 truncate">by {{ $req->encodedBy ? trim("{$req->encodedBy->firstname} {$req->encodedBy->lastname}") : '-' }}</p>
+                                        <p class="text-[11px] text-gray-500 leading-snug">
+                                            {{ $req->request_school_name ?? '-' }}<br>
+                                            {{ $req->request_division_name ?? '-' }}
+                                        </p>
                                         <div class="mt-auto pt-2 flex items-center justify-between gap-1 flex-wrap">
                                             <button type="button"
                                                 class="view-resource-btn hidden"
@@ -792,30 +811,34 @@
                                                 data-subjects="{{ $reqSglTextC }}"
                                                 data-is-request="true">
                                             </button>
-                                            <form action="{{ route('nonprint-masterlist.approve', $req->id) }}"
-                                                  method="POST"
-                                                  onsubmit="event.stopPropagation(); return confirm('Approve this resource request?')"
-                                                  onclick="event.stopPropagation()">
-                                                @csrf
-                                                @method('PATCH')
-                                                <button type="submit"
-                                                    class="inline-flex items-center gap-1 text-xs px-2 py-1 bg-green-50 text-green-700 border border-green-200 rounded-lg hover:bg-green-100 font-medium">
-                                                    <svg class="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
-                                                    Approve
-                                                </button>
-                                            </form>
-                                            <form action="{{ route('nonprint-masterlist.reject', $req->id) }}"
-                                                  method="POST"
-                                                  onsubmit="event.stopPropagation(); return confirm('Reject this request?')"
-                                                  onclick="event.stopPropagation()">
-                                                @csrf
-                                                @method('DELETE')
-                                                <button type="submit"
-                                                    class="inline-flex items-center gap-1 text-xs px-2 py-1 bg-red-50 text-red-700 border border-red-200 rounded-lg hover:bg-red-100 font-medium">
-                                                    <svg class="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
-                                                    Reject
-                                                </button>
-                                            </form>
+                                            @if($req->can_manage_request)
+                                                <form action="{{ route('nonprint-masterlist.approve', $req->id) }}"
+                                                      method="POST"
+                                                      onsubmit="event.stopPropagation(); return confirm('Approve this resource request?')"
+                                                      onclick="event.stopPropagation()">
+                                                    @csrf
+                                                    @method('PATCH')
+                                                    <button type="submit"
+                                                        class="inline-flex items-center gap-1 text-xs px-2 py-1 bg-green-50 text-green-700 border border-green-200 rounded-lg hover:bg-green-100 font-medium">
+                                                        <svg class="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                                                        Approve
+                                                    </button>
+                                                </form>
+                                                <form action="{{ route('nonprint-masterlist.reject', $req->id) }}"
+                                                      method="POST"
+                                                      onsubmit="event.stopPropagation(); return confirm('Reject this request?')"
+                                                      onclick="event.stopPropagation()">
+                                                    @csrf
+                                                    @method('DELETE')
+                                                    <button type="submit"
+                                                        class="inline-flex items-center gap-1 text-xs px-2 py-1 bg-red-50 text-red-700 border border-red-200 rounded-lg hover:bg-red-100 font-medium">
+                                                        <svg class="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                                                        Reject
+                                                    </button>
+                                                </form>
+                                            @else
+                                                <span class="text-xs text-gray-400" title="{{ $req->request_scope_tooltip }}">View only</span>
+                                            @endif
                                         </div>
                                     </div>
                                 </div>
@@ -1759,7 +1782,6 @@
 
             // ── NON-PRINT REQUESTS VIEW TOGGLE ──────────────────────────────────
             (function () {
-                var NRQ_KEY = 'nonprint-masterlist-rq-view';
                 var nrqInput = document.getElementById('nrq-view-input');
 
                 function applyNrqView(view, persist) {
@@ -1787,9 +1809,6 @@
                         url.searchParams.set('rq_view', view);
                         history.replaceState(null, '', url.toString());
                     } catch(e) {}
-                    if (persist !== false) {
-                        try { localStorage.setItem(NRQ_KEY, view); } catch(e) {}
-                    }
                     attachViewBtnListeners();
                 }
 
@@ -1799,10 +1818,12 @@
                     });
                 });
 
-                var fromUrl = nrqInput ? nrqInput.value : null;
-                var fromStorage = 'table';
-                try { fromStorage = localStorage.getItem(NRQ_KEY) || 'table'; } catch(e) {}
-                var initialView = (fromUrl && ['table','card'].includes(fromUrl)) ? fromUrl : fromStorage;
+                var initialView = 'table';
+                var params = new URLSearchParams(window.location.search);
+                var fromUrl = params.get('rq_view');
+                if (fromUrl && ['table','card'].includes(fromUrl)) {
+                    initialView = fromUrl;
+                }
                 applyNrqView(initialView, false);
             })();
 

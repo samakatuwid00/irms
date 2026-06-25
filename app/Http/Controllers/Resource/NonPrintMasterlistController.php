@@ -111,11 +111,7 @@ class NonPrintMasterlistController extends BaseController
 
         abort_unless($level === 3, 403, 'Only division accounts can approve requests.');
 
-        // approver_station scopes this to the division's own queue
-        $resource = NonprintResource::where('id', $id)
-            ->where('status', 0)
-            ->where('approver_station', $user->station_id)
-            ->firstOrFail();
+        $resource = $this->findScopedPendingRequest($id, $user);
 
         $resource->update(['status' => 1]);
 
@@ -139,10 +135,7 @@ class NonPrintMasterlistController extends BaseController
 
         abort_unless($level === 3, 403, 'Only division accounts can reject requests.');
 
-        $resource = NonprintResource::where('id', $id)
-            ->where('status', 0)
-            ->where('approver_station', $user->station_id)
-            ->firstOrFail();
+        $resource = $this->findScopedPendingRequest($id, $user);
 
         // Delete the cover file + thumbnail before the DB row — otherwise they're orphaned on disk
         if ($resource->cover) {
@@ -207,10 +200,8 @@ class NonPrintMasterlistController extends BaseController
 
         $q = trim($request->input('q', ''));
 
-        // Scope to this division's queue only
-        $query = NonprintResource::with(['nonprintTitle', 'type'])
-            ->where('status', 0)
-            ->where('approver_station', $user->station_id);
+        $query = NonprintResource::with(['nonprintTitle', 'type', 'encodedBy.schoolStation.district.division.region'])
+            ->where('status', 0);
 
         if (strlen($q) >= 2) {
             $query->whereRaw(
@@ -267,9 +258,8 @@ class NonPrintMasterlistController extends BaseController
             }
 
             $rqSearch = trim($request->input('rq_search', ''));
-            $requestsQuery = NonprintResource::with(['nonprintTitle', 'type'])
-                ->where('status', 0)
-                ->where('approver_station', $user->station_id);
+            $requestsQuery = NonprintResource::with(['nonprintTitle', 'type', 'encodedBy.schoolStation.district.division.region'])
+                ->where('status', 0);
 
             if (strlen($rqSearch) >= 2) {
                 $requestsQuery->whereRaw(
@@ -281,7 +271,7 @@ class NonPrintMasterlistController extends BaseController
             $requests = $requestsQuery->orderByDesc('created_at')->paginate($rqPerPage, ['*'], 'rq_page');
 
             // Append thumb_url + cover_url to every request row
-            $this->resolveCoverUrls($requests);
+            $this->resolveCoverUrls($requests, $user);
         }
 
         return [$masterlist, $requests];
@@ -291,11 +281,11 @@ class NonPrintMasterlistController extends BaseController
     //   thumb_url → ≤20 KB thumbnail for table row <img> tags
     //   cover_url → full-size image for the view modal data-cover attribute
     // Falls back gracefully: thumbnail → full cover → default placeholder
-    private function resolveCoverUrls($paginator): void
+    private function resolveCoverUrls($paginator, $user = null): void
     {
         $disk = Storage::disk('public');
 
-        $paginator->through(function ($row) use ($disk) {
+        $paginator->through(function ($row) use ($disk, $user) {
             $thumbPath = $this->nonPrintResourceService->thumbnailPathFromCover($row->cover);
 
             $row->thumb_url = ($thumbPath && $disk->exists($thumbPath))
@@ -306,8 +296,52 @@ class NonPrintMasterlistController extends BaseController
                 ? asset('storage/' . $row->cover)
                 : asset('assets/images/def.jpg');
 
+            $this->appendRequestScopeData($row, $user);
+
             return $row;
         });
+    }
+
+    private function findScopedPendingRequest(string $id, $user): NonprintResource
+    {
+        $resource = NonprintResource::where('id', $id)
+            ->where('status', 0)
+            ->firstOrFail();
+
+        abort_unless($this->canManageRequest($resource, $user), 403, 'You can only approve or reject requests within your division.');
+
+        return $resource;
+    }
+
+    private function canManageRequest(NonprintResource $resource, $user): bool
+    {
+        return (int) ($user->userType?->level ?? 0) === 3
+            && (string) $resource->approver_station === (string) $user->station_id;
+    }
+
+    private function appendRequestScopeData(NonprintResource $row, $user = null): void
+    {
+        if ((int) $row->status !== 0) {
+            return;
+        }
+
+        $school = $row->encodedBy?->schoolStation;
+        $district = $school?->district;
+        $division = $district?->division;
+        $region = $division?->region;
+
+        $row->request_region_name = $region?->region_name ?? '-';
+        $row->request_division_name = $division?->division_name ?? '-';
+        $row->request_district_name = $district?->district_name ?? '-';
+        $row->request_school_name = $school?->school_name ?? '-';
+        $row->can_manage_request = $user ? $this->canManageRequest($row, $user) : false;
+        $row->request_scope_label = $row->can_manage_request ? 'Within Your Division' : 'Outside Your Division';
+        $row->request_scope_class = $row->can_manage_request
+            ? 'bg-green-50 text-green-700 border-green-200'
+            : 'bg-gray-100 text-gray-600 border-gray-200';
+        $row->request_scope_tooltip = $row->can_manage_request
+            ? 'You can approve or reject this request.'
+            : 'You can view this request but cannot approve or reject it because it belongs to another division.';
     }
 
     // Shared JSON shape for both search() and requestSearch()

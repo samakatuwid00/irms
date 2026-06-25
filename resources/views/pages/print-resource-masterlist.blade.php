@@ -674,7 +674,7 @@
             <div class="flex items-center justify-between flex-wrap gap-3">
                 <div>
                     <h3 class="text-base font-semibold text-gray-700">School Resource Requests</h3>
-                    <p class="text-xs text-gray-400 mt-0.5">Pending requests from schools in your division. Approve to add to masterlist or reject to remove.</p>
+                    <p class="text-xs text-gray-400 mt-0.5">Pending requests from all schools. Requests outside your division are view-only.</p>
                 </div>
                 <div class="flex gap-2">
                     <form method="GET" action="{{ route('masterlist.index') }}" class="flex gap-2">
@@ -711,7 +711,7 @@
                     </select>
                 </div>
                 {{-- Hidden input so JS and per-page onchange can always read the current view --}}
-                <input type="hidden" id="rq-view-input" value="{{ request('rq_view', 'card') }}">
+                <input type="hidden" id="rq-view-input" value="{{ request('rq_view', 'table') }}">
                 <div class="flex items-center bg-gray-100 p-1 rounded-xl">
                     <button type="button"
                         class="rq-view-toggle-btn px-4 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-1.5"
@@ -747,6 +747,7 @@
                             <th class="px-3 py-3 text-left">Copyright</th>
                             <th class="px-3 py-3 text-left">ISBN</th>
                             <th class="px-3 py-3 text-left">Subjects / Grade Levels</th>
+                            <th class="px-3 py-3 text-left">Origin</th>
                             <th class="px-3 py-3 text-center">Date Submitted</th>
                             <th class="px-3 py-3 text-center">Requested by</th>
                             <th class="px-3 py-3 text-center">Actions</th>
@@ -783,6 +784,12 @@
                                 <td class="px-3 py-2 text-gray-600 text-xs max-w-50">
                                     <span title="{{ $reqSglText }}">{{ Str::limit($reqSglText, 55) }}</span>
                                 </td>
+                                <td class="px-3 py-2 text-xs text-gray-600 min-w-56">
+                                    <div class="font-medium text-gray-800">{{ $req->request_school_name ?? '-' }}</div>
+                                    <div>{{ $req->request_district_name ?? '-' }}</div>
+                                    <div>{{ $req->request_division_name ?? '-' }}</div>
+                                    <div>{{ $req->request_region_name ?? '-' }}</div>
+                                </td>
                                 <td class="px-3 py-2 text-center text-gray-500 text-xs whitespace-nowrap">{{ $req->created_at?->format('M d, Y') ?? '-' }}</td>
                                 <td class="px-3 py-2 text-gray-600 uppercase">
                                     {{ $req->encodedBy ? trim("{$req->encodedBy->firstname} {$req->encodedBy->lastname}") : '-' }}
@@ -811,41 +818,45 @@
                                             View
                                         </button>
 
-                                        {{-- Approve --}}
-                                        <form action="{{ route('masterlist.approve', $req->id) }}" method="POST"
-                                            onsubmit="return confirm('Approve this resource request? It will be added to the masterlist.')">
-                                            @csrf
-                                            @method('PATCH')
-                                            <button type="submit"
-                                                    class="inline-flex items-center gap-1 text-xs px-2.5 py-1.5 bg-green-50 text-green-700 border border-green-200 rounded-lg hover:bg-green-100 transition-colors font-medium whitespace-nowrap"
-                                                    title="Approve">
-                                                <svg class="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
-                                                </svg>
-                                                Approve
-                                            </button>
-                                        </form>
+                                        @if($req->can_manage_request)
+                                            {{-- Approve --}}
+                                            <form action="{{ route('masterlist.approve', $req->id) }}" method="POST"
+                                                onsubmit="return confirm('Approve this resource request? It will be added to the masterlist.')">
+                                                @csrf
+                                                @method('PATCH')
+                                                <button type="submit"
+                                                        class="inline-flex items-center gap-1 text-xs px-2.5 py-1.5 bg-green-50 text-green-700 border border-green-200 rounded-lg hover:bg-green-100 transition-colors font-medium whitespace-nowrap"
+                                                        title="Approve">
+                                                    <svg class="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                                                    </svg>
+                                                    Approve
+                                                </button>
+                                            </form>
 
-                                        {{-- Reject --}}
-                                        <form action="{{ route('masterlist.reject', $req->id) }}" method="POST"
-                                            onsubmit="return confirm('Reject and delete this request? The title and authors will not be removed as they may be used by other resources.')">
-                                            @csrf
-                                            @method('DELETE')
-                                            <button type="submit"
-                                                    class="inline-flex items-center gap-1 text-xs px-2.5 py-1.5 bg-red-50 text-red-700 border border-red-200 rounded-lg hover:bg-red-100 transition-colors font-medium whitespace-nowrap"
-                                                    title="Reject">
-                                                <svg class="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
-                                                </svg>
-                                                Reject
-                                            </button>
-                                        </form>
+                                            {{-- Reject --}}
+                                            <form action="{{ route('masterlist.reject', $req->id) }}" method="POST"
+                                                onsubmit="return confirm('Reject and delete this request? The title and authors will not be removed as they may be used by other resources.')">
+                                                @csrf
+                                                @method('DELETE')
+                                                <button type="submit"
+                                                        class="inline-flex items-center gap-1 text-xs px-2.5 py-1.5 bg-red-50 text-red-700 border border-red-200 rounded-lg hover:bg-red-100 transition-colors font-medium whitespace-nowrap"
+                                                        title="Reject">
+                                                    <svg class="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                                                    </svg>
+                                                    Reject
+                                                </button>
+                                            </form>
+                                        @else
+                                            <span class="text-xs text-gray-400" title="{{ $req->request_scope_tooltip }}">View only</span>
+                                        @endif
                                     </div>
                                 </td>
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="12" class="text-center text-gray-400 py-10">
+                                <td colspan="13" class="text-center text-gray-400 py-10">
                                     <svg class="mx-auto mb-3 h-10 w-10 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
                                     </svg>
@@ -896,6 +907,10 @@
                                 <h3 class="text-xs font-semibold text-gray-900 leading-tight line-clamp-2">{{ $req->printTitle->title ?? '-' }}</h3>
                                 <p class="text-xs text-gray-500 truncate">{{ $req->printTitle->authors->pluck('author_name')->join(', ') ?: '-' }}</p>
                                 <p class="text-xs text-gray-400 truncate">by {{ $req->encodedBy ? trim("{$req->encodedBy->firstname} {$req->encodedBy->lastname}") : '-' }}</p>
+                                <p class="text-[11px] text-gray-500 leading-snug">
+                                    {{ $req->request_school_name ?? '-' }}<br>
+                                    {{ $req->request_division_name ?? '-' }}
+                                </p>
                                 <div class="mt-auto pt-2 flex items-center justify-between gap-1 flex-wrap">
                                     {{-- hidden view btn so card click triggers it --}}
                                     <button type="button"
@@ -913,28 +928,32 @@
                                             data-subjects="{{ $reqSglTextC }}"
                                             class="view-resource-btn hidden">
                                     </button>
-                                    <form action="{{ route('masterlist.approve', $req->id) }}" method="POST"
-                                          onsubmit="event.stopPropagation(); return confirm('Approve this resource request?')"
-                                          onclick="event.stopPropagation()">
-                                        @csrf
-                                        @method('PATCH')
-                                        <button type="submit"
-                                                class="inline-flex items-center gap-1 text-xs px-2 py-1 bg-green-50 text-green-700 border border-green-200 rounded-lg hover:bg-green-100 font-medium">
-                                            <svg class="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
-                                            Approve
-                                        </button>
-                                    </form>
-                                    <form action="{{ route('masterlist.reject', $req->id) }}" method="POST"
-                                          onsubmit="event.stopPropagation(); return confirm('Reject this request?')"
-                                          onclick="event.stopPropagation()">
-                                        @csrf
-                                        @method('DELETE')
-                                        <button type="submit"
-                                                class="inline-flex items-center gap-1 text-xs px-2 py-1 bg-red-50 text-red-700 border border-red-200 rounded-lg hover:bg-red-100 font-medium">
-                                            <svg class="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
-                                            Reject
-                                        </button>
-                                    </form>
+                                    @if($req->can_manage_request)
+                                        <form action="{{ route('masterlist.approve', $req->id) }}" method="POST"
+                                              onsubmit="event.stopPropagation(); return confirm('Approve this resource request?')"
+                                              onclick="event.stopPropagation()">
+                                            @csrf
+                                            @method('PATCH')
+                                            <button type="submit"
+                                                    class="inline-flex items-center gap-1 text-xs px-2 py-1 bg-green-50 text-green-700 border border-green-200 rounded-lg hover:bg-green-100 font-medium">
+                                                <svg class="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                                                Approve
+                                            </button>
+                                        </form>
+                                        <form action="{{ route('masterlist.reject', $req->id) }}" method="POST"
+                                              onsubmit="event.stopPropagation(); return confirm('Reject this request?')"
+                                              onclick="event.stopPropagation()">
+                                            @csrf
+                                            @method('DELETE')
+                                            <button type="submit"
+                                                    class="inline-flex items-center gap-1 text-xs px-2 py-1 bg-red-50 text-red-700 border border-red-200 rounded-lg hover:bg-red-100 font-medium">
+                                                <svg class="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                                                Reject
+                                            </button>
+                                        </form>
+                                    @else
+                                        <span class="text-xs text-gray-400" title="{{ $req->request_scope_tooltip }}">View only</span>
+                                    @endif
                                 </div>
                             </div>
                         </div>
@@ -1774,8 +1793,8 @@
         });
 
         let initialView = 'table';
-        const fromUrl = rqInput.value;
-        try { initialView = localStorage.getItem(RQ_KEY) || 'table'; } catch(e) {}
+        const params = new URLSearchParams(window.location.search);
+        const fromUrl = params.get('rq_view');
         if (fromUrl && ['table','card'].includes(fromUrl)) initialView = fromUrl;
 
         applyRqView(initialView, false);

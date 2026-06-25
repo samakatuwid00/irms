@@ -50,6 +50,11 @@ class NonprintResource extends Model
         return $this->hasMany(NonprintAcquisition::class, 'nonprint_id');
     }
 
+    public function encodedBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'encoded_by', 'id');
+    }
+
     // Quantities summed from acquisitions
     public function getQuantitiesAttribute()
     {
