@@ -8,7 +8,6 @@ use App\Models\District;
 use App\Models\Division;
 use App\Models\SchoolLibrary;
 use App\Models\DivisionLibrary;
-use App\Models\RegionLibrary;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
 use Illuminate\Pagination\LengthAwarePaginator;
@@ -368,34 +367,30 @@ public function getResourcesData(Request $request, int $level, string $stationId
 
         if ($selectedDivision && $selectedDivision !== 'all') {
             $libraries = Cache::remember(
-                "division_all_libraries_{$selectedDivision}",
+                "division_school_libraries_{$selectedDivision}",
                 self::CACHE_TTL_LIBRARIES,
                 function () use ($selectedDivision) {
-                    $divisionLibs = DivisionLibrary::where('division_id', $selectedDivision)->pluck('id');
                     $districtIds  = District::where('division_id', $selectedDivision)->pluck('id');
                     $schoolIds    = School::whereIn('district_id', $districtIds)->pluck('id');
-                    $schoolLibs   = SchoolLibrary::whereIn('school_id', $schoolIds)->pluck('id');
 
-                    return $divisionLibs->merge($schoolLibs);
+                    return SchoolLibrary::whereIn('school_id', $schoolIds)->pluck('id');
                 }
             );
 
             return ['main' => collect(), 'filtered' => $libraries];
         }
 
-        // "All" selected — walk the entire region hierarchy
+        // "All" selected: include every school library in the region, excluding
+        // region/division library hubs from the School tab.
         $libraries = Cache::remember(
-            "region_all_libraries_{$stationId}",
+            "region_school_libraries_{$stationId}",
             self::CACHE_TTL_LIBRARIES,
             function () use ($stationId) {
-                $regionLibs   = RegionLibrary::where('region_id', $stationId)->pluck('id');
                 $divisionIds  = Division::where('region_id', $stationId)->pluck('id');
-                $divisionLibs = DivisionLibrary::whereIn('division_id', $divisionIds)->pluck('id');
                 $districtIds  = District::whereIn('division_id', $divisionIds)->pluck('id');
                 $schoolIds    = School::whereIn('district_id', $districtIds)->pluck('id');
-                $schoolLibs   = SchoolLibrary::whereIn('school_id', $schoolIds)->pluck('id');
 
-                return $regionLibs->merge($divisionLibs)->merge($schoolLibs);
+                return SchoolLibrary::whereIn('school_id', $schoolIds)->pluck('id');
             }
         );
 
@@ -405,15 +400,13 @@ public function getResourcesData(Request $request, int $level, string $stationId
     private function getLevel4DivisionLibraries(string $divisionId): Collection
     {
         return Cache::remember(
-            "division_all_libraries_{$divisionId}",
+            "division_school_libraries_{$divisionId}",
             self::CACHE_TTL_LIBRARIES,
             function () use ($divisionId) {
-                $divisionLibs = DivisionLibrary::where('division_id', $divisionId)->pluck('id');
                 $districtIds  = District::where('division_id', $divisionId)->pluck('id');
                 $schoolIds    = School::whereIn('district_id', $districtIds)->pluck('id');
-                $schoolLibs   = SchoolLibrary::whereIn('school_id', $schoolIds)->pluck('id');
 
-                return $divisionLibs->merge($schoolLibs);
+                return SchoolLibrary::whereIn('school_id', $schoolIds)->pluck('id');
             }
         );
     }
@@ -421,17 +414,14 @@ public function getResourcesData(Request $request, int $level, string $stationId
     private function getLevel4RegionLibraries(string $stationId): Collection
     {
         return Cache::remember(
-            "region_all_libraries_{$stationId}",
+            "region_school_libraries_{$stationId}",
             self::CACHE_TTL_LIBRARIES,
             function () use ($stationId) {
-                $regionLibs   = RegionLibrary::where('region_id', $stationId)->pluck('id');
                 $divisionIds  = Division::where('region_id', $stationId)->pluck('id');
-                $divisionLibs = DivisionLibrary::whereIn('division_id', $divisionIds)->pluck('id');
                 $districtIds  = District::whereIn('division_id', $divisionIds)->pluck('id');
                 $schoolIds    = School::whereIn('district_id', $districtIds)->pluck('id');
-                $schoolLibs   = SchoolLibrary::whereIn('school_id', $schoolIds)->pluck('id');
 
-                return $regionLibs->merge($divisionLibs)->merge($schoolLibs);
+                return SchoolLibrary::whereIn('school_id', $schoolIds)->pluck('id');
             }
         );
     }
@@ -451,12 +441,9 @@ public function getResourcesData(Request $request, int $level, string $stationId
         return $query;
     }
 
-    // Verified resources appear first, then by most recent acquisition (scoped to the active library filter).
+    // Sort resources by their newest acquisition date, scoped to the active library filter.
     private function applyLatestAcquisitionOrder($query, Collection $libraryIds): void
     {
-        $query->orderByDesc('print_resources.verified')
-              ->orderByDesc('print_resources.verified_at');
-
         if ($libraryIds->isEmpty()) {
             return;
         }
@@ -623,10 +610,12 @@ public function getResourcesData(Request $request, int $level, string $stationId
                 "districts_division_{$stationId}",
                 "schools_division_{$stationId}",
                 "division_libraries_{$stationId}",
+                "division_school_libraries_{$stationId}",
                 "division_all_libraries_{$stationId}",
             ],
             self::LEVEL_REGION   => [
                 "divisions_region_{$stationId}",
+                "region_school_libraries_{$stationId}",
                 "region_all_libraries_{$stationId}",
                 "all_districts",
                 "all_schools",

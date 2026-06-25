@@ -8,7 +8,6 @@ use App\Models\District;
 use App\Models\Division;
 use App\Models\SchoolLibrary;
 use App\Models\DivisionLibrary;
-use App\Models\RegionLibrary;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
@@ -223,39 +222,34 @@ class ExportPrintResourceService
             return $this->getLevel4DivisionLibraries($selectedDivision);
         }
 
-        return $this->getLevel4RegionLibraries($stationId);
+        return $this->getLevel4RegionSchoolLibraries($stationId);
     }
 
     private function getLevel4DivisionLibraries(string $divisionId): Collection
     {
         return Cache::remember(
-            "division_all_libraries_{$divisionId}",
+            "division_school_libraries_{$divisionId}",
             self::CACHE_TTL_LIBRARIES,
             function () use ($divisionId) {
-                $divisionLibs = DivisionLibrary::where('division_id', $divisionId)->pluck('id');
                 $districtIds  = District::where('division_id', $divisionId)->pluck('id');
                 $schoolIds    = School::whereIn('district_id', $districtIds)->pluck('id');
-                $schoolLibs   = SchoolLibrary::whereIn('school_id', $schoolIds)->pluck('id');
 
-                return $divisionLibs->merge($schoolLibs);
+                return SchoolLibrary::whereIn('school_id', $schoolIds)->pluck('id');
             }
         );
     }
 
-    private function getLevel4RegionLibraries(string $stationId): Collection
+    private function getLevel4RegionSchoolLibraries(string $stationId): Collection
     {
         return Cache::remember(
-            "region_all_libraries_{$stationId}",
+            "region_school_libraries_{$stationId}",
             self::CACHE_TTL_LIBRARIES,
             function () use ($stationId) {
-                $regionLibs   = RegionLibrary::where('region_id', $stationId)->pluck('id');
                 $divisionIds  = Division::where('region_id', $stationId)->pluck('id');
-                $divisionLibs = DivisionLibrary::whereIn('division_id', $divisionIds)->pluck('id');
                 $districtIds  = District::whereIn('division_id', $divisionIds)->pluck('id');
                 $schoolIds    = School::whereIn('district_id', $districtIds)->pluck('id');
-                $schoolLibs   = SchoolLibrary::whereIn('school_id', $schoolIds)->pluck('id');
 
-                return $regionLibs->merge($divisionLibs)->merge($schoolLibs);
+                return SchoolLibrary::whereIn('school_id', $schoolIds)->pluck('id');
             }
         );
     }
@@ -336,9 +330,13 @@ class ExportPrintResourceService
             self::LEVEL_DIVISION => [
                 "division_libraries_{$stationId}",
                 "division_all_school_libraries_{$stationId}",
+                "division_school_libraries_{$stationId}",
                 "division_all_libraries_{$stationId}",
             ],
-            self::LEVEL_REGION   => ["region_all_libraries_{$stationId}"],
+            self::LEVEL_REGION   => [
+                "region_school_libraries_{$stationId}",
+                "region_all_libraries_{$stationId}",
+            ],
             default              => [],
         };
 
