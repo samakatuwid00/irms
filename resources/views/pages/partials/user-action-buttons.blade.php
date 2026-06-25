@@ -1,4 +1,5 @@
 {{-- resources/views/pages/partials/user-action-buttons.blade.php --}}
+@unless($hideActions ?? false)
 <div class="flex items-center gap-1">
     @if($user->status === 'pending')
         <form
@@ -58,3 +59,4 @@
         </svg>
     </button>
 </div>
+@endunless

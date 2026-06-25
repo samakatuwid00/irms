@@ -1,3 +1,7 @@
+@php
+    $isSpecialUserType = Auth::check() && optional(Auth::user()->userType)->id === 'fd43d1da-64c7-4be2-9f2c-d419f599404f';
+@endphp
+
 <div class="p-6 space-y-6">
     <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <h1 class="text-2xl font-bold text-gray-800">Manage Users</h1>
@@ -102,7 +106,8 @@
                         'users' => $mainUsers,
                         'pageName' => 'main_page',
                         'emptyMessage' => 'No division users found.',
-                        'activeTab' => 'main'
+                        'activeTab' => 'main',
+                        'hideActions' => $isSpecialUserType,
                     ])
                 </div>
             </div>
@@ -193,6 +198,7 @@
                         'activeTab'        => 'sub',
                         'allowStationEdit' => true,
                         'divisionId'       => Auth::user()->station_id, // ← ADD
+                        'hideActions'      => $isSpecialUserType,
                     ])
                 </div>
             </div>
@@ -281,7 +287,8 @@
                         'users' => $subSubUsers,
                         'pageName' => 'subsub_page',
                         'emptyMessage' => 'No school users found.',
-                        'activeTab' => 'subsub'
+                        'activeTab' => 'subsub',
+                        'hideActions' => $isSpecialUserType,
                     ])
                 </div>
             </div>

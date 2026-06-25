@@ -11,7 +11,9 @@
                 <th class="px-4 py-3">User Type</th>
                 <th class="px-4 py-3">Station</th>
                 <th class="px-4 py-3">Status</th>
+                @unless($hideActions ?? false)
                 <th class="px-4 py-3 text-center">Actions</th>
+                @endunless
             </tr>
         </thead>
         <tbody class="divide-y">
@@ -91,15 +93,17 @@
                             {{ ucfirst($user->status) }}
                         </span>
                     </td>
+                    @unless($hideActions ?? false)
                     <td class="px-4 py-3 text-center">
                         <div id="action-cell-{{ $user->id }}" class="flex justify-center gap-2">
                             @include('pages.partials.user-action-buttons', ['user' => $user])
                         </div>
                     </td>
+                    @endunless
                 </tr>
             @empty
                 <tr>
-                    <td colspan="7" class="px-4 py-3 text-center text-gray-500">{{ $emptyMessage }}</td>
+                    <td colspan="{{ ($hideActions ?? false) ? 6 : 7 }}" class="px-4 py-3 text-center text-gray-500">{{ $emptyMessage }}</td>
                 </tr>
             @endforelse
         </tbody>

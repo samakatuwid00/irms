@@ -386,7 +386,7 @@ function buildSubtitleHtml(item) {
     if (isEditableSchoolRow) {
         return `
             <div class="bosy-pre-inventory flex items-center gap-1.5 mt-0.5 min-w-0" data-school-id="${escapeHtml(String(item.id))}">
-                <span class="text-xs text-indigo-500 whitespace-nowrap">Pre-Inventory:</span>
+                <span class="text-xs text-indigo-500 whitespace-nowrap">Net Expected Count:</span>
                 <span class="bosy-pre-inventory-display text-xs font-semibold text-indigo-700 truncate">${formatNumber(displayValue)}</span>
                 <input
                     type="number"

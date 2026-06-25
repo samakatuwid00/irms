@@ -224,6 +224,64 @@
                             Division Users
                         </a>
                     </li>
+
+                    <!-- My Account -->
+                    <li>
+                        <a href="{{ route('profile') }}"
+                           class="flex items-center gap-3 px-3 py-2.5 text-sm rounded-lg transition-colors
+                                  {{ request()->routeIs('profile') ? 'bg-blue-100 text-blue-600' : 'text-gray-700 hover:bg-gray-100' }}">
+                            <svg class="w-5 h-5" xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                <circle cx="12" cy="7" r="4"/>
+                                <path d="M6 21v-2a6 6 0 0 1 12 0v2"/>
+                            </svg>
+                            My Account
+                        </a>
+                    </li>
+
+                    @if (Auth::check() && in_array(Auth::user()?->userType?->level, [1, 2, 3, 4]))
+                        @php
+                            $level = Auth::user()->userType?->level;
+                            $routeName = match ($level) {
+                                1 => 'school-profile',
+                                2 => 'district-profile',
+                                3 => 'division-profile',
+                                4 => 'region-profile',
+                            };
+                            $label = match ($level) {
+                                1 => 'School Profile',
+                                2 => 'District Profile',
+                                3 => 'Division Profile',
+                                4 => 'Region Profile',
+                            };
+                        @endphp
+                        <li>
+                            <a href="{{ route($routeName) }}"
+                               class="flex items-center gap-3 px-3 py-2.5 text-sm rounded-lg transition-colors
+                                      {{ request()->routeIs($routeName) ? 'bg-blue-100 text-blue-600' : 'text-gray-700 hover:bg-gray-100' }}">
+                                <svg class="w-5 h-5" xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                    <path d="M3 9l9-6 9 6v12a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+                                    <path d="M9 22V12h6v10"/>
+                                </svg>
+                                {{ $label }}
+                            </a>
+                        </li>
+                    @endif
+
+                    <!-- Logout -->
+                    <li>
+                        <form action="{{ route('logout') }}" method="POST">
+                            @csrf
+                            <button type="submit"
+                                    class="w-full flex items-center gap-3 px-3 py-2.5 text-sm rounded-lg transition-colors text-red-600 hover:bg-red-50">
+                                <svg class="w-5 h-5" xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                    <path d="M17 16l4-4-4-4"/>
+                                    <path d="M7 12h14"/>
+                                    <path d="M7 4v16"/>
+                                </svg>
+                                Sign out
+                            </button>
+                        </form>
+                    </li>
                     @else
                     <!-- Dashboard -->
                     <li>
@@ -720,6 +778,7 @@
                             </div>
                         </template>
                     </li>
+
                     @else
 
                     <!-- Dashboard -->
