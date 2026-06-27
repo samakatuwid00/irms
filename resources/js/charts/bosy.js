@@ -379,9 +379,14 @@ function buildSubtitleHtml(item) {
     const isSdoSupplyOfficer = String(currentUserTypeId || '').trim() === targetUserType;
     const isEditableSchoolRow = isSdoSupplyOfficer && currentBosyLevel === 'division';
 
+    // Use actual estimated_resource if validated (> 0), otherwise use NEC
+    const estimatedResource = item.estimated_resource || 0;
+    const nec = item.net_expected_count || 0;
+    const isEstimatedValidated = estimatedResource > 0;
+
     const displayValue = isEditableSchoolRow
-        ? (item.estimated_print ?? item.estimated_resource ?? 0)
-        : (item.estimated_resource || 0);
+        ? (item.estimated_print ?? estimatedResource)
+        : (isEstimatedValidated ? estimatedResource : nec);
 
     if (isEditableSchoolRow) {
         return `
@@ -417,7 +422,8 @@ function buildSubtitleHtml(item) {
         `;
     }
 
-    return `<p class="text-xs text-indigo-500 mt-0.5 truncate">Net Expected Count: ${formatNumber(displayValue)}</p>`;
+    const label = isEstimatedValidated ? 'Inventory Count' : 'Net Expected Count';
+    return `<p class="text-xs text-indigo-500 mt-0.5 truncate">${label}: ${formatNumber(displayValue)}</p>`;
 }
 
 function bindPreInventoryHandlers() {
@@ -507,13 +513,17 @@ function updateCachedPreInventory(schoolId, data, printValue) {
     const patchItem = (item) => {
         if (String(item.id) !== String(schoolId)) return item;
 
+        const newEstimatedResource = data.estimated_resource ?? item.estimated_resource;
+        const nec = item.net_expected_count || 0;
+        const pct = calculateBosyPercentage(item.total_lr, newEstimatedResource, nec);
+
         return {
             ...item,
             estimated_print: printValue,
-            estimated_resource: data.estimated_resource ?? item.estimated_resource,
-            percentage: calculateBosyPercentage(item.total_lr, data.estimated_resource ?? item.estimated_resource),
-            status: determineBosyStatus(calculateBosyPercentage(item.total_lr, data.estimated_resource ?? item.estimated_resource)),
-            color: determineBosyColor(calculateBosyPercentage(item.total_lr, data.estimated_resource ?? item.estimated_resource)),
+            estimated_resource: newEstimatedResource,
+            percentage: pct,
+            status: determineBosyStatus(pct),
+            color: determineBosyColor(pct),
         };
     };
 
@@ -529,7 +539,8 @@ function updateRowAfterPreInventorySave(row, schoolId, data) {
 
     const item = bosyAllItems.find(entry => String(entry.id) === String(schoolId));
     const totalLr = item?.total_lr ?? 0;
-    const percentage = calculateBosyPercentage(totalLr, data.estimated_resource ?? 0);
+    const nec = item?.net_expected_count || 0;
+    const percentage = calculateBosyPercentage(totalLr, data.estimated_resource ?? 0, nec);
     const status = determineBosyStatus(percentage);
     const color = determineBosyColor(percentage);
     const statusClass = getStatusClass(status);
@@ -559,12 +570,14 @@ function updateRowAfterPreInventorySave(row, schoolId, data) {
     }
 }
 
-function calculateBosyPercentage(total, estimated) {
+function calculateBosyPercentage(total, estimated, netExpectedCount) {
     const totalLr = Number(total) || 0;
     const estimatedTotal = Number(estimated) || 0;
+    const nec = Number(netExpectedCount) || 0;
+    const projected = estimatedTotal > 0 ? estimatedTotal : nec;
 
-    if (estimatedTotal > 0) {
-        return Math.min(100, Math.round((totalLr / estimatedTotal) * 100));
+    if (projected > 0) {
+        return Math.min(100, Math.round((totalLr / projected) * 100));
     }
 
     return totalLr > 0 ? 100 : 0;

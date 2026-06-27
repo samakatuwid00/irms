@@ -9,6 +9,26 @@
 
 @section('content')
 
+    @if ($populationRequired)
+        <div id="populationRequiredModal"
+            class="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 px-4"
+            role="dialog" aria-modal="true" aria-labelledby="populationRequiredTitle">
+            <div class="w-full max-w-lg rounded-lg bg-white p-6 shadow-2xl">
+                <h2 id="populationRequiredTitle" class="text-xl font-semibold text-gray-900">
+                    School Population Required
+                </h2>
+                <p class="mt-3 text-sm leading-6 text-gray-600">
+                    {{ \App\Services\SchoolPopulationRequirementService::NOTICE }}
+                </p>
+                <div class="mt-6 flex justify-end">
+                    <button type="button" id="updatePopulationNow" class="btn-primary">
+                        Update Now
+                    </button>
+                </div>
+            </div>
+        </div>
+    @endif
+
     @include('pages.partials.page-header')
 
     {{-- ================== FLASH MESSAGE ================== --}}
@@ -234,7 +254,7 @@
         </div>
 
         {{-- ================= STUDENT POPULATION ================= --}}
-        <div class="bg-white rounded-xl shadow p-6">
+        <div id="studentPopulation" class="bg-white rounded-xl shadow p-6" tabindex="-1">
 
             {{-- Section header with Import SF6 button --}}
             <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">

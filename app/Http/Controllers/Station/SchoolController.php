@@ -6,12 +6,14 @@ use App\Http\Controllers\Controller;
 use App\Models\School;
 use App\Models\SchoolYear;
 use App\Models\Population;
+use App\Services\SchoolPopulationRequirementService;
 
 use Illuminate\Http\Request;
 use App\Models\GradeOffering;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use Illuminate\Validation\ValidationException;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Foundation\Validation\ValidatesRequests;
 use Illuminate\Routing\Controller as BaseController;
@@ -20,7 +22,9 @@ class SchoolController extends BaseController
 {
     use AuthorizesRequests, ValidatesRequests;
 
-    public function __construct()
+    public function __construct(
+        private readonly SchoolPopulationRequirementService $populationRequirement
+    )
     {
         $this->middleware('auth');
     }
@@ -36,8 +40,11 @@ class SchoolController extends BaseController
         // Get all school years for dropdown
         $schoolYears = SchoolYear::orderBy('year_end', 'desc')->get();
 
-        // Get selected school year ID from request or default to null
-        $selectedSyId = $request->query('sy_id');
+        $populationRequired = $this->populationRequirement->isRequired(Auth::user());
+
+        // Open the latest school year immediately when population entry is required.
+        $selectedSyId = $request->query('sy_id')
+            ?: ($populationRequired ? $schoolYears->first()?->id : null);
 
         // Get population data for selected school year (if any)
         $population = null;
@@ -47,7 +54,14 @@ class SchoolController extends BaseController
                 ->first();
         }
 
-        return view('pages.school-profile', compact('school', 'gradeOffering', 'schoolYears', 'selectedSyId', 'population'));
+        return view('pages.school-profile', compact(
+            'school',
+            'gradeOffering',
+            'schoolYears',
+            'selectedSyId',
+            'population',
+            'populationRequired'
+        ));
     }
 
     /**
@@ -259,6 +273,25 @@ class SchoolController extends BaseController
 
         // Validate the request
         $request->validate($validationRules);
+
+        // Recalculate totals server-side so the NEC population cannot be spoofed.
+        foreach ($grades as $gradeKey => [$maleField, $femaleField, $totalField]) {
+            if ($gradeOffering->{$gradeKey} !== 'yes') {
+                continue;
+            }
+
+            $populationData[$maleField] = (int) $request->input($maleField, 0);
+            $populationData[$femaleField] = (int) $request->input($femaleField, 0);
+            $populationData[$totalField] = $populationData[$maleField] + $populationData[$femaleField];
+        }
+
+        $necPopulation = $this->populationRequirement->total($populationData);
+
+        if ($necPopulation <= 0) {
+            throw ValidationException::withMessages([
+                'population' => 'Enter a school population greater than zero for Kindergarten through Grade 12.',
+            ]);
+        }
 
         // Check if population record exists for this school and school year
         $population = Population::where('school_id', $schoolId)

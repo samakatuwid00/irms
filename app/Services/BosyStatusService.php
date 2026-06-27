@@ -2,13 +2,16 @@
 
 namespace App\Services;
 
+use App\Models\Subject;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Http\Request;
 
 class BosyStatusService
 {
+    private const NEC_GRADE_LEVEL_MULTIPLIER = 13;
+
     public function getBosyStatusData(Request $request): array
     {
         $user      = Auth::user();
@@ -122,14 +125,18 @@ class BosyStatusService
                 ->pluck('total_nonprint', 'encoded_by');
         }
 
-        // 4. Build items — one row per user
-        $items = $users->map(function ($user) use ($printPerUser, $nonprintPerUser, $school) {
+        // 4. Compute NEC for the school
+        $nec = $this->calculateNec([$schoolId]);
+
+        // 5. Build items — one row per user
+        $items = $users->map(function ($user) use ($printPerUser, $nonprintPerUser, $school, $nec) {
             $userPrint    = (int) ($printPerUser[$user->user_id]    ?? 0);
             $userNonprint = (int) ($nonprintPerUser[$user->user_id] ?? 0);
             $userTotal    = $userPrint + $userNonprint;
 
             $estimated    = (int) $school->total_estimated_resource;
-            $percentage   = $this->calculatePercentage($userTotal, $estimated);
+            $projected    = $estimated > 0 ? $estimated : $nec;
+            $percentage   = $this->calculatePercentage($userTotal, $projected);
 
             return [
                 'id'                 => $user->user_id,
@@ -143,6 +150,7 @@ class BosyStatusService
                 'total_print'        => $userPrint,
                 'total_nonprint'     => $userNonprint,
                 'estimated_resource' => $estimated,
+                'net_expected_count' => $nec,
                 'percentage'         => $percentage,
                 'status'             => $this->determineBosyStatus($percentage),
                 'color'              => $this->determineBosyColor($percentage),
@@ -151,10 +159,11 @@ class BosyStatusService
             ];
         });
 
-        // 5. Summary — total across all users vs school estimated
+        // 6. Summary — total across all users vs school estimated
         $totalActualLr      = $items->sum('total_lr');
         $totalEstimated     = (int) $school->total_estimated_resource;
-        $overallPercentage  = $this->calculatePercentage($totalActualLr, $totalEstimated);
+        $projectedSummary   = $totalEstimated > 0 ? $totalEstimated : $nec;
+        $overallPercentage  = $this->calculatePercentage($totalActualLr, $projectedSummary);
 
         return [
             'level'          => 'school',
@@ -173,6 +182,7 @@ class BosyStatusService
                 'total_libraries'    => 1,
                 'total_lr'           => $totalActualLr,
                 'total_estimated'    => $totalEstimated,
+                'net_expected_count' => $nec,
                 'overall_percentage' => $overallPercentage,
                 'status'             => $this->determineBosyStatus($overallPercentage),
                 'color'              => $this->determineBosyColor($overallPercentage),
@@ -217,10 +227,16 @@ class BosyStatusService
         // Real-time LR calculation (print + nonprint or filtered)
         $realTimeLr = $this->getRealTimeTotalLrBySchool($schoolIds, $printTypeId);
 
-        $items = $schools->map(function ($school) use ($realTimeLr) {
+        // Compute NEC for the district summary and for each displayed school.
+        $nec = $this->calculateNec($schoolIds);
+        $necBySchool = $this->calculateNecBySchool($schoolIds);
+
+        $items = $schools->map(function ($school) use ($realTimeLr, $necBySchool) {
             $totalLr   = (int) ($realTimeLr[$school->school_id] ?? 0);
             $estimated = (int) $school->total_estimated_resource;
-            $percentage = $this->calculatePercentage($totalLr, $estimated);
+            $schoolNec = (int) ($necBySchool[$school->school_id] ?? 0);
+            $projected = $estimated > 0 ? $estimated : $schoolNec;
+            $percentage = $this->calculatePercentage($totalLr, $projected);
 
             return [
                 'id'                 => $school->school_id,
@@ -231,6 +247,7 @@ class BosyStatusService
                     : asset('assets/images/no_image.jpg'),
                 'total_lr'           => $totalLr,
                 'estimated_resource' => $estimated,
+                'net_expected_count' => $schoolNec,
                 'percentage'         => $percentage,
                 'status'             => $this->determineBosyStatus($percentage),
                 'color'              => $this->determineBosyColor($percentage),
@@ -254,7 +271,8 @@ class BosyStatusService
             'total_libraries' => $items->sum('libraries.total'),
         ];
 
-        $overallPercentage = $this->calculatePercentage($totals['total_lr'], $totals['total_estimated']);
+        $projectedTotal = $totals['total_estimated'] > 0 ? $totals['total_estimated'] : $nec;
+        $overallPercentage = $this->calculatePercentage($totals['total_lr'], $projectedTotal);
 
         $districtName = DB::table('lrmis.districts')
             ->where('id', $districtId)
@@ -272,6 +290,7 @@ class BosyStatusService
                 'total_libraries'    => $totals['total_libraries'],
                 'total_lr'           => $totals['total_lr'],
                 'total_estimated'    => $totals['total_estimated'],
+                'net_expected_count' => $nec,
                 'overall_percentage' => $overallPercentage,
                 'status'             => $this->determineBosyStatus($overallPercentage),
                 'color'              => $this->determineBosyColor($overallPercentage),
@@ -319,10 +338,21 @@ class BosyStatusService
 
         $divisionIds = $divisions->pluck('division_id')->toArray();
 
+        // Get school IDs for NEC calculation
+        $schoolIdsForNec = DB::table('lrmis.schools as s')
+            ->join('lrmis.districts as dt', 'dt.id', '=', 's.district_id')
+            ->whereIn('dt.division_id', $divisionIds)
+            ->pluck('s.id')
+            ->toArray();
+
+        // Compute NEC for the region summary and for each displayed division.
+        $nec = $this->calculateNec($schoolIdsForNec);
+        $necByDivision = $this->calculateNecByDivision($divisionIds);
+
         // Real-time LR per division
         $realTimeLr = $this->getRealTimeTotalLrByDivision($divisionIds, $hubFilter, $printTypeId);
 
-        $items = $divisions->map(function ($division) use ($hubFilter, $realTimeLr) {
+        $items = $divisions->map(function ($division) use ($hubFilter, $realTimeLr, $necByDivision) {
             switch ($hubFilter) {
                 case 'division-hub':
                     $estimatedResource = (int) $division->division_estimated_resource;
@@ -336,7 +366,9 @@ class BosyStatusService
             }
 
             $actualLr   = (int) ($realTimeLr[$division->division_id] ?? 0);
-            $percentage = $this->calculatePercentage($actualLr, $estimatedResource);
+            $divisionNec = (int) ($necByDivision[$division->division_id] ?? 0);
+            $projected  = $estimatedResource > 0 ? $estimatedResource : $divisionNec;
+            $percentage = $this->calculatePercentage($actualLr, $projected);
 
             return [
                 'id'                 => $division->division_id,
@@ -347,6 +379,7 @@ class BosyStatusService
                     : asset('assets/images/no_image.jpg'),
                 'total_lr'           => $actualLr,
                 'estimated_resource' => $estimatedResource,
+                'net_expected_count' => $divisionNec,
                 'percentage'         => $percentage,
                 'status'             => $this->determineBosyStatus($percentage),
                 'color'              => $this->determineBosyColor($percentage),
@@ -368,7 +401,8 @@ class BosyStatusService
             'division_libraries'=> $items->sum('libraries.divisions'),
         ];
 
-        $overallPercentage = $this->calculatePercentage($totals['total_lr'], $totals['total_estimated']);
+        $projectedTotal = $totals['total_estimated'] > 0 ? $totals['total_estimated'] : $nec;
+        $overallPercentage = $this->calculatePercentage($totals['total_lr'], $projectedTotal);
 
         return [
             'level'      => 'region',
@@ -384,6 +418,7 @@ class BosyStatusService
                 'division_libraries' => $totals['division_libraries'],
                 'total_lr'           => $totals['total_lr'],
                 'total_estimated'    => $totals['total_estimated'],
+                'net_expected_count' => $nec,
                 'overall_percentage' => $overallPercentage,
                 'status'             => $this->determineBosyStatus($overallPercentage),
                 'color'              => $this->determineBosyColor($overallPercentage),
@@ -431,13 +466,19 @@ class BosyStatusService
 
         $schoolIds = $schools->pluck('school_id')->toArray();
 
+        // Compute NEC for the division summary and for each displayed school.
+        $nec = $this->calculateNec($schoolIds);
+        $necBySchool = $this->calculateNecBySchool($schoolIds);
+
         // Real-time LR calculation (print + nonprint or filtered)
         $realTimeLr = $this->getRealTimeTotalLrBySchool($schoolIds, $printTypeId);
 
-        $items = $schools->map(function ($school) use ($realTimeLr) {
+        $items = $schools->map(function ($school) use ($realTimeLr, $necBySchool) {
             $totalLr = (int) ($realTimeLr[$school->school_id] ?? 0);
             $estimated = (int) $school->total_estimated_resource;
-            $percentage = $this->calculatePercentage($totalLr, $estimated);
+            $schoolNec = (int) ($necBySchool[$school->school_id] ?? 0);
+            $projected = $estimated > 0 ? $estimated : $schoolNec;
+            $percentage = $this->calculatePercentage($totalLr, $projected);
 
             return [
                 'id' => $school->school_id,
@@ -448,6 +489,7 @@ class BosyStatusService
                     : asset('assets/images/no_image.jpg'),
                 'total_lr' => $totalLr,
                 'estimated_resource' => $estimated,
+                'net_expected_count' => $schoolNec,
                 'estimated_print' => (int) ($school->estimated_print ?? 0),
                 'percentage' => $percentage,
                 'status' => $this->determineBosyStatus($percentage),
@@ -472,7 +514,8 @@ class BosyStatusService
             'total_libraries' => $items->sum('libraries.total'),
         ];
 
-        $overallPercentage = $this->calculatePercentage($totals['total_lr'], $totals['total_estimated']);
+        $projectedTotal = $totals['total_estimated'] > 0 ? $totals['total_estimated'] : $nec;
+        $overallPercentage = $this->calculatePercentage($totals['total_lr'], $projectedTotal);
 
         $districtName = null;
         if (!empty($districtFilter)) {
@@ -495,6 +538,7 @@ class BosyStatusService
                 'total_libraries' => $totals['total_libraries'],
                 'total_lr' => $totals['total_lr'],
                 'total_estimated' => $totals['total_estimated'],
+                'net_expected_count' => $nec,
                 'overall_percentage' => $overallPercentage,
                 'status' => $this->determineBosyStatus($overallPercentage),
                 'color' => $this->determineBosyColor($overallPercentage),
@@ -821,5 +865,139 @@ class BosyStatusService
     private function determineStationId($user, int $level): ?string
     {
         return $user->station_id ?: null;
+    }
+
+    /**
+     * Get total population for given school IDs using the latest school year.
+     */
+    private function getTotalPopulation(array $schoolIds): int
+    {
+        return $this->getPopulationTotalsBySchool($schoolIds)->sum();
+    }
+
+    /**
+     * Calculate Net Expected Count = Population x Number of Subject Areas x 13.
+     */
+    private function calculateNec(array $schoolIds): int
+    {
+        $population = $this->getTotalPopulation($schoolIds);
+        $subjectCount = Subject::count();
+
+        return $population * $subjectCount * self::NEC_GRADE_LEVEL_MULTIPLIER;
+    }
+
+    /**
+     * Calculate NEC per school using each school's own population total.
+     */
+    private function calculateNecBySchool(array $schoolIds)
+    {
+        $subjectCount = Subject::count();
+
+        if ($subjectCount <= 0) {
+            return collect();
+        }
+
+        return $this->getPopulationTotalsBySchool($schoolIds)
+            ->map(fn (int $population) => $population * $subjectCount * self::NEC_GRADE_LEVEL_MULTIPLIER);
+    }
+
+    /**
+     * Calculate NEC per division by summing the school NEC values under each division.
+     */
+    private function calculateNecByDivision(array $divisionIds)
+    {
+        if (empty($divisionIds)) {
+            return collect();
+        }
+
+        $schools = DB::table('lrmis.schools as s')
+            ->join('lrmis.districts as d', 'd.id', '=', 's.district_id')
+            ->whereIn('d.division_id', $divisionIds)
+            ->select('s.id as school_id', 'd.division_id')
+            ->get();
+
+        if ($schools->isEmpty()) {
+            return collect();
+        }
+
+        $necBySchool = $this->calculateNecBySchool($schools->pluck('school_id')->all());
+        $necByDivision = collect();
+
+        foreach ($schools as $school) {
+            $current = (int) ($necByDivision[$school->division_id] ?? 0);
+            $necByDivision[$school->division_id] = $current + (int) ($necBySchool[$school->school_id] ?? 0);
+        }
+
+        return $necByDivision;
+    }
+
+    /**
+     * Grade-level total columns in the populations table.
+     * Each represents the combined male + female count for that grade level.
+     */
+    private const GRADE_TOTAL_COLUMNS = [
+        'k_total',
+        'g1_total',
+        'g2_total',
+        'g3_total',
+        'g4_total',
+        'g5_total',
+        'g6_total',
+        'g7_total',
+        'g8_total',
+        'g9_total',
+        'g10_total',
+        'g11_total',
+        'g12_total',
+        'ng_total',
+    ];
+
+    /**
+     * Sum all grade-level population totals per school for the latest school year.
+     *
+     * The populations table stores a pre-computed total column for each grade level
+     * (e.g. k_total, g1_total … g12_total, ng_total). We sum those columns so that
+     * each school's population figure is the grand total of all enrolled learners
+     * across every grade level in the most-recent school year on record.
+     */
+    private function getPopulationTotalsBySchool(array $schoolIds)
+    {
+        $schoolIds = array_values(array_filter(array_unique($schoolIds)));
+
+        if (empty($schoolIds)) {
+            return collect();
+        }
+
+        $latestSyId = $this->getLatestPopulationSchoolYearId($schoolIds);
+
+        if (!$latestSyId) {
+            return collect();
+        }
+
+        // Build a single SUM expression that adds all grade-level _total columns.
+        $sumExpr = implode(' + ', array_map(
+            fn (string $col) => "COALESCE({$col}, 0)",
+            self::GRADE_TOTAL_COLUMNS
+        ));
+
+        $rows = DB::table('populations')
+            ->whereIn('school_id', $schoolIds)
+            ->where('sy_id', $latestSyId)
+            ->selectRaw("school_id, ({$sumExpr}) AS population_total")
+            ->get();
+
+        return $rows->mapWithKeys(fn ($row) => [
+            $row->school_id => (int) $row->population_total,
+        ]);
+    }
+
+    private function getLatestPopulationSchoolYearId(array $schoolIds): ?string
+    {
+        return DB::table('populations as p')
+            ->join('school_years as sy', 'sy.id', '=', 'p.sy_id')
+            ->whereIn('p.school_id', $schoolIds)
+            ->orderByDesc('sy.year_end')
+            ->orderByDesc('sy.year_start')
+            ->value('p.sy_id');
     }
 }

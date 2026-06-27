@@ -557,6 +557,11 @@
                     = Progress based on total LR vs estimated resources. BOSY / EOSY is set by the Regional Account.
                     It automatically RESETS ALL to 0 when period changes. Finalized data from past period becomes permanent.
                 </p>
+                <p>
+                    <span class="font-bold text-red-600">Note:</span>
+                    <span class="font-semibold text-gray-800"> Net Expected Count (NEC)</span>
+                    = Population &times; Number of Subject Areas &times; 13. This serves as the default projected inventory count until validated by the Supply Officer and LRMS personnel, after which the actual inventory is used, resulting in a 100% Inventory Status.
+                </p>
             </div>
  
         </x-chart-card>

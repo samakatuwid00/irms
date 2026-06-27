@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\GradeOffering;
 use App\Models\Population;
 use App\Models\SchoolYear;
+use App\Services\SchoolPopulationRequirementService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Str;
@@ -18,7 +19,9 @@ class ImportSF6Controller extends BaseController
 {
     use AuthorizesRequests, ValidatesRequests;
 
-    public function __construct()
+    public function __construct(
+        private readonly SchoolPopulationRequirementService $populationRequirement
+    )
     {
         $this->middleware('auth');
     }
@@ -106,6 +109,12 @@ class ImportSF6Controller extends BaseController
                 $populationData[$fField] = $data[$gradeKey]['female'] ?? 0;
                 $populationData[$tField] = $data[$gradeKey]['total']  ?? 0;
             }
+        }
+
+        if ($this->populationRequirement->total($populationData) <= 0) {
+            return redirect()->back()->withErrors([
+                'sf6_file' => 'The imported file must contain a population greater than zero for Kindergarten through Grade 12.',
+            ]);
         }
 
         $existing = Population::where('school_id', $schoolId)->where('sy_id', $syId)->first();

@@ -14,4 +14,15 @@ document.addEventListener('DOMContentLoaded', () => {
     initDateEstablished();
     initGradeOfferings();
     initPopulation();
+
+    const populationRequiredModal = document.getElementById('populationRequiredModal');
+    const updatePopulationNow = document.getElementById('updatePopulationNow');
+
+    updatePopulationNow?.addEventListener('click', () => {
+        populationRequiredModal?.classList.add('hidden');
+
+        const populationSection = document.getElementById('studentPopulation');
+        populationSection?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        populationSection?.focus({ preventScroll: true });
+    });
 });

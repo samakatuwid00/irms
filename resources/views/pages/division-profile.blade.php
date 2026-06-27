@@ -253,7 +253,7 @@
                 <tr>
                     <th class="px-3 sm:px-4 py-3">Library Hub Name</th>
                     <th class="px-3 sm:px-4 py-3">Librarian</th>
-                    <th class="px-3 sm:px-4 py-3 text-right">Estimated Resources</th>
+                    <th class="px-3 sm:px-4 py-3 text-right">Net Expected Count</th>
                     <th class="px-3 sm:px-4 py-3 text-center">Actions</th>
                 </tr>
             </thead>
@@ -342,7 +342,7 @@
             </div>
 
             <div>
-                <label class="text-xs text-gray-500">Estimated Resources *</label>
+                <label class="text-xs text-gray-500">Net Expected Count *</label>
                 <input type="number" name="estimated_resource" value="{{ old('estimated_resource', 0) }}" min="0" class="input" required>
             </div>
 
@@ -387,7 +387,7 @@
             </div>
 
             <div>
-                <label class="text-xs text-gray-500">Estimated Resources *</label>
+                <label class="text-xs text-gray-500">Net Expected Count *</label>
                 <input type="number" name="estimated_resource" id="editLibraryHubEstimatedResource" min="0" class="input" required>
             </div>
 
