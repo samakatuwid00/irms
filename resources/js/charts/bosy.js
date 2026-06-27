@@ -1,4 +1,3 @@
-
 document.addEventListener('DOMContentLoaded', () => {
     initBosyStatus();
     // setInterval(initBosyStatus, 300000); // uncomment for auto-refresh every 5 min
@@ -482,9 +481,16 @@ function toggleSearchClear(input, clearBtn) {
  */
 function updateSearchCount(countEl) {
     if (!countEl) return;
+
+    const searchInput  = document.getElementById('bosySearchInput');
+    const searchClear  = document.getElementById('bosySearchClear');
+
     if (!bosySearchTerm) {
         countEl.classList.add('hidden');
         countEl.textContent = '';
+        // Remove the spacing classes so clear button returns to default position
+        if (searchClear)  searchClear.classList.remove('with-count');
+        if (searchInput)  searchInput.classList.remove('has-count');
         return;
     }
 
@@ -497,6 +503,10 @@ function updateSearchCount(countEl) {
     const total = sourceItems.length;
     countEl.textContent = `${matched} / ${total}`;
     countEl.classList.remove('hidden');
+
+    // Shift clear button left and widen input padding to avoid overlapping the count pill
+    if (searchClear)  searchClear.classList.add('with-count');
+    if (searchInput)  searchInput.classList.add('has-count');
 }
 
 /**

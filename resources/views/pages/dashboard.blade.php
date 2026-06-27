@@ -524,22 +524,22 @@
                         class="bosy-search-input"
                         autocomplete="off"
                     >
+                    {{-- Clear button is inside the bar so it stays right-anchored at every screen width --}}
+                    <button type="button" id="bosySearchClear"
+                            class="bosy-search-clear hidden" title="Clear search">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
+                             stroke-width="2.5" stroke="currentColor" class="w-3.5 h-3.5">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12"/>
+                        </svg>
+                    </button>
                     <span id="bosySearchCount" class="bosy-search-count hidden"></span>
                 </div>
-                <button type="button" id="bosySearchClear"
-                        class="bosy-search-clear hidden" title="Clear search">
-                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
-                         stroke-width="2.5" stroke="currentColor" class="w-4 h-4">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12"/>
-                    </svg>
-                </button>
             </div>
  
             {{-- ── Scroll Wrapper ── --}}
-            <div class="overflow-x-auto overflow-y-hidden scroll-smooth pb-1 -mb-1">
+            <div class="bosy-x-scroll-wrapper">
                 <div id="bosy-divisions-container"
-                     class="max-h-[360px] overflow-y-auto overflow-x-visible scroll-smooth
-                            min-h-[200px] min-w-[480px] pr-1 space-y-1">
+                     class="bosy-scroll-container min-h-[200px] min-w-[320px] sm:min-w-[480px] pr-1 space-y-1">
                     @include('pages.partials.bosy-skeleton')
                 </div>
             </div>

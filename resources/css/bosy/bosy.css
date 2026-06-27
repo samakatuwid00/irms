@@ -2,7 +2,7 @@
     .bosy-search-wrapper {
         display: flex;
         align-items: center;
-        gap: 0.5rem;
+        /* wrapper is now just the bar; clear button lives inside */
     }
 
     .bosy-search-bar {
@@ -10,6 +10,7 @@
         display: flex;
         align-items: center;
         flex: 1;
+        min-width: 0;
         background: #f8fafc;
         border: 1.5px solid #e2e8f0;
         border-radius: 0.625rem;
@@ -45,9 +46,15 @@
         background: transparent;
         font-size: 0.8125rem;
         color: #1e293b;
-        padding: 0.5rem 3rem 0.5rem 2.35rem;
+        /* right pad leaves room for the clear button (2rem) + a little breathing room */
+        padding: 0.5rem 2.25rem 0.5rem 2.35rem;
         min-width: 0;
         line-height: 1.5;
+    }
+
+    /* When the search-count pill is also visible, widen the right pad to avoid overlap */
+    .bosy-search-input.has-count {
+        padding-right: 6rem;
     }
 
     .bosy-search-input::placeholder {
@@ -55,12 +62,17 @@
         font-weight: 400;
     }
 
+    /* ── Clear button: absolute-positioned INSIDE the search bar ── */
     .bosy-search-clear {
+        position: absolute;
+        right: 0.4rem;
+        top: 50%;
+        transform: translateY(-50%);
         display: flex;
         align-items: center;
         justify-content: center;
-        width: 1.75rem;
-        height: 1.75rem;
+        width: 1.6rem;
+        height: 1.6rem;
         border: none;
         border-radius: 50%;
         background: #e2e8f0;
@@ -69,17 +81,23 @@
         transition: background-color 0.15s ease, color 0.15s ease, transform 0.15s ease;
         padding: 0;
         flex-shrink: 0;
+        z-index: 1;
     }
 
     .bosy-search-clear:hover {
         background: #cbd5e1;
         color: #334155;
-        transform: scale(1.1);
+        transform: translateY(-50%) scale(1.1);
+    }
+
+    /* Shift clear button left when the count pill is showing */
+    .bosy-search-clear.with-count {
+        right: 4.25rem;
     }
 
     .bosy-search-count {
         position: absolute;
-        right: 0.625rem;
+        right: 0.5rem;
         font-size: 0.6875rem;
         font-weight: 600;
         color: #6366f1;
@@ -89,6 +107,7 @@
         white-space: nowrap;
         pointer-events: none;
         line-height: 1.4;
+        z-index: 1;
     }
 
     /* ── Outer wrapper: horizontal scroll on narrow viewports ── */
@@ -341,7 +360,9 @@
             padding: 0;
             background: transparent !important;
             border: none !important;
+            /* Hide the label text via color trick while keeping the ::before dot */
             color: transparent;
+            font-size: 0;
             width: 14px;
             height: 14px;
             border-radius: 50%;
@@ -355,20 +376,44 @@
             margin: 0;
         }
 
+        /* ── no-population badge: same dot-only treatment as others ── */
         .status-no-population {
-            width: auto;
-            height: auto;
-            padding: 0.25rem 0.45rem;
-            overflow: visible;
-            background-color: #fee2e2 !important;
-            color: #991b1b;
-            border: 1px solid #fca5a5 !important;
+            padding: 0;
+            background: transparent !important;
+            border: none !important;
+            color: transparent;
+            font-size: 0;
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            overflow: hidden;
         }
 
         .status-no-population::before {
-            width: 8px;
-            height: 8px;
+            width: 14px;
+            height: 14px;
+            margin: 0;
+            background-color: #dc2626;
         }
 
-        /* Show a tooltip via title on hover (handled in JS) */
+        /* Hide the inner .status-label span on xs so color: transparent trick
+           doesn't bleed through semi-transparent parent */
+        .status-badge .status-label {
+            display: none;
+        }
+    }
+
+    /* ── Row grid: tighten avatar + reduce gap on xs ── */
+    @media (max-width: 399px) {
+        .bosy-row-grid {
+            grid-template-columns: minmax(90px, 2.2fr) 2.5fr minmax(40px, 1fr) 14px;
+            gap: 0.5rem;
+        }
+    }
+
+    /* ── Scroll container: allow a bit less height on very small screens ── */
+    @media (max-width: 479px) {
+        .bosy-scroll-container {
+            max-height: calc(4 * 72px);
+        }
     }
