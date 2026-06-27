@@ -2,7 +2,6 @@
 
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\DashboardController;
-use App\Http\Controllers\Resource\ManageEstimatedResourceCountController;
 
 // Protected routes [NAVIGATIONS]
 Route::middleware('auth')->group(function () {
@@ -30,9 +29,6 @@ Route::middleware('auth')->group(function () {
 
     Route::get('/dashboard/bosy-status', [DashboardController::class, 'getBosyStatusData'])
         ->name('dashboard.bosy-status');
-
-    Route::patch('/dashboard/school/{schoolId}/pre-inventory', [ManageEstimatedResourceCountController::class, 'updateSchoolPreInventory'])
-        ->name('dashboard.school.pre-inventory.update');
 
     Route::get('/dashboard/bosy-settings', [DashboardController::class, 'getBosySettings'])
         ->name('dashboard.bosy-settings.get');

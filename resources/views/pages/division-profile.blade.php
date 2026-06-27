@@ -9,6 +9,26 @@
 
 @section('content')
 
+@if ($divisionResourceRequired)
+    <div id="divisionResourceRequiredModal"
+        class="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 px-4"
+        role="dialog" aria-modal="true" aria-labelledby="divisionResourceRequiredTitle">
+        <div class="w-full max-w-lg rounded-lg bg-white p-6 shadow-2xl">
+            <h2 id="divisionResourceRequiredTitle" class="text-xl font-semibold text-gray-900">
+                Division NEC Required
+            </h2>
+            <p class="mt-3 text-sm leading-6 text-gray-600">
+                {{ \App\Services\DivisionResourceRequirementService::NOTICE }}
+            </p>
+            <div class="mt-6 flex justify-end">
+                <button type="button" id="updateDivisionResourceNow" class="btn-primary">
+                    OK
+                </button>
+            </div>
+        </div>
+    </div>
+@endif
+
 @include('pages.partials.page-header')
 
 {{-- ================== FLASH MESSAGE ================== --}}
@@ -190,7 +210,7 @@
 
 
 {{-- ================= LIBRARY HUBS ================= --}}
-<div class="bg-white rounded-xl shadow overflow-hidden mt-4">
+<div id="divisionLibraryHubs" class="bg-white rounded-xl shadow overflow-hidden mt-4" tabindex="-1">
     <div class="p-4 border-b border-gray-200">
         <div class="flex flex-col gap-4">
             <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3">
@@ -273,7 +293,7 @@
                             <div class="text-xs text-gray-500">{{ $librarian?->email ?? '-' }}</div>
                         </td>
                         <td class="px-3 sm:px-4 py-3 text-right whitespace-nowrap">
-                            {{ number_format((int) $hub->estimated_resource) }}
+                            {{ number_format((int) $hub->net_expected_count) }}
                         </td>
                         <td class="px-3 sm:px-4 py-3">
                             <div class="flex justify-center gap-2 sm:gap-3">
@@ -283,7 +303,7 @@
                                         data-action="{{ route('division.library-hubs.update', $hub->id) }}"
                                         data-library-name="{{ $hub->library_name }}"
                                         data-librarian="{{ $hub->librarian }}"
-                                        data-estimated-resource="{{ $hub->estimated_resource }}">
+                                        data-net-expected-count="{{ $hub->net_expected_count }}">
                                     <svg class="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                                     </svg>
@@ -343,7 +363,7 @@
 
             <div>
                 <label class="text-xs text-gray-500">Net Expected Count *</label>
-                <input type="number" name="estimated_resource" value="{{ old('estimated_resource', 0) }}" min="0" class="input" required>
+                <input type="number" name="net_expected_count" value="{{ old('net_expected_count', 1) }}" min="1" class="input" required>
             </div>
 
             <div class="flex justify-end gap-3 pt-2">
@@ -388,7 +408,7 @@
 
             <div>
                 <label class="text-xs text-gray-500">Net Expected Count *</label>
-                <input type="number" name="estimated_resource" id="editLibraryHubEstimatedResource" min="0" class="input" required>
+                <input type="number" name="net_expected_count" id="editLibraryHubNetExpectedCount" min="1" class="input" required>
             </div>
 
             <div class="flex justify-end gap-3 pt-2">

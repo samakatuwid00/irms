@@ -3,7 +3,7 @@
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
-use App\Http\Middleware\EnsureSchoolPopulationIsEntered;
+use App\Http\Middleware\EnsureRequiredStationDataIsEntered;
 
 
 return Application::configure(basePath: dirname(__DIR__))
@@ -14,7 +14,7 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->redirectGuestsTo('/');
-        $middleware->appendToGroup('web', EnsureSchoolPopulationIsEntered::class);
+        $middleware->appendToGroup('web', EnsureRequiredStationDataIsEntered::class);
         //$middleware->append(\App\Http\Middleware\SecurityHeaders::class);
     })
     ->withCommands([

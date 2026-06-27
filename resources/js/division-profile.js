@@ -12,4 +12,15 @@ document.addEventListener('DOMContentLoaded', () => {
     initLogoUpload();
     initDateEstablished();
     initLibraryHubs();
+
+    const requirementModal = document.getElementById('divisionResourceRequiredModal');
+    const updateResourceButton = document.getElementById('updateDivisionResourceNow');
+
+    updateResourceButton?.addEventListener('click', () => {
+        requirementModal?.classList.add('hidden');
+
+        const libraryHubs = document.getElementById('divisionLibraryHubs');
+        libraryHubs?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        libraryHubs?.focus({ preventScroll: true });
+    });
 });

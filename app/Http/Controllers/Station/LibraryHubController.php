@@ -53,7 +53,7 @@ class LibraryHubController extends BaseController
                 'uuid',
                 Rule::exists('users', 'id')->where(fn ($query) => $query->where('station_id', $divisionId)),
             ],
-            'estimated_resource' => ['required', 'integer', 'min:0'],
+            'net_expected_count' => ['required', 'integer', 'min:1'],
         ]);
     }
 }

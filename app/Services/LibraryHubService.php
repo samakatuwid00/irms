@@ -29,7 +29,7 @@ class LibraryHubService
                     });
 
                 if (is_numeric($search)) {
-                    $q->orWhere('estimated_resource', (int) $search);
+                    $q->orWhere('net_expected_count', (int) $search);
                 }
             });
         }
@@ -61,7 +61,7 @@ class LibraryHubService
             'division_id' => $divisionId,
             'librarian' => $data['librarian'],
             'library_name' => $data['library_name'],
-            'estimated_resource' => $data['estimated_resource'] ?? 0,
+            'net_expected_count' => $data['net_expected_count'],
         ]);
     }
 
@@ -70,7 +70,7 @@ class LibraryHubService
         $libraryHub->fill([
             'librarian' => $data['librarian'],
             'library_name' => $data['library_name'],
-            'estimated_resource' => $data['estimated_resource'] ?? 0,
+            'net_expected_count' => $data['net_expected_count'],
         ]);
 
         $libraryHub->save();

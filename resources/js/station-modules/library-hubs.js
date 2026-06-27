@@ -5,7 +5,7 @@ export function initLibraryHubs() {
     const editForm = document.getElementById('editLibraryHubForm');
     const editName = document.getElementById('editLibraryHubName');
     const editLibrarian = document.getElementById('editLibraryHubLibrarian');
-    const editEstimatedResource = document.getElementById('editLibraryHubEstimatedResource');
+    const editNetExpectedCount = document.getElementById('editLibraryHubNetExpectedCount');
 
     const openModal = (modal) => {
         if (!modal) return;
@@ -38,12 +38,12 @@ export function initLibraryHubs() {
 
     document.querySelectorAll('.edit-library-hub-btn').forEach((button) => {
         button.addEventListener('click', () => {
-            if (!editForm || !editName || !editLibrarian || !editEstimatedResource) return;
+            if (!editForm || !editName || !editLibrarian || !editNetExpectedCount) return;
 
             editForm.action = button.dataset.action || '';
             editName.value = button.dataset.libraryName || '';
             editLibrarian.value = button.dataset.librarian || '';
-            editEstimatedResource.value = button.dataset.estimatedResource || 0;
+            editNetExpectedCount.value = button.dataset.netExpectedCount || 0;
 
             openModal(editModal);
         });

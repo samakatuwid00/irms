@@ -301,20 +301,15 @@
         background-color: #f59e0b;
     }
 
-    /* ── Inline pre-inventory editor (SDO supply officers) ── */
-    .bosy-pre-inventory-btn:focus-visible {
-        outline: 2px solid #6366f1;
-        outline-offset: 1px;
+    /* Missing school setup */
+    .status-no-population {
+        background-color: #fee2e2;
+        color: #991b1b;
+        border: 1px solid #fca5a5;
     }
 
-    .bosy-pre-inventory-input::-webkit-outer-spin-button,
-    .bosy-pre-inventory-input::-webkit-inner-spin-button {
-        -webkit-appearance: none;
-        margin: 0;
-    }
-
-    .bosy-pre-inventory-input {
-        -moz-appearance: textfield;
+    .status-no-population::before {
+        background-color: #dc2626;
     }
 
     /* ── Row grid layout ── */
@@ -358,6 +353,21 @@
             width: 14px;
             height: 14px;
             margin: 0;
+        }
+
+        .status-no-population {
+            width: auto;
+            height: auto;
+            padding: 0.25rem 0.45rem;
+            overflow: visible;
+            background-color: #fee2e2 !important;
+            color: #991b1b;
+            border: 1px solid #fca5a5 !important;
+        }
+
+        .status-no-population::before {
+            width: 8px;
+            height: 8px;
         }
 
         /* Show a tooltip via title on hover (handled in JS) */

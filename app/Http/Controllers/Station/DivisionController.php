@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Station;
 use App\Http\Controllers\Controller;
 
 use App\Models\Division;
+use App\Services\DivisionResourceRequirementService;
 use App\Services\LibraryHubService;
 
 use Illuminate\Http\Request;
@@ -17,8 +18,10 @@ class DivisionController extends BaseController
 {
     use AuthorizesRequests, ValidatesRequests;
 
-    public function __construct(private LibraryHubService $libraryHubService)
-    {
+    public function __construct(
+        private LibraryHubService $libraryHubService,
+        private DivisionResourceRequirementService $divisionResourceRequirement
+    ) {
         $this->middleware('auth');
     }
 
@@ -29,12 +32,14 @@ class DivisionController extends BaseController
         $libraryHubSearch = $request->query('library_hub_search');
         $libraryHubs = $this->libraryHubService->getDivisionLibraryHubs($divisionId, $libraryHubSearch);
         $divisionLibrarians = $this->libraryHubService->getDivisionLibrarians($divisionId);
+        $divisionResourceRequired = $this->divisionResourceRequirement->isRequired(Auth::user());
 
         return view('pages.division-profile', compact(
             'division',
             'libraryHubs',
             'divisionLibrarians',
-            'libraryHubSearch'
+            'libraryHubSearch',
+            'divisionResourceRequired'
         ));
     }
 
