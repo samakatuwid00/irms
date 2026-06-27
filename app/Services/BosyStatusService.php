@@ -148,7 +148,6 @@ class BosyStatusService
                 'total_lr'           => $userTotal,
                 'total_print'        => $userPrint,
                 'total_nonprint'     => $userNonprint,
-                'net_expected_count' => $nec,
                 'percentage'         => $percentage,
                 'status'             => $this->determineBosyStatus($percentage),
                 'color'              => $this->determineBosyColor($percentage),
@@ -176,7 +175,6 @@ class BosyStatusService
                 'item_label'         => 'Users',
                 'total_libraries'    => 1,
                 'total_lr'           => $totalActualLr,
-                'net_expected_count' => $nec,
                 'overall_percentage' => $overallPercentage,
                 'status'             => $this->determineBosyStatus($overallPercentage),
                 'color'              => $this->determineBosyColor($overallPercentage),
@@ -750,20 +748,25 @@ class BosyStatusService
             'school'   => 'Users',
         ];
 
+        $summary = [
+            'total_items'        => 0,
+            'item_label'         => $labelMap[$level] ?? 'Items',
+            'total_libraries'    => 0,
+            'total_lr'           => 0,
+            'overall_percentage' => 0,
+            'status'             => 'Not Started',
+            'color'              => 'bg-gray-400',
+        ];
+
+        if ($level !== 'school') {
+            $summary['net_expected_count'] = 0;
+        }
+
         return [
             'level'          => $level,
             'items'          => [],
             'station_id'     => $stationId,
-            'summary'        => [
-                'total_items'        => 0,
-                'item_label'         => $labelMap[$level] ?? 'Items',
-                'total_libraries'    => 0,
-                'total_lr'           => 0,
-                'net_expected_count' => 0,
-                'overall_percentage' => 0,
-                'status'             => 'Not Started',
-                'color'              => 'bg-gray-400',
-            ],
+            'summary'        => $summary,
             'period' => [
                 'start' => '05 June',
                 'end'   => '25 Dec',

@@ -189,7 +189,19 @@ function updateBosySummary(summary, level) {
     const summaryContainer = document.getElementById('bosy-summary');
     if (!summaryContainer) return;
 
-    const itemLabel = level === 'division' ? 'Schools' : 'Divisions';
+    const itemLabel = {
+        school: 'Users',
+        district: 'Schools',
+        division: 'Schools',
+        region: 'Divisions',
+    }[level] || 'Items';
+    const necSummary = level === 'school'
+        ? ''
+        : `
+                <div>
+                    <span class="text-gray-600">Total NEC:</span>
+                    <span class="font-semibold ml-1">${formatNumber(summary.net_expected_count || 0)}</span>
+                </div>`;
 
     summaryContainer.innerHTML = `
         <div class="bg-gray-50 rounded-lg p-3 mb-4 text-sm">
@@ -206,10 +218,7 @@ function updateBosySummary(summary, level) {
                     <span class="text-gray-600">Total LR:</span>
                     <span class="font-semibold ml-1">${formatNumber(summary.total_lr)}</span>
                 </div>
-                <div>
-                    <span class="text-gray-600">Total NEC:</span>
-                    <span class="font-semibold ml-1">${formatNumber(summary.net_expected_count || 0)}</span>
-                </div>
+                ${necSummary}
                 <div>
                     <span class="text-gray-600">Progress:</span>
                     <span class="font-semibold ml-1 ${summary.color.replace('bg-', 'text-')}">${summary.overall_percentage}%</span>
@@ -360,6 +369,12 @@ function createItemElement(item) {
 }
 
 function buildSubtitleHtml(item) {
+    if (currentBosyLevel === 'school') {
+        return item.role
+            ? `<p class="text-xs text-gray-500 mt-0.5 truncate">${escapeHtml(item.role)}</p>`
+            : '';
+    }
+
     const nec = item.net_expected_count || 0;
     const role = item.role
         ? `<span class="text-gray-500">${escapeHtml(item.role)} | </span>`

@@ -26,3 +26,14 @@ test('division schools with zero NEC receive no population status', function () 
     expect($determineStatus->invoke($service, 0, 0))->toBe('No Population')
         ->and($determineStatus->invoke($service, 100, 0))->toBe('Not Started');
 });
+
+test('school dashboard empty responses do not expose NEC', function () {
+    $service = new BosyStatusService(new RegionNecCalculator());
+    $emptyResponse = bosyStatusServiceMethod('emptyResponse');
+
+    $schoolResponse = $emptyResponse->invoke($service, 'school', 'school-1');
+    $divisionResponse = $emptyResponse->invoke($service, 'division', 'division-1');
+
+    expect($schoolResponse['summary'])->not->toHaveKey('net_expected_count')
+        ->and($divisionResponse['summary'])->toHaveKey('net_expected_count');
+});

@@ -547,11 +547,20 @@
             {{-- ── Notes ── --}}
             <div class="mt-8 pt-6 border-t border-gray-200
                         text-sm text-gray-600 leading-relaxed space-y-3">
-                <p>
-                    <span class="font-bold text-red-600">Note:</span>
-                    <span class="font-semibold text-gray-800"> Net Expected Count (NEC)</span>
-                    = Population &times; Number of Grade Offerings &times; Number of Subject Area. This serves as the default projected inventory count and remains in effect until validated by the Supply Officer and LRMS personnel to reflect the actual inventory, resulting in 100% Inventory Status.
-                </p>
+                @if ($userLevel === 1)
+                    <p>
+                        <span class="font-bold text-red-600">Note:</span>
+                        <span class="font-semibold text-gray-800"> Status</span>
+                        = Progress based on total LR vs estimated resources. BOSY / EOSY is set by the Regional Account.
+                        It automatically RESETS ALL to 0 when period changes. Finalized data from past period becomes permanent.
+                    </p>
+                @else
+                    <p>
+                        <span class="font-bold text-red-600">Note:</span>
+                        <span class="font-semibold text-gray-800"> Net Expected Count (NEC)</span>
+                        = Population &times; Number of Grade Offerings &times; Number of Subject Area. This serves as the default projected inventory count and remains in effect until validated by the Supply Officer and LRMS personnel to reflect the actual inventory, resulting in 100% Inventory Status.
+                    </p>
+                @endif
             </div>
  
         </x-chart-card>
