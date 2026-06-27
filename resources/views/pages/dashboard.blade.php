@@ -550,7 +550,7 @@
                 <p>
                     <span class="font-bold text-red-600">Note:</span>
                     <span class="font-semibold text-gray-800"> Net Expected Count (NEC)</span>
-                    = Population × Number of Subject Areas × 13. This serves as the default projected inventory count and remains in effect until validated by the Supply Officer and LRMS personnel to reflect the actual inventory, resulting in 100% Inventory Status.
+                    = Population &times; Number of Grade Offerings &times; Number of Subject Area. This serves as the default projected inventory count and remains in effect until validated by the Supply Officer and LRMS personnel to reflect the actual inventory, resulting in 100% Inventory Status.
                 </p>
             </div>
  

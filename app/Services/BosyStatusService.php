@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\Subject;
 use App\Support\GradeColumnMap;
+use App\Support\GradeOfferingMap;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -11,8 +12,6 @@ use Illuminate\Support\Facades\Log;
 
 class BosyStatusService
 {
-    private const NEC_GRADE_LEVEL_MULTIPLIER = 13;
-
     public function __construct(
         private readonly RegionNecCalculator $regionNecCalculator
     ) {}
@@ -847,22 +846,11 @@ class BosyStatusService
     }
 
     /**
-     * Get total population for given school IDs using the latest school year.
-     */
-    private function getTotalPopulation(array $schoolIds): int
-    {
-        return $this->getPopulationTotalsBySchool($schoolIds)->sum();
-    }
-
-    /**
-     * Calculate Net Expected Count = Population x Number of Subject Areas x 13.
+     * NEC = Population x Number of Grade Offerings x Subject Area Constant.
      */
     private function calculateNec(array $schoolIds): int
     {
-        $population = $this->getTotalPopulation($schoolIds);
-        $subjectCount = Subject::count();
-
-        return $population * $subjectCount * self::NEC_GRADE_LEVEL_MULTIPLIER;
+        return (int) $this->calculateNecBySchool($schoolIds)->sum();
     }
 
     /**
@@ -870,14 +858,45 @@ class BosyStatusService
      */
     private function calculateNecBySchool(array $schoolIds)
     {
-        $subjectCount = Subject::count();
+        $subjectAreaConstant = Subject::count();
 
-        if ($subjectCount <= 0) {
+        if ($subjectAreaConstant <= 0) {
             return collect();
         }
 
+        $gradeOfferingCounts = $this->getGradeOfferingCountsBySchool($schoolIds);
+
         return $this->getPopulationTotalsBySchool($schoolIds)
-            ->map(fn (int $population) => $population * $subjectCount * self::NEC_GRADE_LEVEL_MULTIPLIER);
+            ->map(fn (int $population, string $schoolId) => $population
+                * (int) ($gradeOfferingCounts[$schoolId] ?? 0)
+                * $subjectAreaConstant);
+    }
+
+    /**
+     * Count distinct NEC-eligible grade levels offered by each school.
+     */
+    private function getGradeOfferingCountsBySchool(array $schoolIds)
+    {
+        $schoolIds = array_values(array_filter(array_unique($schoolIds)));
+
+        if (empty($schoolIds)) {
+            return collect();
+        }
+
+        $columns = GradeOfferingMap::all();
+        $offerings = DB::table('grade_offerings')
+            ->whereIn('school_id', $schoolIds)
+            ->select(array_merge(['school_id'], $columns))
+            ->get()
+            ->groupBy('school_id');
+
+        return $offerings->map(function ($schoolOfferings) use ($columns): int {
+            return collect($columns)->filter(function (string $column) use ($schoolOfferings): bool {
+                return $schoolOfferings->contains(
+                    fn ($offering) => strtolower((string) ($offering->{$column} ?? 'no')) === 'yes'
+                );
+            })->count();
+        });
     }
 
     /**
