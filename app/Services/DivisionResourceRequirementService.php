@@ -21,6 +21,6 @@ class DivisionResourceRequirementService
 
         return (int) DB::table('division_libraries')
             ->where('division_id', $user->station_id)
-            ->sum('estimated_resource') <= 0;
+            ->sum('net_expected_count') <= 0;
     }
 }

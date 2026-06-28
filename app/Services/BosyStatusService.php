@@ -297,7 +297,7 @@ class BosyStatusService
         $divisionLibraryStats = DB::table('lrmis.division_libraries')
             ->select('division_id')
             ->selectRaw('COUNT(*) as library_count')
-            ->selectRaw('COALESCE(SUM(estimated_resource), 0) as net_expected_count')
+            ->selectRaw('COALESCE(SUM(net_expected_count), 0) as net_expected_count')
             ->groupBy('division_id');
 
         $schoolLibraryStats = DB::table('lrmis.school_libraries as sl')

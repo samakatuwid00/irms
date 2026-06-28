@@ -9,10 +9,10 @@ class DivisionLibrary extends Model
 {
     public $incrementing = false;
     protected $keyType = 'string';
-    protected $fillable = ['id', 'division_id', 'librarian', 'library_name', 'estimated_resource'];
+    protected $fillable = ['id', 'division_id', 'librarian', 'library_name', 'net_expected_count'];
     protected $casts = [
         'id' => 'string',
-        'estimated_resource' => 'integer'
+        'net_expected_count' => 'integer'
     ];
     public $timestamps = false;
 
