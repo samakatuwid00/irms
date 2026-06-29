@@ -73,7 +73,21 @@ class LrAvailabilityService
         $aggregated = $this->aggregationService
             ->aggregateBySubjectGrade($libraryIds, $gradeIds, $subjectIds, $printTypeIds);
 
-        $series = $this->buildSeriesFromData($subjects, $gradeLevels, $aggregated, 'total_qty');
+        $availableSubjectGrades = DB::table('subject_grade_levels')
+            ->whereIn('grade_level_id', $gradeIds)
+            ->whereIn('subject_id', $subjectIds)
+            ->get(['subject_id', 'grade_level_id'])
+            ->mapWithKeys(fn ($mapping) => [
+                $mapping->subject_id.'|'.$mapping->grade_level_id => true,
+            ]);
+
+        $series = $this->buildSeriesFromData(
+            $subjects,
+            $gradeLevels,
+            $aggregated,
+            $availableSubjectGrades,
+            'total_qty'
+        );
 
         // Population
         $popSeriesData = $this->getPopulationData($allowedLibraryIds, $gradeLevels, $userLevel, $stationId);
@@ -107,7 +121,13 @@ class LrAvailabilityService
         ];
     }
 
-    private function buildSeriesFromData($subjects, $gradeLevels, Collection $data, string $qtyColumn): array
+    private function buildSeriesFromData(
+        $subjects,
+        $gradeLevels,
+        Collection $data,
+        Collection $availableSubjectGrades,
+        string $qtyColumn
+    ): array
     {
         $series = [];
         $first = true;
@@ -115,6 +135,13 @@ class LrAvailabilityService
         foreach ($subjects as $subject) {
             $dataPoints = [];
             foreach ($gradeLevels as $gl) {
+                $mappingKey = $subject->id.'|'.$gl->id;
+
+                if (! $availableSubjectGrades->has($mappingKey)) {
+                    $dataPoints[] = null;
+                    continue;
+                }
+
                 $row = $data->firstWhere(fn($r) => $r->subject_id == $subject->id && $r->grade_level_id == $gl->id);
                 $qty = $row ? (int) $row->{$qtyColumn} : 0;
                 $dataPoints[] = $qty;

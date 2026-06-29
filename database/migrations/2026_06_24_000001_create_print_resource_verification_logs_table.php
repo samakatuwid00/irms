@@ -10,32 +10,34 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::create('print_resource_verification_logs', function (Blueprint $table) {
-            $table->uuid('id')->primary();
-            $table->uuid('print_resource_id');
-            $table->uuid('user_id')->nullable();
-            $table->unsignedTinyInteger('user_level')->nullable();
-            $table->string('user_role')->nullable();
-            $table->string('action_type', 50);
-            $table->text('comment')->nullable();
-            $table->json('previous_metadata')->nullable();
-            $table->json('new_metadata')->nullable();
-            $table->timestamp('created_at')->useCurrent();
+        if (! Schema::hasTable('print_resource_verification_logs')) {
+            Schema::create('print_resource_verification_logs', function (Blueprint $table) {
+                $table->uuid('id')->primary();
+                $table->uuid('print_resource_id');
+                $table->uuid('user_id')->nullable();
+                $table->unsignedTinyInteger('user_level')->nullable();
+                $table->string('user_role')->nullable();
+                $table->string('action_type', 50);
+                $table->text('comment')->nullable();
+                $table->json('previous_metadata')->nullable();
+                $table->json('new_metadata')->nullable();
+                $table->timestamp('created_at')->useCurrent();
 
-            $table->foreign('print_resource_id')
-                ->references('id')
-                ->on('print_resources')
-                ->cascadeOnDelete();
+                $table->foreign('print_resource_id')
+                    ->references('id')
+                    ->on('print_resources')
+                    ->cascadeOnDelete();
 
-            $table->foreign('user_id')
-                ->references('id')
-                ->on('users')
-                ->nullOnDelete();
+                $table->foreign('user_id')
+                    ->references('id')
+                    ->on('users')
+                    ->nullOnDelete();
 
-            $table->index(['print_resource_id', 'created_at']);
-            $table->index(['user_id', 'created_at']);
-            $table->index('action_type');
-        });
+                $table->index(['print_resource_id', 'created_at']);
+                $table->index(['user_id', 'created_at']);
+                $table->index('action_type');
+            });
+        }
 
         $this->backfillExistingVerifications();
     }
@@ -56,6 +58,12 @@ return new class extends Migration
             ->leftJoin('usertypes', 'usertypes.id', '=', 'users.usertype_id')
             ->where('print_resources.verified', true)
             ->whereNotNull('print_resources.verified_by')
+            ->whereNotExists(function ($query) {
+                $query->selectRaw('1')
+                    ->from('print_resource_verification_logs as existing_log')
+                    ->whereColumn('existing_log.print_resource_id', 'print_resources.id')
+                    ->where('existing_log.action_type', 'first_verification');
+            })
             ->orderBy('print_resources.id')
             ->select([
                 'print_resources.id as print_resource_id',

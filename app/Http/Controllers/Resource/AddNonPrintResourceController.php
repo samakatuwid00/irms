@@ -152,11 +152,12 @@ class AddNonPrintResourceController extends BaseController
                 'subject_grade_levels.grade_level_id',
                 'subjects.subject_name',
                 'grade_levels.grade as grade_level',
-                'subject_grade_levels.key_stage',
+                'key_stages.name as key_stage',
                 'grade_levels.sort_order'
             )
             ->join('subjects',     'subjects.id',     '=', 'subject_grade_levels.subject_id')
             ->join('grade_levels', 'grade_levels.id', '=', 'subject_grade_levels.grade_level_id')
+            ->join('key_stages', 'key_stages.id', '=', 'grade_levels.key_stage_id')
             ->orderBy('grade_levels.sort_order')
             ->get();
 

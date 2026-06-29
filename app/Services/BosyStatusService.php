@@ -2,10 +2,10 @@
 
 namespace App\Services;
 
-use App\Models\Subject;
 use App\Support\GradeColumnMap;
 use App\Support\GradeOfferingMap;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -849,7 +849,7 @@ class BosyStatusService
     }
 
     /**
-     * NEC = Population x Number of Grade Offerings x Subject Area Constant.
+     * NEC = latest population x offered grade count x available subject-area count.
      */
     private function calculateNec(array $schoolIds): int
     {
@@ -861,18 +861,14 @@ class BosyStatusService
      */
     private function calculateNecBySchool(array $schoolIds)
     {
-        $subjectAreaConstant = Subject::count();
-
-        if ($subjectAreaConstant <= 0) {
-            return collect();
-        }
-
-        $gradeOfferingCounts = $this->getGradeOfferingCountsBySchool($schoolIds);
+        $gradeOfferings = $this->getNecGradeOfferingsBySchool($schoolIds);
+        $gradeOfferingCounts = $gradeOfferings->map(fn (array $grades): int => count($grades));
+        $subjectAreaCounts = $this->getSubjectAreaCountsBySchool($gradeOfferings);
 
         return $this->getPopulationTotalsBySchool($schoolIds)
             ->map(fn (int $population, string $schoolId) => $population
                 * (int) ($gradeOfferingCounts[$schoolId] ?? 0)
-                * $subjectAreaConstant);
+                * (int) ($subjectAreaCounts[$schoolId] ?? 0));
     }
 
     /**
@@ -880,25 +876,71 @@ class BosyStatusService
      */
     private function getGradeOfferingCountsBySchool(array $schoolIds)
     {
+        return $this->getNecGradeOfferingsBySchool($schoolIds)
+            ->map(fn (array $grades): int => count($grades));
+    }
+
+    /**
+     * Get the formal grade-level names offered by each school. Non-Graded is
+     * intentionally excluded from the NEC grade-offering factor.
+     */
+    private function getNecGradeOfferingsBySchool(array $schoolIds): Collection
+    {
         $schoolIds = array_values(array_filter(array_unique($schoolIds)));
 
         if (empty($schoolIds)) {
             return collect();
         }
 
-        $columns = GradeOfferingMap::all();
+        $columns = GradeOfferingMap::necEligible();
         $offerings = DB::table('grade_offerings')
             ->whereIn('school_id', $schoolIds)
             ->select(array_merge(['school_id'], $columns))
             ->get()
             ->groupBy('school_id');
 
-        return $offerings->map(function ($schoolOfferings) use ($columns): int {
-            return collect($columns)->filter(function (string $column) use ($schoolOfferings): bool {
-                return $schoolOfferings->contains(
+        return collect($schoolIds)->mapWithKeys(function (string $schoolId) use ($columns, $offerings): array {
+            $schoolOfferings = $offerings->get($schoolId, collect());
+
+            $grades = collect($columns)
+                ->filter(fn (string $column): bool => $schoolOfferings->contains(
                     fn ($offering) => strtolower((string) ($offering->{$column} ?? 'no')) === 'yes'
-                );
-            })->count();
+                ))
+                ->map(fn (string $column) => GradeOfferingMap::gradeLevel($column))
+                ->filter()
+                ->values()
+                ->all();
+
+            return [$schoolId => $grades];
+        });
+    }
+
+    /**
+     * Count distinct subject areas available across each school's offered
+     * grades using the curated subject_grade_levels matrix.
+     */
+    private function getSubjectAreaCountsBySchool(Collection $gradeOfferings): Collection
+    {
+        $offeredGrades = $gradeOfferings->flatten()->unique()->values();
+
+        if ($offeredGrades->isEmpty()) {
+            return $gradeOfferings->map(fn (): int => 0);
+        }
+
+        $subjectsByGrade = DB::table('grade_levels as grade_level')
+            ->join('subject_grade_levels as subject_grade_level', 'subject_grade_level.grade_level_id', '=', 'grade_level.id')
+            ->whereIn('grade_level.grade', $offeredGrades->all())
+            ->select(['grade_level.grade', 'subject_grade_level.subject_id'])
+            ->distinct()
+            ->get()
+            ->groupBy('grade')
+            ->map(fn (Collection $rows) => $rows->pluck('subject_id')->unique()->values());
+
+        return $gradeOfferings->map(function (array $grades) use ($subjectsByGrade): int {
+            return collect($grades)
+                ->flatMap(fn (string $grade) => $subjectsByGrade->get($grade, collect()))
+                ->unique()
+                ->count();
         });
     }
 
@@ -956,9 +998,10 @@ class BosyStatusService
                 'ROW_NUMBER() OVER (PARTITION BY p.school_id ORDER BY sy.year_end DESC, sy.year_start DESC) as population_rank'
             );
 
+        $populationColumns = array_merge(array_values(GradeColumnMap::all()), ['ng_total']);
         $sumExpr = implode(' + ', array_map(
             fn (string $col) => "COALESCE(latest_population.{$col}, 0)",
-            array_values(GradeColumnMap::all())
+            $populationColumns
         ));
 
         $rows = DB::query()

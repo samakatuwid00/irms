@@ -12,6 +12,29 @@ const KEY_STAGE_RANGES = {
 let _availabilityFullData = null;
 let _availabilityChart = null;
 
+function hasChartValue(value) {
+    return value !== null && value !== undefined && value !== '-';
+}
+
+function filterSeriesForGradeIndices(series, indices) {
+    return series
+        .map(s => ({
+            ...s,
+            data: indices.map(i => s.data[i])
+        }))
+        .filter(s => s.name === 'Population' || s.data.some(hasChartValue));
+}
+
+function formatAvailabilityTooltip(params) {
+    const visibleItems = params.filter(item => hasChartValue(item.value));
+    const grade = params[0]?.axisValueLabel ?? params[0]?.name ?? '';
+
+    return [
+        `<strong>${grade}</strong>`,
+        ...visibleItems.map(item => `${item.marker}${item.seriesName}: ${item.value}`)
+    ].join('<br>');
+}
+
 // Get currently visible (filtered by Key Stage) data
 function getCurrentChartData() {
     if (!_availabilityFullData || !_availabilityChart) return null;
@@ -33,10 +56,8 @@ function getCurrentChartData() {
 
     const filteredGrades = indices.map(i => grade_level[i]);
 
-    const filteredSeries = series.map(s => ({
-        name: s.name,
-        data: indices.map(i => s.data[i])
-    }));
+    const filteredSeries = filterSeriesForGradeIndices(series, indices)
+        .map(s => ({ name: s.name, data: s.data }));
 
     return { grades: filteredGrades, series: filteredSeries };
 }
@@ -100,16 +121,13 @@ function filterAndRenderChart(keyStage) {
         .map(({ index }) => index);
 
     const filteredGrades = indices.map(i => grade_level[i]);
-    const filteredSeries = series.map(s => ({
-        ...s,
-        data: indices.map(i => s.data[i])
-    }));
+    const filteredSeries = filterSeriesForGradeIndices(series, indices);
 
     _availabilityChart.setOption({
         xAxis: [{ data: filteredGrades }],
         series: filteredSeries,
         legend: { data: filteredSeries.map(s => s.name) }
-    }, false);
+    }, { replaceMerge: ['series'] });
 }
 
 async function fetchAvailabilityData() {
@@ -146,7 +164,11 @@ function buildChartOption(result, chartDom, myChart) {
     );
 
     const option = {
-        tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
+        tooltip: {
+            trigger: 'axis',
+            axisPointer: { type: 'shadow' },
+            formatter: formatAvailabilityTooltip
+        },
         legend: { data: finalSeries.map(s => s.name) },
         toolbox: {
             show: true,

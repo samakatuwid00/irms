@@ -11,7 +11,7 @@ beforeEach(function () {
     Schema::create('division_libraries', function (Blueprint $table) {
         $table->uuid('id')->primary();
         $table->uuid('division_id');
-        $table->unsignedBigInteger('estimated_resource')->default(0);
+        $table->unsignedBigInteger('net_expected_count')->default(0);
     });
 });
 
@@ -32,7 +32,7 @@ test('division users without a positive manual NEC are required to update it', f
     DB::table('division_libraries')->insert([
         'id' => 'library-1',
         'division_id' => 'division-1',
-        'estimated_resource' => 0,
+        'net_expected_count' => 0,
     ]);
 
     expect($service->isRequired($user))->toBeTrue();
@@ -42,7 +42,7 @@ test('a positive division-inputted NEC removes the restriction', function () {
     DB::table('division_libraries')->insert([
         'id' => 'library-1',
         'division_id' => 'division-1',
-        'estimated_resource' => 125,
+        'net_expected_count' => 125,
     ]);
 
     $service = app(DivisionResourceRequirementService::class);

@@ -33,7 +33,7 @@ return new class extends Migration {
                 'subject_id',
                 'grade_level_id',
                 'curriculum_id',
-                'school_type'
+                'key_stage'
             ], 'subject_grade_unique');
         });
     }
