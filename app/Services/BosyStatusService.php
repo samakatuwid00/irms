@@ -329,22 +329,43 @@ class BosyStatusService
 
         $divisionIds = $divisions->pluck('division_id')->toArray();
 
-        // School NEC remains automated; division NEC comes only from division input.
-        $schoolNecByDivision = $this->calculateSchoolNecByDivision($divisionIds);
+        $scopedProgress = match ($hubFilter) {
+            'school-hub' => $this->getRegionSchoolLrProgressByDivision($divisionIds, $printTypeId),
+            'division-hub' => $this->getRegionDivisionHubProgressByDivision($divisionIds, $printTypeId),
+            default => null,
+        };
 
-        // Real-time LR per division
-        $realTimeLr = $this->getRealTimeTotalLrByDivision($divisionIds, $hubFilter, $printTypeId);
+        // The unfiltered Region view retains the existing aggregate LR / aggregate NEC formula.
+        $schoolNecByDivision = $scopedProgress === null
+            ? $this->calculateSchoolNecByDivision($divisionIds)
+            : collect();
+        $realTimeLr = $scopedProgress === null
+            ? $this->getRealTimeTotalLrByDivision($divisionIds, $hubFilter, $printTypeId)
+            : [];
 
-        $items = $divisions->map(function ($division) use ($hubFilter, $realTimeLr, $schoolNecByDivision) {
-            $actualLr = (int) ($realTimeLr[$division->division_id] ?? 0);
-            $divisionInputNec = (int) $division->division_net_expected_count;
-            $schoolNec = (int) ($schoolNecByDivision[$division->division_id] ?? 0);
-            $filteredNec = $this->regionNecCalculator->forFilter(
-                $hubFilter,
-                $divisionInputNec,
-                $schoolNec
-            );
-            $percentage = $this->calculatePercentage($actualLr, $filteredNec);
+        $items = $divisions->map(function ($division) use (
+            $hubFilter,
+            $realTimeLr,
+            $schoolNecByDivision,
+            $scopedProgress
+        ) {
+            if ($scopedProgress !== null) {
+                $progress = $scopedProgress['divisions'][$division->division_id]
+                    ?? $this->calculateAverageCompletionSummary([], [], []);
+                $actualLr = $progress['total_lr'];
+                $filteredNec = $progress['net_expected_count'];
+                $percentage = $progress['percentage'];
+            } else {
+                $actualLr = (int) ($realTimeLr[$division->division_id] ?? 0);
+                $divisionInputNec = (int) $division->division_net_expected_count;
+                $schoolNec = (int) ($schoolNecByDivision[$division->division_id] ?? 0);
+                $filteredNec = $this->regionNecCalculator->forFilter(
+                    $hubFilter,
+                    $divisionInputNec,
+                    $schoolNec
+                );
+                $percentage = $this->calculatePercentage($actualLr, $filteredNec);
+            }
 
             return [
                 'id'                 => $division->division_id,
@@ -376,8 +397,9 @@ class BosyStatusService
         ];
 
         $nec = (int) $items->sum('net_expected_count');
-        $overallPercentage = $this->calculatePercentage($totals['total_lr'], $nec);
-
+        $overallPercentage = $scopedProgress !== null
+            ? $scopedProgress['overall']['percentage']
+            : $this->calculatePercentage($totals['total_lr'], $nec);
         return [
             'level'      => 'region',
             'hub_filter' => $hubFilter,
@@ -528,6 +550,188 @@ class BosyStatusService
     }
 
     /**
+     * Region "School LRs" completion treats every school as one equal unit.
+     * Each eligible school's progress is capped at 100 before division and
+     * Region averages are calculated, so surplus in one school cannot hide a
+     * shortfall in another school.
+     */
+    private function getRegionSchoolLrProgressByDivision(
+        array $divisionIds,
+        ?string $printTypeId = null
+    ): array
+    {
+        $emptySummary = $this->calculateAverageCompletionSummary([], [], []);
+
+        if (empty($divisionIds)) {
+            return ['divisions' => [], 'overall' => $emptySummary];
+        }
+
+        $schools = DB::table('lrmis.schools as s')
+            ->join('lrmis.districts as d', 'd.id', '=', 's.district_id')
+            ->whereIn('d.division_id', $divisionIds)
+            ->select('s.id as school_id', 'd.division_id')
+            ->get();
+
+        if ($schools->isEmpty()) {
+            return [
+                'divisions' => array_fill_keys($divisionIds, $emptySummary),
+                'overall' => $emptySummary,
+            ];
+        }
+
+        $schoolIds = $schools->pluck('school_id')->all();
+        $necBySchool = $this->calculateNecBySchool($schoolIds)->all();
+        $actualLrBySchool = $this->getRealTimeTotalLrBySchool($schoolIds, $printTypeId);
+
+        $progressByDivision = [];
+
+        foreach ($schools->groupBy('division_id') as $divisionId => $divisionSchools) {
+            $progressByDivision[$divisionId] = $this->calculateAverageCompletionSummary(
+                $divisionSchools->pluck('school_id')->all(),
+                $actualLrBySchool,
+                $necBySchool
+            );
+        }
+
+        foreach ($divisionIds as $divisionId) {
+            $progressByDivision[$divisionId] ??= $emptySummary;
+        }
+
+        return [
+            'divisions' => $progressByDivision,
+            'overall' => $this->calculateAverageCompletionSummary(
+                $schoolIds,
+                $actualLrBySchool,
+                $necBySchool
+            ),
+        ];
+    }
+
+    /**
+     * Region "Division Library Hub" completion treats every hub as one equal
+     * unit. NEC comes from the division user's input for each hub.
+     */
+    private function getRegionDivisionHubProgressByDivision(
+        array $divisionIds,
+        ?string $printTypeId = null
+    ): array
+    {
+        $emptySummary = $this->calculateAverageCompletionSummary([], [], []);
+
+        if (empty($divisionIds)) {
+            return ['divisions' => [], 'overall' => $emptySummary];
+        }
+
+        $hubs = DB::table('lrmis.division_libraries as dl')
+            ->whereIn('dl.division_id', $divisionIds)
+            ->select('dl.id as library_id', 'dl.division_id', 'dl.net_expected_count')
+            ->get();
+
+        if ($hubs->isEmpty()) {
+            return [
+                'divisions' => array_fill_keys($divisionIds, $emptySummary),
+                'overall' => $emptySummary,
+            ];
+        }
+
+        $hubIds = $hubs->pluck('library_id')->all();
+        $necByHub = $hubs->pluck('net_expected_count', 'library_id')
+            ->map(fn ($nec): int => (int) $nec)
+            ->all();
+        $actualLrByHub = $this->getRealTimeTotalLrByDivisionLibrary($hubIds, $printTypeId);
+
+        $progressByDivision = [];
+
+        foreach ($hubs->groupBy('division_id') as $divisionId => $divisionHubs) {
+            $progressByDivision[$divisionId] = $this->calculateAverageCompletionSummary(
+                $divisionHubs->pluck('library_id')->all(),
+                $actualLrByHub,
+                $necByHub
+            );
+        }
+
+        foreach ($divisionIds as $divisionId) {
+            $progressByDivision[$divisionId] ??= $emptySummary;
+        }
+
+        return [
+            'divisions' => $progressByDivision,
+            'overall' => $this->calculateAverageCompletionSummary(
+                $hubIds,
+                $actualLrByHub,
+                $necByHub
+            ),
+        ];
+    }
+
+    /**
+     * Calculate the average of capped completion percentages for schools or
+     * division library hubs. Items without a positive NEC are excluded.
+     */
+    private function calculateAverageCompletionSummary(
+        array $itemIds,
+        array $actualLrByItem,
+        array $necByItem
+    ): array
+    {
+        $totalLr = 0;
+        $totalNec = 0;
+        $completionSum = 0.0;
+        $eligibleItems = 0;
+        $completedItems = 0;
+
+        foreach ($itemIds as $itemId) {
+            $actualLr = max(0, (int) ($actualLrByItem[$itemId] ?? 0));
+            $itemNec = max(0, (int) ($necByItem[$itemId] ?? 0));
+
+            $totalLr += $actualLr;
+            $totalNec += $itemNec;
+
+            if ($itemNec === 0) {
+                continue;
+            }
+
+            $eligibleItems++;
+
+            if ($actualLr >= $itemNec) {
+                $completionSum += 100;
+                $completedItems++;
+            } else {
+                $completionSum += ($actualLr / $itemNec) * 100;
+            }
+        }
+
+        return [
+            'total_lr' => $totalLr,
+            'net_expected_count' => $totalNec,
+            'eligible_items' => $eligibleItems,
+            'completed_items' => $completedItems,
+            'percentage' => $this->finalizeAverageCompletion(
+                $completionSum,
+                $eligibleItems,
+                $completedItems
+            ),
+        ];
+    }
+
+    private function finalizeAverageCompletion(
+        float $completionSum,
+        int $eligibleItems,
+        int $completedItems
+    ): float
+    {
+        if ($eligibleItems === 0) {
+            return 0.0;
+        }
+
+        if ($completedItems === $eligibleItems) {
+            return 100.0;
+        }
+
+        return min(99.99, round($completionSum / $eligibleItems, 2));
+    }
+
+    /**
      * Real-time total LR per school filtered by print_type_id.
      * Queries the schema directly (not the MV) for accurate per-type counts.
      */
@@ -594,6 +798,58 @@ class BosyStatusService
             ->select('school_id', DB::raw('SUM(qty)::integer as total_lr'))
             ->groupBy('school_id')
             ->pluck('total_lr', 'school_id')
+            ->all();
+    }
+
+    /**
+     * Real-time total LR per division library hub (print + nonprint, or
+     * print-only when a print type is selected).
+     */
+    private function getRealTimeTotalLrByDivisionLibrary(
+        array $libraryIds,
+        ?string $printTypeId = null
+    ): array
+    {
+        if (empty($libraryIds)) {
+            return [];
+        }
+
+        if ($printTypeId) {
+            return DB::table('lrmis.division_libraries as dl')
+                ->join('lrmis.print_acquisitions as pa', 'pa.library_id', '=', 'dl.id')
+                ->join('lrmis.print_resources as pr', 'pr.id', '=', 'pa.print_id')
+                ->where('pr.print_type_id', $printTypeId)
+                ->whereIn('dl.id', $libraryIds)
+                ->select('dl.id as library_id', DB::raw('COALESCE(SUM(pa.total_qty), 0)::integer as total_lr'))
+                ->groupBy('dl.id')
+                ->pluck('total_lr', 'library_id')
+                ->all();
+        }
+
+        $combined = DB::table('lrmis.print_acquisitions as pa')
+            ->join('lrmis.division_libraries as dl', 'dl.id', '=', 'pa.library_id')
+            ->whereIn('dl.id', $libraryIds)
+            ->select([
+                'dl.id as library_id',
+                DB::raw('COALESCE(SUM(pa.total_qty), 0) as qty'),
+            ])
+            ->groupBy('dl.id')
+            ->unionAll(
+                DB::table('lrmis.nonprint_acquisitions as na')
+                    ->join('lrmis.division_libraries as dl', 'dl.id', '=', 'na.library_id')
+                    ->whereIn('dl.id', $libraryIds)
+                    ->select([
+                        'dl.id as library_id',
+                        DB::raw('COALESCE(SUM(na.total_qty), 0) as qty'),
+                    ])
+                    ->groupBy('dl.id')
+            );
+
+        return DB::query()
+            ->fromSub($combined, 'combined')
+            ->select('library_id', DB::raw('SUM(qty)::integer as total_lr'))
+            ->groupBy('library_id')
+            ->pluck('total_lr', 'library_id')
             ->all();
     }
 
@@ -790,10 +1046,10 @@ class BosyStatusService
             ->value('division_name') ?? 'Division';
     }
 
-    private function determineBosyStatus(int $percentage): string
+    private function determineBosyStatus(int|float $percentage): string
     {
         return match (true) {
-            $percentage === 0 => 'Not Started',
+            $percentage <= 0 => 'Not Started',
             $percentage < 25 => 'Partial',
             $percentage < 50 => 'In-progress',
             $percentage < 75 => 'Advanced',
@@ -812,10 +1068,10 @@ class BosyStatusService
         return $nec > 0 ? $this->determineBosyColor($percentage) : 'bg-gray-400';
     }
 
-    private function determineBosyColor(int $percentage): string
+    private function determineBosyColor(int|float $percentage): string
     {
         return match (true) {
-            $percentage === 0 => 'bg-gray-400',
+            $percentage <= 0 => 'bg-gray-400',
             $percentage < 25 => 'bg-red-600',
             $percentage < 50 => 'bg-green-600',
             $percentage < 75 => 'bg-purple-500',

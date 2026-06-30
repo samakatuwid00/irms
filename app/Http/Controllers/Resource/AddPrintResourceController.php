@@ -15,6 +15,7 @@ use Illuminate\Http\Request;
 use Illuminate\Routing\Controller as BaseController;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\Rule;
 
 class AddPrintResourceController extends BaseController
 {
@@ -170,22 +171,7 @@ class AddPrintResourceController extends BaseController
         $level     = $user->userType?->level ?? 0;
         $stationId = $user->station_id;
 
-        // Single query to get the joined subject+grade data needed for the multi-select
-        $subjectGradeLevels = SubjectGradeLevel::query()
-            ->select(
-                'subject_grade_levels.id as subject_grade_level_id',
-                'subject_grade_levels.subject_id',
-                'subject_grade_levels.grade_level_id',
-                'subjects.subject_name',
-                'grade_levels.grade as grade_level',
-                'key_stages.name as key_stage',
-                'grade_levels.sort_order'
-            )
-            ->join('subjects',     'subjects.id',     '=', 'subject_grade_levels.subject_id')
-            ->join('grade_levels',  'grade_levels.id',  '=', 'subject_grade_levels.grade_level_id')
-            ->join('key_stages', 'key_stages.id', '=', 'grade_levels.key_stage_id')
-            ->orderBy('grade_levels.sort_order')
-            ->get();
+        $subjectGradeLevels = $this->getSubjectGradeLevels();
 
         $printTypes = PrintType::all();
 
@@ -219,10 +205,43 @@ class AddPrintResourceController extends BaseController
         );
     }
 
+    private function getSubjectGradeLevels()
+    {
+        return SubjectGradeLevel::query()
+            ->select(
+                'subject_grade_levels.id as subject_grade_level_id',
+                'subject_grade_levels.subject_id',
+                'subject_grade_levels.grade_level_id',
+                'subjects.subject_name',
+                'grade_levels.grade as grade_level',
+                'key_stages.code as key_stage',
+                'grade_levels.sort_order'
+            )
+            ->join('subjects', 'subjects.id', '=', 'subject_grade_levels.subject_id')
+            ->join('grade_levels', 'grade_levels.id', '=', 'subject_grade_levels.grade_level_id')
+            ->join('key_stages', 'key_stages.id', '=', 'grade_levels.key_stage_id')
+            ->orderBy('key_stages.sort_order')
+            ->orderBy('grade_levels.sort_order')
+            ->orderBy('subjects.subject_name')
+            ->get();
+    }
+
     // Same rules for both store() and update() — keeps them from drifting apart
     private function validateResourceRequest(Request $request): array
     {
-        $validated = $request->validate([
+        $validated = $request->validate($this->resourceValidationRules());
+
+        // validate() strips the UploadedFile, so re-attach it manually
+        if ($request->hasFile('image')) {
+            $validated['image'] = $request->file('image');
+        }
+
+        return $validated;
+    }
+
+    private function resourceValidationRules(): array
+    {
+        return [
             'title'                => 'required|string|max:255',
             'authors'              => 'nullable|string',
             'type'                 => 'required|exists:print_types,id',
@@ -232,15 +251,14 @@ class AddPrintResourceController extends BaseController
             'copyright'            => 'nullable|string|max:255',
             'isbn'                 => 'nullable|string|max:255',
             'pages'                => 'nullable|integer',
-            'subject_grade_levels' => 'required|array',
+            'subject_grade_levels' => 'required|array|min:1',
+            'subject_grade_levels.*' => [
+                'required',
+                'uuid',
+                'distinct',
+                Rule::exists('subject_grade_levels', 'id'),
+            ],
             'image'                => 'nullable|image|mimes:jpeg,png,jpg|max:5120',
-        ]);
-
-        // validate() strips the UploadedFile, so re-attach it manually
-        if ($request->hasFile('image')) {
-            $validated['image'] = $request->file('image');
-        }
-
-        return $validated;
+        ];
     }
 }

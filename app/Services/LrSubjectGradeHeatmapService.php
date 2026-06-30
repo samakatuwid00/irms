@@ -2,9 +2,7 @@
 
 namespace App\Services;
 
-use App\Models\GradeLevel;
-use App\Models\Subject;
-use App\Services\LibraryScopeService;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Log;
 
 class LrSubjectGradeHeatmapService
@@ -12,23 +10,28 @@ class LrSubjectGradeHeatmapService
     public function __construct(
         private readonly LibraryScopeService  $libraryScopeService,
         private readonly LrAggregationService $aggregationService,
+        private readonly SchoolDashboardCurriculumScopeService $curriculumScopeService,
     ) {}
 
     public function getHeatmapData(?string $explicitLibraryId, int $userLevel, ?string $stationId, ?string $printTypeId = null): array
     {
-        $gradeLevels = GradeLevel::query()
-            ->select('id', 'grade', 'sort_order')
-            ->orderBy('sort_order')
-            ->get();
+        $curriculumScope = $this->curriculumScopeService->resolve($userLevel, $stationId);
+        $gradeLevels = $curriculumScope['grade_levels'];
 
         if ($gradeLevels->isEmpty()) {
-            return $this->emptyResponse('No grade levels found');
+            return $this->emptyResponse(
+                $curriculumScope['message'] ?? 'No grade levels found',
+                $curriculumScope['is_school_scoped']
+            );
         }
 
-        $subjects = Subject::query()->orderBy('subject_name')->get();
+        $subjects = $curriculumScope['subjects'];
 
         if ($subjects->isEmpty()) {
-            return $this->emptyResponse('No subjects found');
+            return $this->emptyResponse(
+                $curriculumScope['message'] ?? 'No subjects found',
+                $curriculumScope['is_school_scoped']
+            );
         }
 
         $gradeIndexMap   = $gradeLevels->pluck('id')->values()->flip()->toArray();
@@ -45,7 +48,9 @@ class LrSubjectGradeHeatmapService
 
         $heatmapData = $this->buildFromLiveQuery(
             $explicitLibraryId, $userLevel, $stationId, $printTypeId,
-            $subjects, $gradeLevels, $subjectIndexMap, $gradeIndexMap
+            $subjects, $gradeLevels, $subjectIndexMap, $gradeIndexMap,
+            $curriculumScope['subject_grade_pairs'],
+            $curriculumScope['is_school_scoped']
         );
 
         $libraryScope = match ($userLevel) {
@@ -57,7 +62,10 @@ class LrSubjectGradeHeatmapService
         };
 
         return [
-            'x_axis'        => $subjects->pluck('abbrv')->toArray(),
+            'x_axis'        => $subjects
+                ->map(fn ($subject) => $subject->abbrv ?? $subject->subject_name)
+                ->values()
+                ->toArray(),
             'y_axis'        => $gradeLevels->pluck('grade')->toArray(),
             'series_data'   => $heatmapData,
             'library_scope' => $explicitLibraryId ? 'single_library' : $libraryScope,
@@ -69,6 +77,7 @@ class LrSubjectGradeHeatmapService
             'using_mv'      => false,
             'user_level'    => $userLevel,
             'source'        => 'live_query_direct_schema',
+            'school_curriculum_scoped' => $curriculumScope['is_school_scoped'],
         ];
     }
 
@@ -80,7 +89,9 @@ class LrSubjectGradeHeatmapService
         $subjects,
         $gradeLevels,
         array   $subjectIndexMap,
-        array   $gradeIndexMap
+        array   $gradeIndexMap,
+        Collection $subjectGradePairs,
+        bool    $isSchoolCurriculumScoped
     ): array {
         $allowedLibraryIds = $this->libraryScopeService->getAllowedLibraryIds(
             $explicitLibraryId, $userLevel, $stationId
@@ -98,7 +109,12 @@ class LrSubjectGradeHeatmapService
 
         if (empty($libraryIds)) {
             Log::warning('No libraries in scope for heatmap');
-            return $this->buildZeroMatrix($subjectIndexMap, $gradeIndexMap);
+            return $this->buildZeroMatrix(
+                $subjectIndexMap,
+                $gradeIndexMap,
+                $subjectGradePairs,
+                $isSchoolCurriculumScoped
+            );
         }
 
         $gradeIds     = $gradeLevels->pluck('id')->all();
@@ -114,6 +130,10 @@ class LrSubjectGradeHeatmapService
 
         foreach ($subjectIndexMap as $subjectId => $subjIdx) {
             foreach ($gradeIndexMap as $gradeId => $gradeIdx) {
+                if ($isSchoolCurriculumScoped && ! $subjectGradePairs->has($subjectId.'|'.$gradeId)) {
+                    continue;
+                }
+
                 $qty = (int) ($aggregated->get("{$subjectId}_{$gradeId}")?->total_qty ?? 0);
                 $heatmapData[] = [$subjIdx, $gradeIdx, $qty];
                 if ($qty > 0) $nonZeroCount++;
@@ -128,25 +148,35 @@ class LrSubjectGradeHeatmapService
         return $heatmapData;
     }
 
-    private function buildZeroMatrix(array $subjectIndexMap, array $gradeIndexMap): array
+    private function buildZeroMatrix(
+        array $subjectIndexMap,
+        array $gradeIndexMap,
+        Collection $subjectGradePairs,
+        bool $isSchoolCurriculumScoped
+    ): array
     {
         $heatmapData = [];
-        foreach ($subjectIndexMap as $subjIdx) {
-            foreach ($gradeIndexMap as $gradeIdx) {
+        foreach ($subjectIndexMap as $subjectId => $subjIdx) {
+            foreach ($gradeIndexMap as $gradeId => $gradeIdx) {
+                if ($isSchoolCurriculumScoped && ! $subjectGradePairs->has($subjectId.'|'.$gradeId)) {
+                    continue;
+                }
+
                 $heatmapData[] = [$subjIdx, $gradeIdx, 0];
             }
         }
         return $heatmapData;
     }
 
-    private function emptyResponse(string $message): array
+    private function emptyResponse(string $message, bool $isSchoolCurriculumScoped = false): array
     {
         return [
             'x_axis' => [], 
             'y_axis' => [], 
             'series_data' => [], 
             'message' => $message,
-            'source' => 'empty'
+            'source' => 'empty',
+            'school_curriculum_scoped' => $isSchoolCurriculumScoped,
         ];
     }
 

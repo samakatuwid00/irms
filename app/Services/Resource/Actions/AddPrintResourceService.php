@@ -36,6 +36,7 @@ class AddPrintResourceService
             }
 
             $resource        = $this->createPrintResource($data, $title->id, $authorIds, $coverPath);
+            $this->syncSubjectGradeLevels($resource->id, $data['subject_grade_levels']);
             $printResourceId = $resource->id;
         });
 
@@ -97,6 +98,7 @@ class AddPrintResourceService
             ];
 
             $resource->update($updateData);
+            $this->syncSubjectGradeLevels($resource->id, $data['subject_grade_levels']);
         });
 
         $this->updateSearchVector($resource->id);
@@ -340,6 +342,31 @@ class AddPrintResourceService
             // Race condition — another request created the same hash between our check and insert
             return PrintResource::where('uniqueness_hash', $uniquenessHash)->firstOrFail();
         }
+    }
+
+    private function syncSubjectGradeLevels(string $printResourceId, array $subjectGradeLevelIds): void
+    {
+        $subjectGradeLevelIds = array_values(array_unique(
+            array_map('strval', $subjectGradeLevelIds)
+        ));
+
+        DB::table('print_resource_sgl')
+            ->where('print_id', $printResourceId)
+            ->delete();
+
+        if ($subjectGradeLevelIds === []) {
+            return;
+        }
+
+        DB::table('print_resource_sgl')->insert(
+            array_map(
+                fn (string $subjectGradeLevelId): array => [
+                    'print_id' => $printResourceId,
+                    'sgl_id' => $subjectGradeLevelId,
+                ],
+                $subjectGradeLevelIds
+            )
+        );
     }
 
     private function updateSearchVector(string $printResourceId): void

@@ -282,10 +282,10 @@
             {{-- SUBJECT-GRADE LEVEL --}}
             @php
                 $stages = [
-                    'S1'  => ['tab' => 'stage1', 'label' => 'Key Stage 1', 'grades' => [0=>'K',1=>'1',2=>'2',3=>'3']],
-                    'ES'  => ['tab' => 'stage2', 'label' => 'Key Stage 2', 'grades' => [4=>'4',5=>'5',6=>'6']],
-                    'JHS' => ['tab' => 'jhs',    'label' => 'Junior High',  'grades' => [7=>'7',8=>'8',9=>'9',10=>'10']],
-                    'SHS' => ['tab' => 'shs',    'label' => 'Senior High',  'grades' => [11=>'11',12=>'12']],
+                    'KS1' => ['tab' => 'stage1', 'label' => 'Key Stage 1', 'grades' => [0=>'K',1=>'1',2=>'2',3=>'3']],
+                    'KS2' => ['tab' => 'stage2', 'label' => 'Key Stage 2', 'grades' => [4=>'4',5=>'5',6=>'6']],
+                    'KS3' => ['tab' => 'jhs',    'label' => 'Junior High',  'grades' => [7=>'7',8=>'8',9=>'9',10=>'10']],
+                    'KS4' => ['tab' => 'shs',    'label' => 'Senior High',  'grades' => [11=>'11',12=>'12']],
                 ];
                 $grouped     = $subjectGradeLevels->groupBy(['key_stage', 'subject_name']);
                 $checkedIds  = old('subject_grade_levels', $isEditing ? ($editingSglIds ?? []) : []);
@@ -324,7 +324,7 @@
                                                     <input type="checkbox"
                                                         name="subject_grade_levels[]"
                                                         value="{{ $gradeMap[$sortOrder]->subject_grade_level_id }}"
-                                                        {{ in_array($gradeMap[$sortOrder]->subject_grade_level_id, $checkedIds) ? 'checked' : '' }}>
+                                                        {{ in_array($gradeMap[$sortOrder]->subject_grade_level_id, $checkedIds, true) ? 'checked' : '' }}>
                                                 @endif
                                             </td>
                                         @endforeach
@@ -335,6 +335,13 @@
                     </div>
                 @endforeach
             </div>
+
+            @error('subject_grade_levels')
+                <p class="mt-2 text-sm text-red-600">{{ $message }}</p>
+            @enderror
+            @error('subject_grade_levels.*')
+                <p class="mt-2 text-sm text-red-600">{{ $message }}</p>
+            @enderror
 
             {{-- SUBMIT / CANCEL --}}
             <div class="flex justify-end gap-3">

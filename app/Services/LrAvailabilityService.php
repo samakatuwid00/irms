@@ -2,9 +2,6 @@
 
 namespace App\Services;
 
-use App\Models\GradeLevel;
-use App\Models\Subject;
-use App\Services\LibraryScopeService;
 use App\Support\GradeColumnMap;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
@@ -15,31 +12,28 @@ class LrAvailabilityService
     public function __construct(
         private readonly LibraryScopeService  $libraryScopeService,
         private readonly LrAggregationService $aggregationService,
+        private readonly SchoolDashboardCurriculumScopeService $curriculumScopeService,
     ) {}
 
     public function getChartData(?string $explicitLibraryId, int $userLevel, ?string $stationId, ?string $printTypeId = null): array
     {
-        $gradeLevels = GradeLevel::query()
-            ->select('id', 'grade', 'sort_order')
-            ->orderBy('sort_order')
-            ->get();
+        $curriculumScope = $this->curriculumScopeService->resolve($userLevel, $stationId);
+        $gradeLevels = $curriculumScope['grade_levels'];
 
         if ($gradeLevels->isEmpty()) {
             Log::warning('No grade levels found in database');
             return [
                 'grade_level' => [],
                 'series' => [],
-                'message' => 'No grade levels found'
+                'message' => $curriculumScope['message'] ?? 'No grade levels found',
+                'school_curriculum_scoped' => $curriculumScope['is_school_scoped'],
             ];
         }
 
         $gradeNames = $gradeLevels->pluck('grade')->toArray();
         $gradeIds = $gradeLevels->pluck('id')->toArray();
 
-        $subjects = Subject::query()
-            ->select('id', 'subject_name', 'abbrv')
-            ->orderBy('subject_name')
-            ->get();
+        $subjects = $curriculumScope['subjects'];
         $subjectIds = $subjects->pluck('id')->toArray();
 
         // MODIFIED: Now all user levels use real-time queries directly from the schema
@@ -73,13 +67,7 @@ class LrAvailabilityService
         $aggregated = $this->aggregationService
             ->aggregateBySubjectGrade($libraryIds, $gradeIds, $subjectIds, $printTypeIds);
 
-        $availableSubjectGrades = DB::table('subject_grade_levels')
-            ->whereIn('grade_level_id', $gradeIds)
-            ->whereIn('subject_id', $subjectIds)
-            ->get(['subject_id', 'grade_level_id'])
-            ->mapWithKeys(fn ($mapping) => [
-                $mapping->subject_id.'|'.$mapping->grade_level_id => true,
-            ]);
+        $availableSubjectGrades = $curriculumScope['subject_grade_pairs'];
 
         $series = $this->buildSeriesFromData(
             $subjects,
@@ -118,6 +106,7 @@ class LrAvailabilityService
             'user_level' => $userLevel,
             'station_id' => $stationId,
             'print_type_id' => $printTypeId ?: null,
+            'school_curriculum_scoped' => $curriculumScope['is_school_scoped'],
         ];
     }
 

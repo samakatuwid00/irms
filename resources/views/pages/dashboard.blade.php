@@ -194,18 +194,20 @@
                 class="w-full sm:flex-1 min-w-0"
             />
 
-            <x-filter-select
-                id="schoolYearFilter"
-                label="Key Stages"
-                :options="[
-                    ['value' => 'All', 'label' => 'All Key Stages', 'selected' => true],
-                    ['value' => 'K1', 'label' => 'Key Stage 1'],
-                    ['value' => 'K2', 'label' => 'Key Stage 2'],
-                    ['value' => 'JH', 'label' => 'Junior High'],
-                    ['value' => 'SH', 'label' => 'Senior High'],
-                ]"
-                class="w-full sm:flex-1 min-w-0"
-            />
+            @if($userLevel !== 1)
+                <x-filter-select
+                    id="schoolYearFilter"
+                    label="Key Stages"
+                    :options="[
+                        ['value' => 'All', 'label' => 'All Key Stages', 'selected' => true],
+                        ['value' => 'K1', 'label' => 'Key Stage 1'],
+                        ['value' => 'K2', 'label' => 'Key Stage 2'],
+                        ['value' => 'JH', 'label' => 'Junior High'],
+                        ['value' => 'SH', 'label' => 'Senior High'],
+                    ]"
+                    class="w-full sm:flex-1 min-w-0"
+                />
+            @endif
 
             <!-- Print Type Filter -->
             <x-filter-select

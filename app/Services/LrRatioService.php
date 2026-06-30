@@ -2,7 +2,6 @@
 
 namespace App\Services;
 
-use App\Models\GradeLevel;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
@@ -12,6 +11,7 @@ class LrRatioService
     public function __construct(
         private readonly LibraryScopeService  $libraryScopeService,
         private readonly LrAggregationService $aggregationService,
+        private readonly SchoolDashboardCurriculumScopeService $curriculumScopeService,
     ) {}
 
     public function getChartDataCached($explicitLibraryId, $userLevel, $stationId, ?string $printTypeId = null)
@@ -21,13 +21,14 @@ class LrRatioService
 
     private function getChartData($explicitLibraryId, $userLevel, $stationId, ?string $printTypeId = null)
     {
-        $gradeLevels = GradeLevel::query()
-            ->select('id', 'grade', 'sort_order')
-            ->orderBy('sort_order')
-            ->get();
+        $curriculumScope = $this->curriculumScopeService->resolve($userLevel, $stationId);
+        $gradeLevels = $curriculumScope['grade_levels'];
 
         if ($gradeLevels->isEmpty()) {
-            return $this->emptyResult('No grade levels found');
+            return $this->emptyResult(
+                $curriculumScope['message'] ?? 'No grade levels found',
+                $curriculumScope['is_school_scoped']
+            );
         }
 
         $gradeNames = $gradeLevels->pluck('grade')->toArray();
@@ -51,7 +52,10 @@ class LrRatioService
                 'user_level' => $userLevel,
                 'station_id' => $stationId
             ]);
-            return $this->buildZeroedResult($gradeNames);
+            return $this->buildZeroedResult(
+                $gradeNames,
+                $curriculumScope['is_school_scoped']
+            );
         }
 
         $libraryIds  = $allowedLibraryIds->values()->toArray();
@@ -79,7 +83,8 @@ class LrRatioService
             $libraryScope,
             $userLevel,
             $stationId,
-            $printTypeId
+            $printTypeId,
+            $curriculumScope['is_school_scoped']
         );
     }
 
@@ -147,7 +152,8 @@ class LrRatioService
         string $libraryScope,
         int $userLevel,
         ?string $stationId,
-        ?string $printTypeId = null
+        ?string $printTypeId = null,
+        bool $isSchoolCurriculumScoped = false
     ): array {
         $directData  = [];
         $ratioLabels = [];
@@ -172,10 +178,11 @@ class LrRatioService
             'user_level'    => $userLevel,
             'station_id'    => $stationId,
             'print_type_id' => $printTypeId ?: null,
+            'school_curriculum_scoped' => $isSchoolCurriculumScoped,
         ];
     }
 
-    private function buildZeroedResult(array $gradeNames): array
+    private function buildZeroedResult(array $gradeNames, bool $isSchoolCurriculumScoped = false): array
     {
         $count = count($gradeNames);
         return [
@@ -186,10 +193,11 @@ class LrRatioService
             'ratioLabels'   => array_fill(0, $count, 'N/A'),
             'library_scope' => 'no_scope',
             'source'        => 'empty',
+            'school_curriculum_scoped' => $isSchoolCurriculumScoped,
         ];
     }
 
-    private function emptyResult(string $message): array
+    private function emptyResult(string $message, bool $isSchoolCurriculumScoped = false): array
     {
         return [
             'grades'      => [],
@@ -198,6 +206,7 @@ class LrRatioService
             'mailData'    => [],
             'ratioLabels' => [],
             'message'     => $message,
+            'school_curriculum_scoped' => $isSchoolCurriculumScoped,
         ];
     }
 

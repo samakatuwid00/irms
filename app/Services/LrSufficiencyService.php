@@ -2,8 +2,6 @@
 
 namespace App\Services;
 
-use App\Models\GradeLevel;
-use App\Models\Subject;
 use App\Models\SubjectGradeLevel;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
@@ -14,6 +12,7 @@ class LrSufficiencyService
     public function __construct(
         private readonly LibraryScopeService  $libraryScopeService,
         private readonly LrAggregationService $aggregationService,
+        private readonly SchoolDashboardCurriculumScopeService $curriculumScopeService,
     ) {}
 
     public function getSufficiencyData(
@@ -22,16 +21,28 @@ class LrSufficiencyService
         ?string $stationId,
         ?string $printTypeId = null
     ): array {
-        $gradeLevels = GradeLevel::query()
-            ->select('id', 'grade', 'sort_order')
-            ->orderBy('sort_order')
-            ->get();
+        $curriculumScope = $this->curriculumScopeService->resolve($userLevel, $stationId);
+        $gradeLevels = $curriculumScope['grade_levels'];
 
         if ($gradeLevels->isEmpty()) {
-            return ['error' => 'No grade levels found'];
+            return $this->emptyResult(
+                $curriculumScope['message'] ?? 'No grade levels found',
+                $userLevel,
+                $stationId,
+                $curriculumScope['is_school_scoped']
+            );
         }
 
-        $subjects = Subject::query()->orderBy('subject_name')->get();
+        $subjects = $curriculumScope['subjects'];
+
+        if ($subjects->isEmpty()) {
+            return $this->emptyResult(
+                $curriculumScope['message'] ?? 'No subjects found',
+                $userLevel,
+                $stationId,
+                $curriculumScope['is_school_scoped']
+            );
+        }
 
         $allowedLibraryIds = $this->libraryScopeService->getAllowedLibraryIds(
             $explicitLibraryId, $userLevel, $stationId
@@ -47,7 +58,8 @@ class LrSufficiencyService
 
         return $this->buildFromLiveQuery(
             $subjects, $gradeLevels, $allowedLibraryIds,
-            $userLevel, $stationId, $explicitLibraryId, $printTypeId
+            $userLevel, $stationId, $explicitLibraryId, $printTypeId,
+            $curriculumScope['is_school_scoped']
         );
     }
 
@@ -60,7 +72,8 @@ class LrSufficiencyService
         int         $userLevel,
         ?string     $stationId,
         ?string     $explicitLibraryId,
-        ?string     $printTypeId = null
+        ?string     $printTypeId = null,
+        bool        $isSchoolCurriculumScoped = false
     ): array {
         $libraryIds  = $this->normalizeLibraryIds($allowedLibraryIds);
         $gradeIds    = $gradeLevels->pluck('id')->all();
@@ -91,6 +104,10 @@ class LrSufficiencyService
                 $sgl = $sgls->get($subject->id . '_' . $grade->id);
 
                 if (!$sgl) {
+                    if ($isSchoolCurriculumScoped) {
+                        continue;
+                    }
+
                     $tableData[] = $this->makeEmptyRow($subject->abbrv ?? $subject->subject_name, $grade->grade);
                     continue;
                 }
@@ -112,7 +129,8 @@ class LrSufficiencyService
 
         return $this->wrapResult(
             $tableData, $gradeLevels, false, $libraryScope, $userLevel,
-            $explicitLibraryId, $stationId, $printTypeId
+            $explicitLibraryId, $stationId, $printTypeId,
+            $isSchoolCurriculumScoped
         );
     }
 
@@ -222,7 +240,8 @@ class LrSufficiencyService
         int        $userLevel,
         ?string    $explicitLibraryId = null,
         ?string    $stationId = null,
-        ?string    $printTypeId = null
+        ?string    $printTypeId = null,
+        bool       $isSchoolCurriculumScoped = false
     ): array {
         return [
             'grade_levels'  => $gradeLevels->pluck('grade')->toArray(),
@@ -234,6 +253,24 @@ class LrSufficiencyService
             'station_id'    => $stationId,
             'print_type_id' => $printTypeId ?: null,
             'source'        => 'live_query_direct_schema',
+            'school_curriculum_scoped' => $isSchoolCurriculumScoped,
+        ];
+    }
+
+    private function emptyResult(
+        string $message,
+        int $userLevel,
+        ?string $stationId,
+        bool $isSchoolCurriculumScoped
+    ): array {
+        return [
+            'grade_levels' => [],
+            'table_data' => [],
+            'message' => $message,
+            'user_level' => $userLevel,
+            'station_id' => $stationId,
+            'source' => 'empty',
+            'school_curriculum_scoped' => $isSchoolCurriculumScoped,
         ];
     }
 

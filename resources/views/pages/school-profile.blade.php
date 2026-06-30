@@ -22,7 +22,7 @@
                 </p>
                 <div class="mt-6 flex justify-end">
                     <button type="button" id="updatePopulationNow" class="btn-primary">
-                        Update Now
+                        OK
                     </button>
                 </div>
             </div>

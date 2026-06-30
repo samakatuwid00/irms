@@ -3,6 +3,7 @@
 use App\Services\LibraryScopeService;
 use App\Services\LrAggregationService;
 use App\Services\LrAvailabilityService;
+use App\Services\SchoolDashboardCurriculumScopeService;
 
 afterEach(function () {
     Mockery::close();
@@ -12,6 +13,7 @@ test('availability series uses null for invalid subject-grade pairs and zero for
     $service = new LrAvailabilityService(
         Mockery::mock(LibraryScopeService::class),
         Mockery::mock(LrAggregationService::class),
+        Mockery::mock(SchoolDashboardCurriculumScopeService::class),
     );
 
     $subjects = collect([
