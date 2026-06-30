@@ -8,6 +8,7 @@ use App\Models\PrintTitle;
 use App\Models\PrintType;
 use App\Models\SubjectGradeLevel;
 use App\Services\Resource\Actions\AddPrintResourceService;
+use App\Services\SchoolDashboardCurriculumScopeService;
 
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Foundation\Validation\ValidatesRequests;
@@ -23,8 +24,10 @@ class AddPrintResourceController extends BaseController
 
     protected $printResourceService;
 
-    public function __construct(AddPrintResourceService $printResourceService)
-    {
+    public function __construct(
+        AddPrintResourceService $printResourceService,
+        private readonly SchoolDashboardCurriculumScopeService $curriculumScopeService
+    ) {
         $this->middleware('auth');
         $this->printResourceService = $printResourceService;
     }
@@ -171,7 +174,10 @@ class AddPrintResourceController extends BaseController
         $level     = $user->userType?->level ?? 0;
         $stationId = $user->station_id;
 
-        $subjectGradeLevels = $this->getSubjectGradeLevels();
+        $curriculumScope = $this->curriculumScopeService->resolve($level, $stationId);
+        $allowedGradeLevelIds = $curriculumScope['grade_levels']->pluck('id')->all();
+        $subjectGradeLevels = $this->getSubjectGradeLevels($allowedGradeLevelIds);
+        $curriculumMessage = $curriculumScope['message'];
 
         $printTypes = PrintType::all();
 
@@ -201,11 +207,12 @@ class AddPrintResourceController extends BaseController
             'myRequests',
             'pendingCount',
             'isDivision',
-            'level'
+            'level',
+            'curriculumMessage'
         );
     }
 
-    private function getSubjectGradeLevels()
+    private function getSubjectGradeLevels(?array $gradeLevelIds = null)
     {
         return SubjectGradeLevel::query()
             ->select(
@@ -214,13 +221,11 @@ class AddPrintResourceController extends BaseController
                 'subject_grade_levels.grade_level_id',
                 'subjects.subject_name',
                 'grade_levels.grade as grade_level',
-                'key_stages.code as key_stage',
                 'grade_levels.sort_order'
             )
             ->join('subjects', 'subjects.id', '=', 'subject_grade_levels.subject_id')
             ->join('grade_levels', 'grade_levels.id', '=', 'subject_grade_levels.grade_level_id')
-            ->join('key_stages', 'key_stages.id', '=', 'grade_levels.key_stage_id')
-            ->orderBy('key_stages.sort_order')
+            ->when($gradeLevelIds !== null, fn ($query) => $query->whereIn('grade_levels.id', $gradeLevelIds))
             ->orderBy('grade_levels.sort_order')
             ->orderBy('subjects.subject_name')
             ->get();
@@ -229,7 +234,12 @@ class AddPrintResourceController extends BaseController
     // Same rules for both store() and update() — keeps them from drifting apart
     private function validateResourceRequest(Request $request): array
     {
-        $validated = $request->validate($this->resourceValidationRules());
+        $user = Auth::user();
+        $level = $user->userType?->level ?? 0;
+        $curriculumScope = $this->curriculumScopeService->resolve($level, $user->station_id);
+        $allowedGradeLevelIds = $curriculumScope['grade_levels']->pluck('id')->all();
+
+        $validated = $request->validate($this->resourceValidationRules($allowedGradeLevelIds));
 
         // validate() strips the UploadedFile, so re-attach it manually
         if ($request->hasFile('image')) {
@@ -239,8 +249,16 @@ class AddPrintResourceController extends BaseController
         return $validated;
     }
 
-    private function resourceValidationRules(): array
+    private function resourceValidationRules(?array $allowedGradeLevelIds = null): array
     {
+        $subjectGradeLevelExists = Rule::exists('subject_grade_levels', 'id');
+
+        if ($allowedGradeLevelIds !== null) {
+            $subjectGradeLevelExists->where(
+                fn ($query) => $query->whereIn('grade_level_id', $allowedGradeLevelIds)
+            );
+        }
+
         return [
             'title'                => 'required|string|max:255',
             'authors'              => 'nullable|string',
@@ -256,7 +274,7 @@ class AddPrintResourceController extends BaseController
                 'required',
                 'uuid',
                 'distinct',
-                Rule::exists('subject_grade_levels', 'id'),
+                $subjectGradeLevelExists,
             ],
             'image'                => 'nullable|image|mimes:jpeg,png,jpg|max:5120',
         ];

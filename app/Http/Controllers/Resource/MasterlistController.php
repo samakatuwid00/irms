@@ -16,6 +16,7 @@ use Illuminate\Routing\Controller as BaseController;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\Rule;
 
 class MasterlistController extends BaseController
 {
@@ -524,19 +525,32 @@ class MasterlistController extends BaseController
                 'subject_grade_levels.grade_level_id',
                 'subjects.subject_name',
                 'grade_levels.grade as grade_level',
-                'key_stages.name as key_stage',
+                'key_stages.code as key_stage',
                 'grade_levels.sort_order'
             )
             ->join('subjects',     'subjects.id',     '=', 'subject_grade_levels.subject_id')
             ->join('grade_levels', 'grade_levels.id', '=', 'subject_grade_levels.grade_level_id')
             ->join('key_stages', 'key_stages.id', '=', 'grade_levels.key_stage_id')
+            ->orderBy('key_stages.sort_order')
             ->orderBy('grade_levels.sort_order')
+            ->orderBy('subjects.subject_name')
             ->get();
     }
 
     private function validateResourceRequest(Request $request, ?PrintResource $resource = null): array
     {
-        $validated = $request->validate([
+        $validated = $request->validate($this->resourceValidationRules($resource));
+
+        if ($request->hasFile('image')) {
+            $validated['image'] = $request->file('image');
+        }
+
+        return $validated;
+    }
+
+    private function resourceValidationRules(?PrintResource $resource = null): array
+    {
+        return [
             'title'                => 'required|string|max:255',
             'authors'              => 'nullable|string',
             'type'                 => 'required|exists:print_types,id',
@@ -546,7 +560,13 @@ class MasterlistController extends BaseController
             'copyright'            => 'nullable|integer',
             'isbn'                 => 'nullable|string|max:50',
             'pages'                => 'nullable|integer',
-            'subject_grade_levels' => 'nullable|array',
+            'subject_grade_levels' => 'required|array|min:1',
+            'subject_grade_levels.*' => [
+                'required',
+                'uuid',
+                'distinct',
+                Rule::exists('subject_grade_levels', 'id'),
+            ],
             'image'                => 'nullable|image|mimes:jpeg,png,jpg|max:5120',
             'verified'             => 'nullable|boolean',
             'comment'              => [
@@ -554,12 +574,6 @@ class MasterlistController extends BaseController
                 'string',
                 'max:2000',
             ],
-        ]);
-
-        if ($request->hasFile('image')) {
-            $validated['image'] = $request->file('image');
-        }
-
-        return $validated;
+        ];
     }
 }

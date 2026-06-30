@@ -1,7 +1,10 @@
 <?php
 
 use App\Http\Controllers\Resource\AddPrintResourceController;
+use App\Http\Controllers\Resource\MasterlistController;
+use App\Services\PrintResourceVerificationService;
 use App\Services\Resource\Actions\AddPrintResourceService;
+use App\Services\SchoolDashboardCurriculumScopeService;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
@@ -76,7 +79,134 @@ afterEach(function () {
     }
 });
 
-test('add print resource supplies canonical key stage codes to the checkbox table', function () {
+test('add print resource filters checkbox mappings to the supplied grade levels', function () {
+    $stageId = (string) Str::uuid();
+    $gradeId = (string) Str::uuid();
+    $otherGradeId = (string) Str::uuid();
+    $subjectId = (string) Str::uuid();
+    $otherSubjectId = (string) Str::uuid();
+    $mappingId = (string) Str::uuid();
+    $otherMappingId = (string) Str::uuid();
+
+    DB::table('key_stages')->insert([
+        'id' => $stageId,
+        'code' => 'KS1',
+        'name' => 'Key Stage 1 — Kindergarten to Grade 3',
+        'sort_order' => 1,
+    ]);
+    DB::table('grade_levels')->insert([
+        [
+            'id' => $gradeId,
+            'grade' => 'Kindergarten',
+            'sort_order' => 0,
+            'key_stage_id' => $stageId,
+        ],
+        [
+            'id' => $otherGradeId,
+            'grade' => 'Grade 1',
+            'sort_order' => 1,
+            'key_stage_id' => $stageId,
+        ],
+    ]);
+    DB::table('subjects')->insert([
+        [
+            'id' => $subjectId,
+            'subject_name' => 'Kindergarten Domains',
+        ],
+        [
+            'id' => $otherSubjectId,
+            'subject_name' => 'Mathematics',
+        ],
+    ]);
+    DB::table('subject_grade_levels')->insert([
+        [
+            'id' => $mappingId,
+            'subject_id' => $subjectId,
+            'grade_level_id' => $gradeId,
+        ],
+        [
+            'id' => $otherMappingId,
+            'subject_id' => $otherSubjectId,
+            'grade_level_id' => $otherGradeId,
+        ],
+    ]);
+
+    $controller = new AddPrintResourceController(
+        new AddPrintResourceService(),
+        new SchoolDashboardCurriculumScopeService()
+    );
+    $method = new ReflectionMethod($controller, 'getSubjectGradeLevels');
+    $method->setAccessible(true);
+
+    $mappings = $method->invoke($controller, [$gradeId]);
+    $mapping = $mappings->first();
+
+    expect($mappings)->toHaveCount(1)
+        ->and($mapping->grade_level)->toBe('Kindergarten')
+        ->and($mapping->subject_name)->toBe('Kindergarten Domains')
+        ->and($mapping->subject_grade_level_id)->toBe($mappingId);
+});
+
+test('add print resource rejects unknown and duplicate subject grade mappings', function () {
+    $printTypeId = (string) Str::uuid();
+    $mappingId = (string) Str::uuid();
+    $otherMappingId = (string) Str::uuid();
+    $gradeLevelId = (string) Str::uuid();
+    $otherGradeLevelId = (string) Str::uuid();
+
+    DB::table('print_types')->insert([
+        'id' => $printTypeId,
+        'type_name' => 'Textbook',
+    ]);
+    DB::table('subject_grade_levels')->insert([
+        [
+            'id' => $mappingId,
+            'subject_id' => (string) Str::uuid(),
+            'grade_level_id' => $gradeLevelId,
+        ],
+        [
+            'id' => $otherMappingId,
+            'subject_id' => (string) Str::uuid(),
+            'grade_level_id' => $otherGradeLevelId,
+        ],
+    ]);
+
+    $controller = new AddPrintResourceController(
+        new AddPrintResourceService(),
+        new SchoolDashboardCurriculumScopeService()
+    );
+    $method = new ReflectionMethod($controller, 'resourceValidationRules');
+    $method->setAccessible(true);
+    $rules = $method->invoke($controller, [$gradeLevelId]);
+    $base = [
+        'title' => 'Test Resource',
+        'type' => $printTypeId,
+    ];
+
+    $valid = Validator::make(
+        $base + ['subject_grade_levels' => [$mappingId]],
+        $rules
+    );
+    $unknown = Validator::make(
+        $base + ['subject_grade_levels' => [(string) Str::uuid()]],
+        $rules
+    );
+    $duplicate = Validator::make(
+        $base + ['subject_grade_levels' => [$mappingId, $mappingId]],
+        $rules
+    );
+    $outsideOffering = Validator::make(
+        $base + ['subject_grade_levels' => [$otherMappingId]],
+        $rules
+    );
+
+    expect($valid->passes())->toBeTrue()
+        ->and($unknown->errors()->has('subject_grade_levels.0'))->toBeTrue()
+        ->and($duplicate->errors()->has('subject_grade_levels.1'))->toBeTrue()
+        ->and($outsideOffering->errors()->has('subject_grade_levels.0'))->toBeTrue();
+});
+
+test('print masterlist edit supplies canonical key stage codes to the checkbox table', function () {
     $stageId = (string) Str::uuid();
     $gradeId = (string) Str::uuid();
     $subjectId = (string) Str::uuid();
@@ -104,7 +234,10 @@ test('add print resource supplies canonical key stage codes to the checkbox tabl
         'grade_level_id' => $gradeId,
     ]);
 
-    $controller = new AddPrintResourceController(new AddPrintResourceService());
+    $controller = new MasterlistController(
+        new AddPrintResourceService(),
+        new PrintResourceVerificationService()
+    );
     $method = new ReflectionMethod($controller, 'getSubjectGradeLevels');
     $method->setAccessible(true);
 
@@ -116,7 +249,7 @@ test('add print resource supplies canonical key stage codes to the checkbox tabl
         ->and($mapping->subject_grade_level_id)->toBe($mappingId);
 });
 
-test('add print resource rejects unknown and duplicate subject grade mappings', function () {
+test('print masterlist edit requires valid distinct subject grade mappings', function () {
     $printTypeId = (string) Str::uuid();
     $mappingId = (string) Str::uuid();
 
@@ -130,12 +263,15 @@ test('add print resource rejects unknown and duplicate subject grade mappings', 
         'grade_level_id' => (string) Str::uuid(),
     ]);
 
-    $controller = new AddPrintResourceController(new AddPrintResourceService());
+    $controller = new MasterlistController(
+        new AddPrintResourceService(),
+        new PrintResourceVerificationService()
+    );
     $method = new ReflectionMethod($controller, 'resourceValidationRules');
     $method->setAccessible(true);
     $rules = $method->invoke($controller);
     $base = [
-        'title' => 'Test Resource',
+        'title' => 'Edited Resource',
         'type' => $printTypeId,
     ];
 
@@ -143,6 +279,7 @@ test('add print resource rejects unknown and duplicate subject grade mappings', 
         $base + ['subject_grade_levels' => [$mappingId]],
         $rules
     );
+    $missing = Validator::make($base, $rules);
     $unknown = Validator::make(
         $base + ['subject_grade_levels' => [(string) Str::uuid()]],
         $rules
@@ -153,6 +290,7 @@ test('add print resource rejects unknown and duplicate subject grade mappings', 
     );
 
     expect($valid->passes())->toBeTrue()
+        ->and($missing->errors()->has('subject_grade_levels'))->toBeTrue()
         ->and($unknown->errors()->has('subject_grade_levels.0'))->toBeTrue()
         ->and($duplicate->errors()->has('subject_grade_levels.1'))->toBeTrue();
 });

@@ -204,11 +204,46 @@ class SchoolController extends BaseController
             'ng' => $request->has('ng') ? 'yes' : 'no',
         ];
 
+        // Get previous grade offerings to detect unchecked grades
+        $previousGradeOffering = GradeOffering::where('school_id', $schoolId)->first();
+
         // Update or create grade offering
         $gradeOffering = GradeOffering::updateOrCreate(
             ['school_id' => $schoolId],
             $gradeData
         );
+
+        // Zero out population for grades that were unchecked
+        $gradeFields = [
+            'K'  => ['k_m', 'k_f', 'k_total'],
+            'g1' => ['g1_m', 'g1_f', 'g1_total'],
+            'g2' => ['g2_m', 'g2_f', 'g2_total'],
+            'g3' => ['g3_m', 'g3_f', 'g3_total'],
+            'g4' => ['g4_m', 'g4_f', 'g4_total'],
+            'g5' => ['g5_m', 'g5_f', 'g5_total'],
+            'g6' => ['g6_m', 'g6_f', 'g6_total'],
+            'g7' => ['g7_m', 'g7_f', 'g7_total'],
+            'g8' => ['g8_m', 'g8_f', 'g8_total'],
+            'g9' => ['g9_m', 'g9_f', 'g9_total'],
+            'g10' => ['g10_m', 'g10_f', 'g10_total'],
+            'g11' => ['g11_m', 'g11_f', 'g11_total'],
+            'g12' => ['g12_m', 'g12_f', 'g12_total'],
+            'ng'  => ['ng_m', 'ng_f', 'ng_total'],
+        ];
+
+        $zeroFields = [];
+        foreach ($gradeFields as $gradeKey => $fields) {
+            // If grade was previously offered but now unchecked, zero it out
+            if ($previousGradeOffering && $previousGradeOffering->{$gradeKey} === 'yes' && $gradeData[$gradeKey] === 'no') {
+                foreach ($fields as $field) {
+                    $zeroFields[$field] = 0;
+                }
+            }
+        }
+
+        if (!empty($zeroFields)) {
+            Population::where('school_id', $schoolId)->update($zeroFields);
+        }
 
         // Check if it was recently created
         $message = $gradeOffering->wasRecentlyCreated

@@ -281,60 +281,57 @@
 
             {{-- SUBJECT-GRADE LEVEL --}}
             @php
-                $stages = [
-                    'KS1' => ['tab' => 'stage1', 'label' => 'Key Stage 1', 'grades' => [0=>'K',1=>'1',2=>'2',3=>'3']],
-                    'KS2' => ['tab' => 'stage2', 'label' => 'Key Stage 2', 'grades' => [4=>'4',5=>'5',6=>'6']],
-                    'KS3' => ['tab' => 'jhs',    'label' => 'Junior High',  'grades' => [7=>'7',8=>'8',9=>'9',10=>'10']],
-                    'KS4' => ['tab' => 'shs',    'label' => 'Senior High',  'grades' => [11=>'11',12=>'12']],
-                ];
-                $grouped     = $subjectGradeLevels->groupBy(['key_stage', 'subject_name']);
-                $checkedIds  = old('subject_grade_levels', $isEditing ? ($editingSglIds ?? []) : []);
+                $gradeColumns = $subjectGradeLevels
+                    ->unique('grade_level_id')
+                    ->sortBy('sort_order')
+                    ->values();
+                $groupedSubjects = $subjectGradeLevels->groupBy('subject_name');
+                $checkedIds = old('subject_grade_levels', $isEditing ? ($editingSglIds ?? []) : []);
             @endphp
 
-            <div class="space-y-4">
-                <div class="flex gap-6 border-b border-gray-300">
-                    @foreach ($stages as $stage)
-                        <button type="button"
-                                class="sgl-tab-btn {{ $loop->first ? 'active border-blue-600 text-blue-600' : 'border-transparent text-gray-600' }} whitespace-nowrap pb-2 px-1 text-sm font-medium border-b-2"
-                                data-sgl-tab="{{ $stage['tab'] }}">
-                            {{ $stage['label'] }}
-                        </button>
-                    @endforeach
+            @if ($subjectGradeLevels->isEmpty())
+                <div class="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+                    {{ $curriculumMessage ?? 'No subject and grade-level mappings are available.' }}
                 </div>
-
-                @foreach ($stages as $stageKey => $stage)
-                    <div id="{{ $stage['tab'] }}" class="sgl-tab-content {{ !$loop->first ? 'hidden' : '' }}">
-                        <table class="w-full border border-gray-300 text-sm">
-                            <thead class="bg-gray-100">
+            @else
+                <div class="overflow-x-auto rounded-lg border border-gray-300">
+                    <table class="min-w-max w-full text-sm">
+                        <thead class="bg-gray-100">
+                            <tr>
+                                <th class="border-b border-r border-gray-300 px-3 py-2 text-left sticky left-0 bg-gray-100 min-w-64">
+                                    Subject
+                                </th>
+                                @foreach ($gradeColumns as $grade)
+                                    <th class="border-b border-r border-gray-300 px-3 py-2 text-center min-w-24">
+                                        {{ $grade->grade_level }}
+                                    </th>
+                                @endforeach
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach ($groupedSubjects as $subject => $rows)
+                                @php $gradeMap = collect($rows)->keyBy('grade_level_id'); @endphp
                                 <tr>
-                                    <th class="border border-gray-300 px-3 py-2 text-left w-72">Subject</th>
-                                    @foreach ($stage['grades'] as $gradeLabel)
-                                        <th class="border border-gray-300">{{ $gradeLabel }}</th>
+                                    <td class="border-b border-r border-gray-300 px-3 py-2 sticky left-0 bg-white font-medium">
+                                        {{ $subject }}
+                                    </td>
+                                    @foreach ($gradeColumns as $grade)
+                                        @php $mapping = $gradeMap->get($grade->grade_level_id); @endphp
+                                        <td class="border-b border-r border-gray-300 text-center px-3 py-2">
+                                            @if ($mapping)
+                                                <input type="checkbox"
+                                                    name="subject_grade_levels[]"
+                                                    value="{{ $mapping->subject_grade_level_id }}"
+                                                    {{ in_array($mapping->subject_grade_level_id, $checkedIds, true) ? 'checked' : '' }}>
+                                            @endif
+                                        </td>
                                     @endforeach
                                 </tr>
-                            </thead>
-                            <tbody>
-                                @foreach ($grouped[$stageKey] ?? [] as $subject => $rows)
-                                    @php $gradeMap = collect($rows)->keyBy('sort_order'); @endphp
-                                    <tr>
-                                        <td class="border border-gray-300 px-3 py-2">{{ $subject }}</td>
-                                        @foreach ($stage['grades'] as $sortOrder => $label)
-                                            <td class="border border-gray-300 text-center">
-                                                @if ($gradeMap->has($sortOrder))
-                                                    <input type="checkbox"
-                                                        name="subject_grade_levels[]"
-                                                        value="{{ $gradeMap[$sortOrder]->subject_grade_level_id }}"
-                                                        {{ in_array($gradeMap[$sortOrder]->subject_grade_level_id, $checkedIds, true) ? 'checked' : '' }}>
-                                                @endif
-                                            </td>
-                                        @endforeach
-                                    </tr>
-                                @endforeach
-                            </tbody>
-                        </table>
-                    </div>
-                @endforeach
-            </div>
+                            @endforeach
+                        </tbody>
+                    </table>
+                </div>
+            @endif
 
             @error('subject_grade_levels')
                 <p class="mt-2 text-sm text-red-600">{{ $message }}</p>
@@ -815,27 +812,6 @@
     const cancelBtn = document.getElementById('cancelEditBtn');
     if (backBtn)   backBtn.addEventListener('click',   goBackToRequests);
     if (cancelBtn) cancelBtn.addEventListener('click', goBackToRequests);
-
-    // ────────────────────────────────────────────────────────────────────────
-    // SGL (Subject / Grade Level) INNER TABS
-    // ────────────────────────────────────────────────────────────────────────
-    const sglTabBtns     = document.querySelectorAll('.sgl-tab-btn');
-    const sglTabContents = document.querySelectorAll('.sgl-tab-content');
-
-    function activateSglTab(targetId) {
-        sglTabBtns.forEach(btn => {
-            const active = btn.dataset.sglTab === targetId;
-            btn.classList.toggle('border-blue-600',   active);
-            btn.classList.toggle('text-blue-600',      active);
-            btn.classList.toggle('active',             active);
-            btn.classList.toggle('border-transparent', !active);
-            btn.classList.toggle('text-gray-600',      !active);
-        });
-        sglTabContents.forEach(c => c.classList.toggle('hidden', c.id !== targetId));
-    }
-
-    sglTabBtns.forEach(btn => btn.addEventListener('click', () => activateSglTab(btn.dataset.sglTab)));
-    if (sglTabBtns.length) activateSglTab(sglTabBtns[0].dataset.sglTab);
 
     // ────────────────────────────────────────────────────────────────────────
     // SEARCH EXISTING
