@@ -1,5 +1,7 @@
 @php
-    $activeTab = request('tab', 'library-hub');
+    $validTabs = ['library-hub', 'school'];
+    $requestedTab = request('tab');
+    $activeTab = in_array($requestedTab, $validTabs, true) ? $requestedTab : 'library-hub';
     $perPage   = $perPage ?? 10;
     $perPageOptions = $perPageOptions ?? [5, 10, 15, 20];
 @endphp
@@ -675,8 +677,34 @@ window.__allSchools = @json(collect($allSchools ?? [])->map(fn($s) => ['id' => $
 (function () {
     'use strict';
 
+    const TAB_STORAGE_KEY = 'printResourcesRegionTab';
+    const DEFAULT_TAB = 'library-hub';
+    const VALID_TABS = ['library-hub', 'school'];
+
+    function getAvailableTab(tabName) {
+        if (!VALID_TABS.includes(tabName)) return null;
+
+        const button = Array.from(document.querySelectorAll('.tab-btn'))
+            .find(function (btn) { return btn.dataset.tab === tabName; });
+        const panel = document.getElementById(tabName + '-tab');
+
+        return button && panel ? { button, panel } : null;
+    }
+
+    function resolveTab(urlTab) {
+        if (getAvailableTab(urlTab)) return urlTab;
+
+        const storedTab = sessionStorage.getItem(TAB_STORAGE_KEY);
+        if (getAvailableTab(storedTab)) return storedTab;
+
+        return DEFAULT_TAB;
+    }
+
     // ── Tab switching with URL update ──────────────────────────
     function switchTab(targetTab) {
+        const target = getAvailableTab(targetTab);
+        if (!target) return false;
+
         // Update URL without reload
         const url = new URL(window.location.href);
         url.searchParams.set('tab', targetTab);
@@ -696,11 +724,11 @@ window.__allSchools = @json(collect($allSchools ?? [])->map(fn($s) => ['id' => $
         document.querySelectorAll('.tab-content').forEach(function (panel) {
             panel.classList.add('hidden');
         });
-        var panel = document.getElementById(targetTab + '-tab');
-        if (panel) panel.classList.remove('hidden');
+        target.panel.classList.remove('hidden');
         
         // Store current tab in session storage
-        sessionStorage.setItem('activeTab', targetTab);
+        sessionStorage.setItem(TAB_STORAGE_KEY, targetTab);
+        return true;
     }
 
     document.querySelectorAll('.tab-btn').forEach(function (btn) {
@@ -790,10 +818,8 @@ window.__allSchools = @json(collect($allSchools ?? [])->map(fn($s) => ['id' => $
     }
 
     // ── Restore active tab on page load ───────────────────────
-    const savedTab = sessionStorage.getItem('activeTab') || 
-                     new URLSearchParams(window.location.search).get('tab') || 
-                     'library-hub';
-    switchTab(savedTab);
+    const initialTab = resolveTab(new URLSearchParams(window.location.search).get('tab'));
+    switchTab(initialTab);
 
     // ── View toggle (cards / table) with AJAX ─────────────────
     function updateView(target, view) {
@@ -1026,7 +1052,7 @@ window.__allSchools = @json(collect($allSchools ?? [])->map(fn($s) => ['id' => $
     
     // Handle browser back/forward
     window.addEventListener('popstate', function() {
-        const tab = new URLSearchParams(window.location.search).get('tab') || 'library-hub';
+        const tab = resolveTab(new URLSearchParams(window.location.search).get('tab'));
         switchTab(tab);
         // Reload current form data
         const activeForm = document.querySelector('.tab-content:not(.hidden) form[data-ajax]');

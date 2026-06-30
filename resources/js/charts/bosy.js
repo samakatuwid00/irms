@@ -308,7 +308,7 @@ function createItemElement(item) {
            </a>`;
     } else if (isDivisionItem) {
         // Region account: division name → Print Resources, pre-filtered by division (black)
-        schoolNameHtml = `<a href="print-resources?tab=library-hub?tab=library-hub&hub_view=card&per_page=10&hub_search=&hub_division=${encodeURIComponent(item.id)}&hub_library=all"
+        schoolNameHtml = `<a href="/print-resources?tab=library-hub&hub_view=card&per_page=10&hub_search=&hub_division=${encodeURIComponent(item.id)}&hub_library=all"
               class="text-sm sm:text-base font-semibold text-gray-900 hover:text-blue-600 truncate block transition-colors cursor-pointer"
               title="View ${escapeHtml(item.name)} resources in Print Resources">
                ${escapeHtml(item.shortname || item.name)}
