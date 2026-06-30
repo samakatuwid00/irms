@@ -221,11 +221,14 @@ class AddPrintResourceController extends BaseController
                 'subject_grade_levels.grade_level_id',
                 'subjects.subject_name',
                 'grade_levels.grade as grade_level',
+                'key_stages.code as key_stage',
                 'grade_levels.sort_order'
             )
             ->join('subjects', 'subjects.id', '=', 'subject_grade_levels.subject_id')
             ->join('grade_levels', 'grade_levels.id', '=', 'subject_grade_levels.grade_level_id')
+            ->join('key_stages', 'key_stages.id', '=', 'grade_levels.key_stage_id')
             ->when($gradeLevelIds !== null, fn ($query) => $query->whereIn('grade_levels.id', $gradeLevelIds))
+            ->orderBy('key_stages.sort_order')
             ->orderBy('grade_levels.sort_order')
             ->orderBy('subjects.subject_name')
             ->get();

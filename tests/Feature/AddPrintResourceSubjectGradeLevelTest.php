@@ -142,6 +142,7 @@ test('add print resource filters checkbox mappings to the supplied grade levels'
     $mapping = $mappings->first();
 
     expect($mappings)->toHaveCount(1)
+        ->and($mapping->key_stage)->toBe('KS1')
         ->and($mapping->grade_level)->toBe('Kindergarten')
         ->and($mapping->subject_name)->toBe('Kindergarten Domains')
         ->and($mapping->subject_grade_level_id)->toBe($mappingId);
