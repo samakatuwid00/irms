@@ -541,6 +541,8 @@
             {{-- ── Scroll Wrapper ── --}}
             <div class="bosy-x-scroll-wrapper">
                 <div id="bosy-divisions-container"
+                     data-can-edit-school-nec="{{ $canEditSchoolNec ? '1' : '0' }}"
+                     data-school-nec-update-base="{{ url('/dashboard/bosy-schools') }}"
                      class="bosy-scroll-container min-h-[200px] min-w-[320px] sm:min-w-[480px] pr-1 space-y-1">
                     @include('pages.partials.bosy-skeleton')
                 </div>
@@ -566,6 +568,55 @@
             </div>
  
         </x-chart-card>
+
+        @if($canEditSchoolNec)
+            <div id="schoolNecModal"
+                 class="fixed inset-0 z-50 hidden items-center justify-center bg-black/40 backdrop-blur-sm p-4"
+                 role="dialog" aria-modal="true" aria-labelledby="schoolNecModalTitle">
+                <div class="w-full max-w-sm overflow-hidden rounded-2xl bg-white shadow-xl ring-1 ring-gray-200">
+                    <div class="flex items-center justify-between border-b border-gray-100 bg-indigo-50/60 px-5 py-4">
+                        <div>
+                            <h2 id="schoolNecModalTitle" class="font-semibold text-gray-800">Validate School NEC</h2>
+                            <p id="schoolNecSchoolName" class="mt-0.5 text-xs text-gray-500"></p>
+                        </div>
+                        <button type="button" id="closeSchoolNecModalBtn"
+                                class="rounded-lg p-1.5 text-gray-500 hover:bg-white hover:text-gray-700"
+                                aria-label="Close NEC editor">
+                            <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18 18 6M6 6l12 12"/>
+                            </svg>
+                        </button>
+                    </div>
+
+                    <form id="schoolNecForm" class="space-y-4 p-5">
+                        <div>
+                            <label for="schoolNecInput" class="mb-1.5 block text-sm font-medium text-gray-700">
+                                Validated Net Expected Count
+                            </label>
+                            <input type="number" id="schoolNecInput" name="estimated_resource"
+                                   min="0" max="2147483647" step="1" required
+                                   class="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-200">
+                            <p class="mt-1.5 text-xs text-gray-500">
+                                Enter 0 to remove the validated value and return to the computed NEC.
+                            </p>
+                        </div>
+
+                        <div id="schoolNecAlert" class="hidden rounded-lg px-3 py-2 text-sm"></div>
+
+                        <div class="flex justify-end gap-3 border-t border-gray-100 pt-4">
+                            <button type="button" id="cancelSchoolNecModalBtn"
+                                    class="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-50">
+                                Cancel
+                            </button>
+                            <button type="submit" id="saveSchoolNecBtn"
+                                    class="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-50">
+                                Save NEC
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        @endif
 
         @if($userLevel >= 4)
 <script>

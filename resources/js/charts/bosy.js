@@ -1,4 +1,5 @@
 document.addEventListener('DOMContentLoaded', () => {
+    initSchoolNecEditor();
     initBosyStatus();
     // setInterval(initBosyStatus, 300000); // uncomment for auto-refresh every 5 min
 });
@@ -12,6 +13,7 @@ let bosySearchDebounceTimer = null;
 let bosyFullDivisionItems = null;
 let bosyFullDivisionPrintType = null;
 let bosyFullDivisionFetching = false;
+let schoolNecEditor = null;
 
 function initBosyStatus() {
     const regionSelect = document.getElementById('regionFilter');
@@ -365,6 +367,15 @@ function createItemElement(item) {
         </div>
     `;
 
+    const editNecButton = div.querySelector('[data-edit-school-nec]');
+    if (editNecButton) {
+        editNecButton.addEventListener('click', event => {
+            event.preventDefault();
+            event.stopPropagation();
+            openSchoolNecModal(item);
+        });
+    }
+
     return div;
 }
 
@@ -380,7 +391,175 @@ function buildSubtitleHtml(item) {
         ? `<span class="text-gray-500">${escapeHtml(item.role)} | </span>`
         : '';
 
-    return `<p class="text-xs text-indigo-500 mt-0.5 truncate">${role}Net Expected Count: ${formatNumber(nec)}</p>`;
+    const editButton = canEditSchoolNec() && currentBosyLevel === 'division' && item.district?.id
+        ? `<button type="button" data-edit-school-nec
+                   class="ml-1 inline-flex h-5 w-5 flex-shrink-0 items-center justify-center rounded text-indigo-500 hover:bg-indigo-50 hover:text-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-200"
+                   title="Edit validated NEC for ${escapeHtml(String(item.name || 'school'))}"
+                   aria-label="Edit validated NEC for ${escapeHtml(String(item.name || 'school'))}">
+                <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                          d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.5-9.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 8.5-8.5z"/>
+                </svg>
+           </button>`
+        : '';
+
+    return `<div class="mt-0.5 flex min-w-0 items-center">
+                <p class="truncate text-xs text-indigo-500">${role}Net Expected Count: ${formatNumber(nec)}</p>
+                ${editButton}
+            </div>`;
+}
+
+function canEditSchoolNec() {
+    return document.getElementById('bosy-divisions-container')?.dataset.canEditSchoolNec === '1';
+}
+
+function initSchoolNecEditor() {
+    const modal = document.getElementById('schoolNecModal');
+    const form = document.getElementById('schoolNecForm');
+
+    if (!modal || !form) return;
+
+    schoolNecEditor = {
+        modal,
+        form,
+        schoolName: document.getElementById('schoolNecSchoolName'),
+        input: document.getElementById('schoolNecInput'),
+        alert: document.getElementById('schoolNecAlert'),
+        saveButton: document.getElementById('saveSchoolNecBtn'),
+    };
+
+    document.getElementById('closeSchoolNecModalBtn')?.addEventListener('click', closeSchoolNecModal);
+    document.getElementById('cancelSchoolNecModalBtn')?.addEventListener('click', closeSchoolNecModal);
+
+    modal.addEventListener('click', event => {
+        if (event.target === modal) closeSchoolNecModal();
+    });
+
+    document.addEventListener('keydown', event => {
+        if (event.key === 'Escape' && !modal.classList.contains('hidden')) {
+            closeSchoolNecModal();
+        }
+    });
+
+    form.addEventListener('submit', saveSchoolNec);
+}
+
+function openSchoolNecModal(item) {
+    if (!schoolNecEditor || !canEditSchoolNec()) return;
+
+    schoolNecEditor.modal.dataset.schoolId = String(item.id);
+    schoolNecEditor.schoolName.textContent = item.name || 'Selected school';
+    schoolNecEditor.input.value = Number(item.net_expected_count || 0);
+    hideSchoolNecAlert();
+    setSchoolNecSaving(false);
+    schoolNecEditor.modal.classList.remove('hidden');
+    schoolNecEditor.modal.classList.add('flex');
+
+    setTimeout(() => {
+        schoolNecEditor.input.focus();
+        schoolNecEditor.input.select();
+    }, 0);
+}
+
+function closeSchoolNecModal() {
+    if (!schoolNecEditor) return;
+
+    schoolNecEditor.modal.classList.add('hidden');
+    schoolNecEditor.modal.classList.remove('flex');
+    delete schoolNecEditor.modal.dataset.schoolId;
+    hideSchoolNecAlert();
+    setSchoolNecSaving(false);
+}
+
+async function saveSchoolNec(event) {
+    event.preventDefault();
+
+    if (!schoolNecEditor) return;
+
+    const schoolId = schoolNecEditor.modal.dataset.schoolId;
+    const estimatedResource = Number(schoolNecEditor.input.value);
+
+    if (!schoolId || !Number.isInteger(estimatedResource) || estimatedResource < 0 || estimatedResource > 2147483647) {
+        showSchoolNecAlert('Enter a whole number between 0 and 2,147,483,647.');
+        return;
+    }
+
+    const container = document.getElementById('bosy-divisions-container');
+    const updateBase = container?.dataset.schoolNecUpdateBase;
+
+    if (!updateBase) {
+        showSchoolNecAlert('The NEC update endpoint is unavailable. Please refresh the page.');
+        return;
+    }
+
+    setSchoolNecSaving(true);
+    hideSchoolNecAlert();
+
+    try {
+        const response = await fetch(`${updateBase}/${encodeURIComponent(schoolId)}/nec`, {
+            method: 'PATCH',
+            headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json',
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content || '',
+                'X-Requested-With': 'XMLHttpRequest',
+            },
+            credentials: 'same-origin',
+            body: JSON.stringify({ estimated_resource: estimatedResource }),
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+            const validationMessage = data.errors
+                ? Object.values(data.errors).flat().join(' ')
+                : null;
+            showSchoolNecAlert(validationMessage || data.error || data.message || 'Unable to update the school NEC.');
+            return;
+        }
+
+        closeSchoolNecModal();
+        refreshCurrentBosyStatus();
+    } catch (error) {
+        console.error('School NEC update failed:', error);
+        showSchoolNecAlert('A network error occurred. Please try again.');
+    } finally {
+        setSchoolNecSaving(false);
+    }
+}
+
+function refreshCurrentBosyStatus() {
+    const regionSelect = document.getElementById('regionFilter');
+    const districtSelect = document.getElementById('divisionFilter');
+    const printTypeSelect = document.getElementById('bosyPrintTypeFilter');
+
+    fetchBosyStatus(
+        true,
+        regionSelect?.value || '',
+        districtSelect?.value || '',
+        printTypeSelect?.value || ''
+    );
+}
+
+function showSchoolNecAlert(message) {
+    if (!schoolNecEditor?.alert) return;
+
+    schoolNecEditor.alert.textContent = message;
+    schoolNecEditor.alert.className = 'rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700';
+}
+
+function hideSchoolNecAlert() {
+    if (!schoolNecEditor?.alert) return;
+
+    schoolNecEditor.alert.textContent = '';
+    schoolNecEditor.alert.className = 'hidden rounded-lg px-3 py-2 text-sm';
+}
+
+function setSchoolNecSaving(isSaving) {
+    if (!schoolNecEditor?.saveButton) return;
+
+    schoolNecEditor.saveButton.disabled = isSaving;
+    schoolNecEditor.saveButton.textContent = isSaving ? 'Saving...' : 'Save NEC';
 }
 
 function getStatusClass(status) {

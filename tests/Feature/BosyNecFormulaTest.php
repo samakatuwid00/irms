@@ -49,6 +49,12 @@ beforeEach(function () {
         }
     });
 
+    Schema::create('school_libraries', function (Blueprint $table) {
+        $table->uuid('id')->primary();
+        $table->uuid('school_id');
+        $table->unsignedBigInteger('estimated_resource')->default(0);
+    });
+
     DB::table('subjects')->insert([
         ['id' => 'subject-math', 'subject_name' => 'Mathematics'],
         ['id' => 'subject-language', 'subject_name' => 'Language'],
@@ -128,4 +134,36 @@ test('NEC uses latest population, formal grade offerings, and their distinct sub
         ->and($necBySchool['school-b'])->toBe(165) // 55 latest population × 1 grade × 3 distinct subjects
         ->and($necBySchool['school-c'])->toBe(0) // Non-Graded is not a grade-offering factor
         ->and(invokeBosyNecMethod($service, 'calculateNec', $schoolIds))->toBe(825);
+});
+
+test('a positive school library estimate replaces the computed NEC while zero keeps the formula', function () {
+    DB::table('populations')->insert([
+        ['id' => 'pop-a', 'school_id' => 'school-a', 'sy_id' => 'sy-2026', 'g1_total' => 100],
+        ['id' => 'pop-b', 'school_id' => 'school-b', 'sy_id' => 'sy-2026', 'g7_total' => 50],
+    ]);
+
+    DB::table('grade_offerings')->insert([
+        ['id' => 'offering-a', 'school_id' => 'school-a', 'g1' => 'yes'],
+        ['id' => 'offering-b', 'school_id' => 'school-b', 'g7' => 'yes'],
+    ]);
+
+    $service = app(BosyStatusService::class);
+    $schoolIds = ['school-a', 'school-b', 'school-c'];
+    $computedNec = invokeBosyNecMethod($service, 'calculateNecBySchool', $schoolIds);
+
+    DB::table('school_libraries')->insert([
+        ['id' => 'library-a', 'school_id' => 'school-a', 'estimated_resource' => 125],
+        ['id' => 'library-b', 'school_id' => 'school-b', 'estimated_resource' => 0],
+        ['id' => 'library-c', 'school_id' => 'school-c', 'estimated_resource' => 75],
+    ]);
+
+    $necBySchool = invokeBosyNecMethod(
+        $service,
+        'calculateNecBySchool',
+        $schoolIds
+    );
+
+    expect($necBySchool['school-a'])->toBe(125)
+        ->and($necBySchool['school-b'])->toBe($computedNec['school-b'])
+        ->and($necBySchool['school-c'])->toBe(75);
 });

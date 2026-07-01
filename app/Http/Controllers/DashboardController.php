@@ -7,6 +7,7 @@ use App\Models\District;
 use App\Models\Division;
 use App\Models\Region;
 use App\Models\School;
+use App\Models\SchoolLibrary;
 use App\Services\LrAvailabilityService;
 use App\Services\LrNeedsService;
 use App\Services\LrRatioService;
@@ -26,6 +27,8 @@ use Illuminate\Support\Facades\Log;
 class DashboardController extends BaseController
 {
     use AuthorizesRequests, ValidatesRequests;
+
+    private const SDO_SUPPLY_OFFICER_USER_TYPE_ID = 'fd43d1da-64c7-4be2-9f2c-d419f599404f';
 
     private LrAvailabilityService $lrAvailabilityService;
     private LrRatioService $lrRatioService;
@@ -68,6 +71,8 @@ class DashboardController extends BaseController
         $userLevel = $this->determineUserLevel($user);
         $stationId = $this->determineStationId($user, $userLevel);
         $userTypeId = $user->usertype_id ?? '';
+        $canEditSchoolNec = $userLevel === 3
+            && (string) $userTypeId === self::SDO_SUPPLY_OFFICER_USER_TYPE_ID;
         $totalLrData    = $this->totalLearningResourcesService->getTotalResourcesData(null, $userLevel, $stationId);
         $populationData = $this->totalPopulationService->getPopulationData(null, $userLevel, $stationId);
         $lrNeedsData    = $this->lrNeedsService->getLrNeeds(null, $userLevel, $stationId, 5); // top 5 needs
@@ -157,7 +162,8 @@ class DashboardController extends BaseController
             'divisions',
             'printTypeOptions',
             'bosySettings',
-            'userTypeId'
+            'userTypeId',
+            'canEditSchoolNec'
         ));
     }
 
@@ -237,6 +243,66 @@ class DashboardController extends BaseController
             'period_end'     => $setting->period_end->format('Y-m-d'),
             'period_display' => $setting->period_display,
             'message'        => 'BOSY settings updated successfully.',
+        ]);
+    }
+
+    /**
+     * Store the SDO Supply Officer's validated NEC for a school in their division.
+     * A value of zero clears the manual override and restores the computed NEC.
+     */
+    public function updateSchoolNec(Request $request, School $school)
+    {
+        $user = Auth::user();
+
+        if (! $user || (string) $user->usertype_id !== self::SDO_SUPPLY_OFFICER_USER_TYPE_ID) {
+            return response()->json([
+                'error' => 'Unauthorized. Only the SDO Supply Officer may update school NEC.',
+            ], 403);
+        }
+
+        $isInUserDivision = $school->district()
+            ->where('division_id', (string) $user->station_id)
+            ->exists();
+
+        if (! $isInUserDivision) {
+            return response()->json([
+                'error' => 'Unauthorized. This school is outside your division.',
+            ], 403);
+        }
+
+        $validated = $request->validate([
+            'estimated_resource' => ['required', 'integer', 'min:0', 'max:2147483647'],
+        ]);
+
+        $schoolLibrary = SchoolLibrary::where('school_id', (string) $school->id)
+            ->orderBy('id')
+            ->first();
+
+        if (! $schoolLibrary) {
+            return response()->json([
+                'error' => 'The selected school does not have a school library record.',
+            ], 422);
+        }
+
+        $schoolLibrary->update([
+            'estimated_resource' => (int) $validated['estimated_resource'],
+        ]);
+
+        Log::info('School BOSY NEC updated by SDO Supply Officer', [
+            'by_user_id' => $user->id,
+            'division_id' => $user->station_id,
+            'school_id' => $school->id,
+            'school_library_id' => $schoolLibrary->id,
+            'estimated_resource' => (int) $validated['estimated_resource'],
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'school_id' => (string) $school->id,
+            'estimated_resource' => (int) $validated['estimated_resource'],
+            'message' => (int) $validated['estimated_resource'] > 0
+                ? 'School NEC validated successfully.'
+                : 'Validated NEC cleared. The computed NEC is active again.',
         ]);
     }
 

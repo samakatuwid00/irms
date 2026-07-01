@@ -30,6 +30,9 @@ Route::middleware('auth')->group(function () {
     Route::get('/dashboard/bosy-status', [DashboardController::class, 'getBosyStatusData'])
         ->name('dashboard.bosy-status');
 
+    Route::patch('/dashboard/bosy-schools/{school}/nec', [DashboardController::class, 'updateSchoolNec'])
+        ->name('dashboard.bosy-school-nec.update');
+
     Route::get('/dashboard/bosy-settings', [DashboardController::class, 'getBosySettings'])
         ->name('dashboard.bosy-settings.get');
  

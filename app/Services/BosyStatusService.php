@@ -1113,7 +1113,8 @@ class BosyStatusService
     }
 
     /**
-     * Calculate NEC per school using each school's own population total.
+     * Calculate the effective NEC per school. A positive SDO-validated value in
+     * school_libraries replaces the projected formula; zero keeps the formula.
      */
     private function calculateNecBySchool(array $schoolIds)
     {
@@ -1121,10 +1122,43 @@ class BosyStatusService
         $gradeOfferingCounts = $gradeOfferings->map(fn (array $grades): int => count($grades));
         $subjectAreaCounts = $this->getSubjectAreaCountsBySchool($gradeOfferings);
 
-        return $this->getPopulationTotalsBySchool($schoolIds)
-            ->map(fn (int $population, string $schoolId) => $population
-                * (int) ($gradeOfferingCounts[$schoolId] ?? 0)
-                * (int) ($subjectAreaCounts[$schoolId] ?? 0));
+        $populationTotals = $this->getPopulationTotalsBySchool($schoolIds);
+        $computedNec = collect($schoolIds)
+            ->filter()
+            ->unique()
+            ->mapWithKeys(fn (string $schoolId): array => [
+                $schoolId => (int) ($populationTotals[$schoolId] ?? 0)
+                    * (int) ($gradeOfferingCounts[$schoolId] ?? 0)
+                    * (int) ($subjectAreaCounts[$schoolId] ?? 0),
+            ]);
+
+        $validatedNec = $this->getValidatedNecBySchool($schoolIds);
+
+        return $computedNec->map(
+            fn (int $computed, string $schoolId): int => (int) ($validatedNec[$schoolId] ?? $computed)
+        );
+    }
+
+    /**
+     * Return the canonical positive school-library NEC overrides keyed by school.
+     */
+    private function getValidatedNecBySchool(array $schoolIds): Collection
+    {
+        $schoolIds = array_values(array_filter(array_unique($schoolIds)));
+
+        if (empty($schoolIds)) {
+            return collect();
+        }
+
+        return DB::table('school_libraries')
+            ->whereIn('school_id', $schoolIds)
+            ->orderBy('id')
+            ->get(['school_id', 'estimated_resource'])
+            ->unique('school_id')
+            ->filter(fn ($library): bool => (int) $library->estimated_resource > 0)
+            ->mapWithKeys(fn ($library): array => [
+                (string) $library->school_id => (int) $library->estimated_resource,
+            ]);
     }
 
     /**
