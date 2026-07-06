@@ -1,59 +1,123 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# Integrated Resource Inventory and Mapping System for Region V (IRIMS-V)
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+IRIMS-V is a web-based platform for managing, monitoring, and reporting learning resources across regional, division, district, and school stations. It maintains print and non-print resource inventories, school population and grade-offering data, library information, and user access in one system.
 
-## About Laravel
+## Core features
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+- Hierarchical station management for regions, divisions, districts, and schools
+- Print and non-print learning-resource inventories and masterlists
+- Acquisition, title, author, package, subject, grade-level, and curriculum records
+- School population and grade-offering management, including SF6 imports
+- Learning-resource availability, ratio, sufficiency/excess-deficit, heatmap, and BOSY dashboards
+- Normative Entitlement Computation (NEC) and resource-requirement calculations
+- Spreadsheet exports and print-resource verification logs
+- Role- and station-aware user management
+- School, division, district, and region profile management
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+## Technology stack
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+- PHP 8.2+
+- Laravel 12
+- SQLite by default (other Laravel-supported databases can be configured)
+- Vite 7 and Tailwind CSS 4
+- ECharts 6 for dashboard visualizations
+- Preline UI
+- PhpSpreadsheet for imports and exports
+- Pest 3 / PHPUnit for automated tests
 
-## Learning Laravel
+## Local setup
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework. You can also check out [Laravel Learn](https://laravel.com/learn), where you will be guided through building a modern Laravel application.
+### Prerequisites
 
-If you don't feel like reading, [Laracasts](https://laracasts.com) can help. Laracasts contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+Install PHP 8.2 or newer, Composer, and Node.js with npm. Enable the PHP extensions required by Laravel and the selected database driver (for the default configuration, SQLite is required).
 
-## Laravel Sponsors
+### Installation
 
-We would like to extend our thanks to the following sponsors for funding Laravel development. If you are interested in becoming a sponsor, please visit the [Laravel Partners program](https://partners.laravel.com).
+```bash
+git clone <repository-url>
+cd IRIMS-V
+composer run setup
+```
 
-### Premium Partners
+The setup script installs PHP and JavaScript dependencies, creates `.env` from `.env.example`, generates an application key, runs migrations, and builds the frontend assets.
 
-- **[Vehikl](https://vehikl.com)**
-- **[Tighten Co.](https://tighten.co)**
-- **[Kirschbaum Development Group](https://kirschbaumdevelopment.com)**
-- **[64 Robots](https://64robots.com)**
-- **[Curotec](https://www.curotec.com/services/technologies/laravel)**
-- **[DevSquad](https://devsquad.com/hire-laravel-developers)**
-- **[Redberry](https://redberry.international/laravel-development)**
-- **[Active Logic](https://activelogic.com)**
+If the SQLite database file does not already exist, create `database/database.sqlite`, then run:
 
-## Contributing
+```bash
+php artisan migrate
+```
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+To load the development seed data:
 
-## Code of Conduct
+```bash
+php artisan db:seed
+```
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+Review `.env` before starting the application. At minimum, set `APP_NAME`, `APP_URL`, and the appropriate `DB_*` values for your environment. Never commit secrets or a populated `.env` file.
 
-## Security Vulnerabilities
+## Development
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+Start the application server, queue listener, and Vite development server together:
+
+```bash
+composer run dev
+```
+
+The application is available at `http://127.0.0.1:8000` unless configured otherwise.
+
+For separate processes, use:
+
+```bash
+php artisan serve
+php artisan queue:listen --tries=1
+npm run dev
+```
+
+## Testing and code quality
+
+Run the complete automated test suite:
+
+```bash
+composer test
+```
+
+Format PHP source files with Laravel Pint:
+
+```bash
+./vendor/bin/pint
+```
+
+On Windows PowerShell, use `vendor\\bin\\pint` if the shell does not resolve the Unix-style command.
+
+## Production build
+
+Compile optimized frontend assets with:
+
+```bash
+npm run build
+```
+
+For production, disable debug mode, configure the production database, mail, cache, session, queue, and filesystem services, and run Laravel's deployment commands as appropriate for the hosting environment.
+
+## Project structure
+
+```text
+app/                 Application models, controllers, services, middleware, and observers
+config/              Laravel and service configuration
+database/            Migrations, factories, and seeders
+public/              Public entry point and static assets
+resources/           Blade views, JavaScript modules, and CSS
+routes/              Authentication, dashboard, resource, export, station, and user routes
+tests/               Pest unit and feature tests
+```
+
+## Data and security notes
+
+- Treat learner population, station details, user accounts, and resource records as operational data and protect them accordingly.
+- Use least-privilege accounts and verify station assignments before granting access.
+- Back up the database and uploaded assets before migrations or deployments.
+- Do not use seeded test accounts in production.
 
 ## License
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+This repository does not currently declare a project-specific license. Contact the project owner before copying, redistributing, or deploying it outside its authorized environment.
