@@ -23,10 +23,6 @@ Route::middleware('auth')->group(function () {
     Route::get('/chart/heatmap', [DashboardController::class, 'getLrHeatmapData'])
         ->name('chart.heatmap');
 
-    // New Heatmap chart
-    Route::get('/chart/heatmap', [DashboardController::class, 'getLrHeatmapData'])
-        ->name('chart.heatmap');
-
     Route::get('/dashboard/bosy-status', [DashboardController::class, 'getBosyStatusData'])
         ->name('dashboard.bosy-status');
 

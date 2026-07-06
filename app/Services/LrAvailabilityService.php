@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Support\GradeColumnMap;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
@@ -17,6 +18,15 @@ class LrAvailabilityService
 
     public function getChartData(?string $explicitLibraryId, int $userLevel, ?string $stationId, ?string $printTypeId = null): array
     {
+        $cacheKey = 'availability_chart_' . sha1(json_encode([
+            $explicitLibraryId,
+            $userLevel,
+            $stationId,
+            $printTypeId,
+            session('dashboard_chart_cache_version'),
+        ]));
+
+        return Cache::remember($cacheKey, 3600, function () use ($explicitLibraryId, $userLevel, $stationId, $printTypeId) {
         $curriculumScope = $this->curriculumScopeService->resolve($userLevel, $stationId);
         $gradeLevels = $curriculumScope['grade_levels'];
 
@@ -108,6 +118,7 @@ class LrAvailabilityService
             'print_type_id' => $printTypeId ?: null,
             'school_curriculum_scoped' => $curriculumScope['is_school_scoped'],
         ];
+        });
     }
 
     private function buildSeriesFromData(

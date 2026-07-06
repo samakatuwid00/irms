@@ -31,8 +31,16 @@ function getCurrentHeatmapData() {
         allowedGradeIndices.map((origIdx, newIdx) => [origIdx, newIdx])
     );
 
+    const visibleSubjectIndices = new Set(
+        rawData
+            .filter(([, gradeIdx]) => gradeIndexMap.has(gradeIdx))
+            .map(([subjIdx]) => subjIdx)
+    );
+
+    const filteredSubjects = subjects.filter((_, index) => visibleSubjectIndices.has(index));
+
     const filteredRawData = rawData
-        .filter(([subjIdx, gradeIdx]) => gradeIndexMap.has(gradeIdx))
+        .filter(([subjIdx, gradeIdx]) => gradeIndexMap.has(gradeIdx) && visibleSubjectIndices.has(subjIdx))
         .map(([subjIdx, gradeIdx, qty]) => ({
             subject: subjects[subjIdx],
             grade: gradeLevels[gradeIdx],
@@ -40,7 +48,7 @@ function getCurrentHeatmapData() {
         }));
 
     return {
-        subjects,
+        subjects: filteredSubjects,
         grades: filteredGradeLevels,
         data: filteredRawData,
         maxValue
@@ -115,15 +123,32 @@ function filterAndRenderHeatmapChart(keyStage) {
         allowedGradeIndices.map((origIdx, newIdx) => [origIdx, newIdx])
     );
 
+    const visibleSubjectIndices = [...new Set(
+        rawData
+            .filter(([, gradeIdx]) => gradeIndexMap.has(gradeIdx))
+            .map(([subjIdx]) => subjIdx)
+    )];
+
+    const subjectIndexMap = new Map(
+        visibleSubjectIndices.map((origIdx, newIdx) => [origIdx, newIdx])
+    );
+
+    const filteredSubjects = visibleSubjectIndices.map(index => subjects[index]);
+
     const filteredData = rawData
-        .filter(([subjIdx, gradeIdx]) => gradeIndexMap.has(gradeIdx))
-        .map(([subjIdx, gradeIdx, qty]) => [subjIdx, gradeIndexMap.get(gradeIdx), qty]);
+        .filter(([subjIdx, gradeIdx]) => subjectIndexMap.has(subjIdx) && gradeIndexMap.has(gradeIdx))
+        .map(([subjIdx, gradeIdx, qty]) => [
+            subjectIndexMap.get(subjIdx),
+            gradeIndexMap.get(gradeIdx),
+            qty
+        ]);
 
     const filteredMax = filteredData.length
         ? Math.max(...filteredData.map(([,, qty]) => qty))
         : maxValue;
 
     _heatmapChart.setOption({
+        xAxis:     { data: filteredSubjects },
         yAxis:     { data: filteredGradeLevels },
         visualMap: { max: filteredMax },
         series:    [{ data: filteredData }]
@@ -160,8 +185,9 @@ function buildHeatmapOption(result) {
         tooltip: {
             position: 'top',
             formatter: function (params) {
-                const subj  = subjects[params.data[0]];
-                const grade = gradeLevels[params.data[1]];
+                const currentOption = _heatmapChart?.getOption();
+                const subj  = currentOption?.xAxis?.[0]?.data?.[params.data[0]] ?? subjects[params.data[0]];
+                const grade = currentOption?.yAxis?.[0]?.data?.[params.data[1]] ?? gradeLevels[params.data[1]];
                 const val   = params.data[2];
                 return `${subj}<br>${grade}<br>Total Qty: ${val}`;
             }
@@ -444,6 +470,7 @@ async function initHeatmapChart() {
 
         const ksSelect = document.getElementById('schoolYearFilter');
         if (ksSelect) {
+            filterAndRenderHeatmapChart(ksSelect.value);
             ksSelect.addEventListener('change', (e) => {
                 window.DashboardChartLoading?.transition(
                     chartDom,
@@ -470,4 +497,29 @@ async function initHeatmapChart() {
     }
 }
 
-initHeatmapChart();
+function setupLazyHeatmapChartLoading() {
+    const chartContainer = document.getElementById('heatmap');
+    if (!chartContainer) {
+        console.warn('Chart container #heatmap not found');
+        return;
+    }
+
+    if (!('IntersectionObserver' in window)) {
+        initHeatmapChart();
+        return;
+    }
+
+    const observer = new IntersectionObserver(
+        (entries, obs) => {
+            if (entries[0].isIntersecting) {
+                initHeatmapChart();
+                obs.disconnect();
+            }
+        },
+        { root: null, rootMargin: '0px', threshold: 0.1 }
+    );
+
+    observer.observe(chartContainer);
+}
+
+setupLazyHeatmapChartLoading();

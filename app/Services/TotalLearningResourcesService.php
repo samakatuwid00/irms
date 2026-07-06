@@ -8,6 +8,7 @@ use App\Models\PrintAcquisition;
 use App\Models\PrintResource;
 use App\Models\Population;
 use App\Services\LibraryScopeService;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Log;
@@ -24,6 +25,14 @@ class TotalLearningResourcesService
 
     public function getTotalResourcesData(?string $explicitLibraryId, int $userLevel, ?string $stationId): array
     {
+        $cacheKey = 'total_learning_resources_' . sha1(json_encode([
+            $explicitLibraryId,
+            $userLevel,
+            $stationId,
+            session('dashboard_chart_cache_version'),
+        ]));
+
+        return Cache::remember($cacheKey, now()->addHour(), function () use ($explicitLibraryId, $userLevel, $stationId) {
         $allowedLibraryIds = $this->libraryScopeService->getAllowedLibraryIds(
             $explicitLibraryId,
             $userLevel,
@@ -83,6 +92,7 @@ class TotalLearningResourcesService
             'user_level' => $userLevel,
             'station_id' => $stationId,
         ];
+        });
     }
 
     /**

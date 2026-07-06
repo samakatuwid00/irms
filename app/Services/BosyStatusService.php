@@ -7,6 +7,7 @@ use App\Support\GradeOfferingMap;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
@@ -29,14 +30,24 @@ class BosyStatusService
         $hubFilter      = $request->query('hub_filter', '');
         $districtFilter = $request->query('district_filter', '');
         $printTypeId    = $request->query('print_type_id') ?: null;
+        $cacheKey       = 'bosy_status_' . sha1(json_encode([
+            $userLevel,
+            $stationId,
+            $hubFilter,
+            $districtFilter,
+            $printTypeId,
+            session('dashboard_chart_cache_version'),
+        ]));
 
         try {
-            return match ($userLevel) {
-                4 => $this->getRegionData($stationId, $hubFilter, $printTypeId),
-                3 => $this->getDivisionData($stationId, $districtFilter, $printTypeId),
-                2 => $this->getDistrictData($stationId, $printTypeId),
-                1 => $this->getSchoolData($stationId, $printTypeId),
-            };
+            return Cache::remember($cacheKey, now()->addHour(), function () use ($userLevel, $stationId, $hubFilter, $districtFilter, $printTypeId) {
+                return match ($userLevel) {
+                    4 => $this->getRegionData($stationId, $hubFilter, $printTypeId),
+                    3 => $this->getDivisionData($stationId, $districtFilter, $printTypeId),
+                    2 => $this->getDistrictData($stationId, $printTypeId),
+                    1 => $this->getSchoolData($stationId, $printTypeId),
+                };
+            });
         } catch (\Exception $e) {
             Log::error('BOSY Status data failed', [
                 'message'    => $e->getMessage(),
@@ -218,11 +229,12 @@ class BosyStatusService
         // Real-time LR calculation (print + nonprint or filtered)
         $realTimeLr = $this->getRealTimeTotalLrBySchool($schoolIds, $printTypeId);
 
-        // Compute NEC for the district summary and for each displayed school.
-        $nec = $this->calculateNec($schoolIds);
+        // Compute NEC once for both the district summary and displayed schools.
         $necBySchool = $this->calculateNecBySchool($schoolIds);
+        $nec = (int) $necBySchool->sum();
+        $divisionName = $this->getDivisionName((string) $schools->first()->division_id);
 
-        $items = $schools->map(function ($school) use ($realTimeLr, $necBySchool) {
+        $items = $schools->map(function ($school) use ($realTimeLr, $necBySchool, $divisionName) {
             $totalLr = (int) ($realTimeLr[$school->school_id] ?? 0);
             $schoolNec = (int) ($necBySchool[$school->school_id] ?? 0);
             $percentage = $this->calculatePercentage($totalLr, $schoolNec);
@@ -243,7 +255,7 @@ class BosyStatusService
                 'libraries'          => ['total' => (int) $school->total_libraries],
                 'parent'             => [
                     'id'   => $school->division_id,
-                    'name' => $this->getDivisionName($school->division_id),
+                    'name' => $divisionName,
                 ],
                 'district'           => [
                     'id'   => $school->district_id,
@@ -260,9 +272,7 @@ class BosyStatusService
 
         $overallPercentage = $this->calculatePercentage($totals['total_lr'], $nec);
 
-        $districtName = DB::table('lrmis.districts')
-            ->where('id', $districtId)
-            ->value('district_name') ?? 'District';
+        $districtName = $schools->first()->district_name ?? 'District';
 
         return [
             'level'        => 'district',
@@ -459,14 +469,15 @@ class BosyStatusService
 
         $schoolIds = $schools->pluck('school_id')->toArray();
 
-        // Compute NEC for the division summary and for each displayed school.
-        $nec = $this->calculateNec($schoolIds);
+        // Compute NEC once for both the division summary and displayed schools.
         $necBySchool = $this->calculateNecBySchool($schoolIds);
+        $nec = (int) $necBySchool->sum();
+        $divisionName = $this->getDivisionName($divisionId);
 
         // Real-time LR calculation (print + nonprint or filtered)
         $realTimeLr = $this->getRealTimeTotalLrBySchool($schoolIds, $printTypeId);
 
-        $items = $schools->map(function ($school) use ($realTimeLr, $necBySchool) {
+        $items = $schools->map(function ($school) use ($realTimeLr, $necBySchool, $divisionName) {
             $totalLr = (int) ($realTimeLr[$school->school_id] ?? 0);
             $schoolNec = (int) ($necBySchool[$school->school_id] ?? 0);
             $percentage = $this->calculatePercentage($totalLr, $schoolNec);
@@ -489,7 +500,7 @@ class BosyStatusService
                 'libraries' => ['total' => (int) $school->total_libraries],
                 'parent' => [
                     'id' => $school->division_id,
-                    'name' => $this->getDivisionName($school->division_id),
+                    'name' => $divisionName,
                 ],
                 'district' => [
                     'id' => $school->district_id,
@@ -517,7 +528,7 @@ class BosyStatusService
             'level' => 'division',
             'items' => $items->toArray(),
             'station_id' => $divisionId,
-            'station_name' => $this->getDivisionName($divisionId),
+            'station_name' => $divisionName,
             'district_id' => $districtFilter ?: null,
             'district_name' => $districtName,
             'summary' => [

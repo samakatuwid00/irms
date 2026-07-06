@@ -75,20 +75,7 @@
         html:not([data-sidebar])       #desktop-sidebar { width: 16rem; }
         #desktop-sidebar { transition: width 300ms ease-in-out; }
 
-        /* Before Alpine boots: show skeleton, hide real content */
-        #sidebar-skeleton      { display: flex; flex-direction: column; flex: 1; overflow: hidden; }
-        #sidebar-real-content  { display: none; flex-direction: column; flex: 1; min-height: 0; overflow: hidden; }
-
-        /* After Alpine adds .sidebar-ready: swap them */
-        #desktop-sidebar.sidebar-ready #sidebar-skeleton      { display: none; }
-        #desktop-sidebar.sidebar-ready #sidebar-real-content  { display: flex; }
-        #desktop-sidebar.sidebar-ready #sidebar-real-content  {
-            animation: sidebarFadeIn 180ms ease-out both;
-        }
-        @keyframes sidebarFadeIn {
-            from { opacity: 0; }
-            to   { opacity: 1; }
-        }
+        #sidebar-real-content { display: flex; flex-direction: column; flex: 1; min-height: 0; overflow: hidden; }
 
         /* Main content skeleton: shown until window load fires */
         #content-skeleton { display: block; }
@@ -96,12 +83,14 @@
         body.page-ready #content-skeleton { display: none; }
         body.page-ready #content-real     {
             display: block;
-            animation: contentFadeIn 220ms ease-out both;
+            animation: contentFadeIn 320ms cubic-bezier(0.22, 1, 0.36, 1);
         }
         @keyframes contentFadeIn {
             from { opacity: 0; }
             to   { opacity: 1; }
         }
+        @media (prefers-reduced-motion: reduce) {
+            body.page-ready #content-real { animation: none; }
         }
     </style>
 
@@ -572,68 +561,10 @@
          }">
         <!-- Desktop Sidebar -->
         <div id="desktop-sidebar"
-             x-init="$nextTick(() => $el.classList.add('sidebar-ready'))"
              :class="collapsed ? 'md:w-20' : 'md:w-64'"
              class="hidden md:flex md:flex-col bg-white shadow-lg shrink-0 transition-all duration-300 ease-in-out">
 
-            <!-- ══ SIDEBAR SKELETON (shown before Alpine boots) ══════════════ -->
-            <div id="sidebar-skeleton">
-                <!-- Header skeleton -->
-                <div class="flex items-center border-b border-gray-200 shrink-0 p-4 gap-3">
-                    <div class="skeleton w-10 h-10 rounded-lg shrink-0"></div>
-                    <div id="sk-title" class="skeleton h-5 flex-1 rounded"
-                         style="display: var(--sk-expanded-only, block)"></div>
-                </div>
-                <!-- Nav items skeleton -->
-                <div class="p-3 flex-1 space-y-2">
-                    <!-- 6 nav rows: icon + label (label hidden when collapsed) -->
-                    <div class="flex items-center gap-3 px-2.5 py-2">
-                        <div class="skeleton w-5 h-5 rounded shrink-0"></div>
-                        <div class="skeleton h-3.5 flex-1 rounded sk-label"></div>
-                    </div>
-                    <div class="flex items-center gap-3 px-2.5 py-2">
-                        <div class="skeleton w-5 h-5 rounded shrink-0"></div>
-                        <div class="skeleton h-3.5 flex-1 rounded sk-label"></div>
-                    </div>
-                    <div class="flex items-center gap-3 px-2.5 py-2">
-                        <div class="skeleton w-5 h-5 rounded shrink-0"></div>
-                        <div class="skeleton h-3.5 flex-1 rounded sk-label"></div>
-                    </div>
-                    <div class="flex items-center gap-3 px-2.5 py-2">
-                        <div class="skeleton w-5 h-5 rounded shrink-0"></div>
-                        <div class="skeleton h-3.5 flex-1 rounded sk-label"></div>
-                    </div>
-                    <div class="flex items-center gap-3 px-2.5 py-2">
-                        <div class="skeleton w-5 h-5 rounded shrink-0"></div>
-                        <div class="skeleton h-3.5 w-3/4 rounded sk-label"></div>
-                    </div>
-                    <div class="border-t border-gray-100 my-1"></div>
-                    <div class="flex items-center gap-3 px-2.5 py-2">
-                        <div class="skeleton w-5 h-5 rounded shrink-0"></div>
-                        <div class="skeleton h-3.5 flex-1 rounded sk-label"></div>
-                    </div>
-                </div>
-                <!-- Logo skeleton -->
-                <div class="p-6 flex justify-center">
-                    <div class="skeleton rounded-full sk-logo-expanded"
-                         style="width:80px;height:80px"></div>
-                    <div class="skeleton rounded-full sk-logo-collapsed"
-                         style="width:32px;height:32px;display:none"></div>
-                </div>
-                <!-- User footer skeleton -->
-                <div class="border-t border-gray-200 p-3 mb-5">
-                    <div class="flex items-center gap-3">
-                        <div class="skeleton w-10 h-10 rounded-full shrink-0"></div>
-                        <div class="space-y-1.5 flex-1 sk-label">
-                            <div class="skeleton h-3 w-3/4 rounded"></div>
-                            <div class="skeleton h-2.5 w-1/2 rounded"></div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <!-- ══ END SIDEBAR SKELETON ══════════════════════════════════════ -->
-
-            <!-- ══ REAL SIDEBAR CONTENT (hidden until Alpine ready) ══════════ -->
+            <!-- ══ SIDEBAR CONTENT ═══════════════════════════════════════════ -->
             <div id="sidebar-real-content" class="flex flex-col h-full overflow-hidden">
             <div class="flex items-center border-b border-gray-300 shrink-0 p-4"
                  :class="collapsed ? 'flex-col gap-3 py-4 px-2' : 'justify-between'">
@@ -1393,21 +1324,6 @@
     @stack('scripts')
 
     <script>
-        /* ── Sync skeleton label visibility with stored collapsed state ──────
-           Runs immediately after DOM is parsed (before Alpine, before paint)
-           so skeleton rows already match the correct collapsed/expanded look.  */
-        (function () {
-            var collapsed = false;
-            try { collapsed = JSON.parse(localStorage.getItem('sidebar_collapsed') || 'false'); } catch(e) {}
-            if (collapsed) {
-                document.querySelectorAll('.sk-label').forEach(function(el){ el.style.display = 'none'; });
-                var logoExp = document.querySelector('.sk-logo-expanded');
-                var logoColl = document.querySelector('.sk-logo-collapsed');
-                if (logoExp)  logoExp.style.display  = 'none';
-                if (logoColl) logoColl.style.display = 'block';
-            }
-        })();
-
         /* ── Reveal real page content once the page is fully loaded ──────────
            Using 'load' ensures images/assets are ready so the swap looks clean.
            A 60ms delay lets Alpine finish its own init tick first.             */

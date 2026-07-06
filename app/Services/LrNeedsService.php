@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Services\LibraryScopeService;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 
 class LrNeedsService
@@ -14,14 +15,24 @@ class LrNeedsService
 
     /**
      * Returns:
-     * - total_needs : sum of the 3 largest shortfalls (most deficient subject-grade pairs)
-     * - needs       : array of the top 3 most deficient entries
+     * - total_needs : sum of the requested largest shortfalls
+     * - needs       : array of the most deficient entries
      */
     public function getLrNeeds(
         ?string $explicitLibraryId,
         int $userLevel,
-        ?string $stationId
+        ?string $stationId,
+        int $limit = 3
     ): array {
+        $cacheKey = 'lr_needs_' . sha1(json_encode([
+            $explicitLibraryId,
+            $userLevel,
+            $stationId,
+            $limit,
+            session('dashboard_chart_cache_version'),
+        ]));
+
+        return Cache::remember($cacheKey, now()->addHour(), function () use ($explicitLibraryId, $userLevel, $stationId, $limit) {
         $sufficiencyData = $this->sufficiencyService->getSufficiencyData(
             $explicitLibraryId,
             $userLevel,
@@ -42,7 +53,7 @@ class LrNeedsService
         $deficientRows = collect($tableData)
             ->filter(fn($row) => ($row['shortfall'] ?? 0) > 0)
             ->sortByDesc('shortfall')
-            ->take(3);
+            ->take($limit);
 
         if ($deficientRows->isEmpty()) {
             return [
@@ -71,5 +82,6 @@ class LrNeedsService
             'has_data'    => true,
             'library_scope' => $sufficiencyData['library_scope'] ?? 'unknown',
         ];
+        });
     }
 }

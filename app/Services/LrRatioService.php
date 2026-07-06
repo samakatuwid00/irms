@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 
 class LrRatioService
@@ -16,7 +17,17 @@ class LrRatioService
 
     public function getChartDataCached($explicitLibraryId, $userLevel, $stationId, ?string $printTypeId = null)
     {
-        return $this->getChartData($explicitLibraryId, $userLevel, $stationId, $printTypeId);
+        $cacheKey = 'ratio_chart_' . sha1(json_encode([
+            $explicitLibraryId,
+            $userLevel,
+            $stationId,
+            $printTypeId,
+            session('dashboard_chart_cache_version'),
+        ]));
+
+        return Cache::remember($cacheKey, 3600, function () use ($explicitLibraryId, $userLevel, $stationId, $printTypeId) {
+            return $this->getChartData($explicitLibraryId, $userLevel, $stationId, $printTypeId);
+        });
     }
 
     private function getChartData($explicitLibraryId, $userLevel, $stationId, ?string $printTypeId = null)

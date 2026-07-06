@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 
 class LrSubjectGradeHeatmapService
@@ -15,6 +16,15 @@ class LrSubjectGradeHeatmapService
 
     public function getHeatmapData(?string $explicitLibraryId, int $userLevel, ?string $stationId, ?string $printTypeId = null): array
     {
+        $cacheKey = 'heatmap_chart_' . sha1(json_encode([
+            $explicitLibraryId,
+            $userLevel,
+            $stationId,
+            $printTypeId,
+            session('dashboard_chart_cache_version'),
+        ]));
+
+        return Cache::remember($cacheKey, 3600, function () use ($explicitLibraryId, $userLevel, $stationId, $printTypeId) {
         $curriculumScope = $this->curriculumScopeService->resolve($userLevel, $stationId);
         $gradeLevels = $curriculumScope['grade_levels'];
 
@@ -79,6 +89,7 @@ class LrSubjectGradeHeatmapService
             'source'        => 'live_query_direct_schema',
             'school_curriculum_scoped' => $curriculumScope['is_school_scoped'],
         ];
+        });
     }
 
     private function buildFromLiveQuery(
@@ -130,7 +141,7 @@ class LrSubjectGradeHeatmapService
 
         foreach ($subjectIndexMap as $subjectId => $subjIdx) {
             foreach ($gradeIndexMap as $gradeId => $gradeIdx) {
-                if ($isSchoolCurriculumScoped && ! $subjectGradePairs->has($subjectId.'|'.$gradeId)) {
+                if (! $subjectGradePairs->has($subjectId.'|'.$gradeId)) {
                     continue;
                 }
 
@@ -158,7 +169,7 @@ class LrSubjectGradeHeatmapService
         $heatmapData = [];
         foreach ($subjectIndexMap as $subjectId => $subjIdx) {
             foreach ($gradeIndexMap as $gradeId => $gradeIdx) {
-                if ($isSchoolCurriculumScoped && ! $subjectGradePairs->has($subjectId.'|'.$gradeId)) {
+                if (! $subjectGradePairs->has($subjectId.'|'.$gradeId)) {
                     continue;
                 }
 

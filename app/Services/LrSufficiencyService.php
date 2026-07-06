@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\SubjectGradeLevel;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
@@ -21,6 +22,15 @@ class LrSufficiencyService
         ?string $stationId,
         ?string $printTypeId = null
     ): array {
+        $cacheKey = 'exdef_chart_' . sha1(json_encode([
+            $explicitLibraryId,
+            $userLevel,
+            $stationId,
+            $printTypeId,
+            session('dashboard_chart_cache_version'),
+        ]));
+
+        return Cache::remember($cacheKey, 3600, function () use ($explicitLibraryId, $userLevel, $stationId, $printTypeId) {
         $curriculumScope = $this->curriculumScopeService->resolve($userLevel, $stationId);
         $gradeLevels = $curriculumScope['grade_levels'];
 
@@ -61,6 +71,7 @@ class LrSufficiencyService
             $userLevel, $stationId, $explicitLibraryId, $printTypeId,
             $curriculumScope['is_school_scoped']
         );
+        });
     }
 
     // ── Live query path ──────────────────────────────────────────────────────

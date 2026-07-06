@@ -439,4 +439,29 @@ async function initExdefChart() {
     }
 }
 
-initExdefChart();
+function setupLazyExdefChartLoading() {
+    const chartContainer = document.getElementById('exdef');
+    if (!chartContainer) {
+        console.warn('Chart container #exdef not found');
+        return;
+    }
+
+    if (!('IntersectionObserver' in window)) {
+        initExdefChart();
+        return;
+    }
+
+    const observer = new IntersectionObserver(
+        (entries, obs) => {
+            if (entries[0].isIntersecting) {
+                initExdefChart();
+                obs.disconnect();
+            }
+        },
+        { root: null, rootMargin: '0px', threshold: 0.1 }
+    );
+
+    observer.observe(chartContainer);
+}
+
+setupLazyExdefChartLoading();

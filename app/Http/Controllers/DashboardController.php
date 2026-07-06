@@ -67,6 +67,8 @@ class DashboardController extends BaseController
 
     public function index()
     {
+        session(['dashboard_chart_cache_version' => uniqid('', true)]);
+
         $user      = Auth::user();
         $userLevel = $this->determineUserLevel($user);
         $stationId = $this->determineStationId($user, $userLevel);
@@ -75,7 +77,7 @@ class DashboardController extends BaseController
             && (string) $userTypeId === self::SDO_SUPPLY_OFFICER_USER_TYPE_ID;
         $totalLrData    = $this->totalLearningResourcesService->getTotalResourcesData(null, $userLevel, $stationId);
         $populationData = $this->totalPopulationService->getPopulationData(null, $userLevel, $stationId);
-        $lrNeedsData    = $this->lrNeedsService->getLrNeeds(null, $userLevel, $stationId, 5); // top 5 needs
+        $lrNeedsData    = $this->lrNeedsService->getLrNeeds(null, $userLevel, $stationId, 3); // top 5 needs
 
         $totalLr  = (int) ($totalLrData['total']    ?? 0);
         $totalPop = (int) ($populationData['total'] ?? 0);
@@ -287,6 +289,8 @@ class DashboardController extends BaseController
         $schoolLibrary->update([
             'estimated_resource' => (int) $validated['estimated_resource'],
         ]);
+
+        session(['dashboard_chart_cache_version' => uniqid('', true)]);
 
         Log::info('School BOSY NEC updated by SDO Supply Officer', [
             'by_user_id' => $user->id,
