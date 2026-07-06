@@ -386,13 +386,15 @@ function buildRatioOption(chartData, chartDom, myChart) {
 async function reloadRatioChart() {
     if (!_ratioChart) return;
 
+    const chartDom = document.getElementById('main');
+    window.DashboardChartLoading?.show(chartDom);
+
     _ratioChart.showLoading({ text: 'Loading…', maskColor: 'rgba(255,255,255,0.7)' });
 
     try {
         const chartData = await fetchRatioData();
         if (chartData.message) console.warn(chartData.message);
 
-        const chartDom = document.getElementById('main');
         const { option, grades, population, directData, mailData } = buildRatioOption(chartData, chartDom, _ratioChart);
 
         _ratioFullData = { grades, population, directData, mailData };
@@ -403,11 +405,13 @@ async function reloadRatioChart() {
 
             const ksSelect = document.getElementById('schoolYearFilter');
             if (ksSelect) filterAndRenderRatioChart(ksSelect.value);
+            window.DashboardChartLoading?.hide(chartDom);
         }, 0);
 
     } catch (err) {
         console.error('Failed to reload LR Ratio chart:', err);
         _ratioChart.hideLoading();
+        window.DashboardChartLoading?.hide(chartDom);
     }
 }
 
@@ -417,6 +421,8 @@ async function initRatioChart() {
         console.warn('Chart container #main not found');
         return;
     }
+
+    window.DashboardChartLoading?.show(chartDom);
 
     try {
         const chartData = await fetchRatioData();
@@ -438,7 +444,10 @@ async function initRatioChart() {
             filterAndRenderRatioChart(ksSelect.value);
 
             ksSelect.addEventListener('change', (e) => {
-                filterAndRenderRatioChart(e.target.value);
+                window.DashboardChartLoading?.transition(
+                    chartDom,
+                    () => filterAndRenderRatioChart(e.target.value)
+                );
             });
         }
 
@@ -457,11 +466,14 @@ async function initRatioChart() {
             myChart.dispose?.();
         });
 
+        window.DashboardChartLoading?.hide(chartDom);
+
     } catch (err) {
         console.error('Failed to initialize LR Ratio chart:', err);
         if (chartDom) {
             chartDom.innerHTML = '<div style="text-align:center; padding:50px;">Failed to load chart data</div>';
         }
+        window.DashboardChartLoading?.hide(chartDom);
     }
 }
 

@@ -313,11 +313,13 @@ function buildChartOption(result, chartDom, myChart) {
 async function reloadAvailabilityChart() {
     if (!_availabilityChart) return;
 
+    const chartDom = document.getElementById('chart');
+    window.DashboardChartLoading?.show(chartDom);
+
     _availabilityChart.showLoading({ text: 'Loading…', maskColor: 'rgba(255,255,255,0.7)' });
 
     try {
         const result = await fetchAvailabilityData();
-        const chartDom = document.getElementById('chart');
         const { option, finalSeries } = buildChartOption(result, chartDom, _availabilityChart);
 
         _availabilityFullData = { ...result, series: finalSeries };
@@ -328,11 +330,13 @@ async function reloadAvailabilityChart() {
 
             const ksSelect = document.getElementById('schoolYearFilter');
             if (ksSelect) filterAndRenderChart(ksSelect.value);
+            window.DashboardChartLoading?.hide(chartDom);
         }, 0);
 
     } catch (err) {
         console.error('Failed to reload LR Availability chart:', err);
         _availabilityChart.hideLoading();
+        window.DashboardChartLoading?.hide(chartDom);
     }
 }
 
@@ -342,6 +346,8 @@ async function initAvailabilityChart() {
         console.warn('Chart container #chart not found');
         return;
     }
+
+    window.DashboardChartLoading?.show(chartDom);
 
     try {
         const echarts = await import('echarts');
@@ -360,7 +366,10 @@ async function initAvailabilityChart() {
             filterAndRenderChart(ksSelect.value);
 
             ksSelect.addEventListener('change', (e) => {
-                filterAndRenderChart(e.target.value);
+                window.DashboardChartLoading?.transition(
+                    chartDom,
+                    () => filterAndRenderChart(e.target.value)
+                );
             });
         }
 
@@ -381,11 +390,14 @@ async function initAvailabilityChart() {
             myChart.dispose?.();
         });
 
+        window.DashboardChartLoading?.hide(chartDom);
+
     } catch (err) {
         console.error('Failed to initialize LR Availability chart:', err);
         if (chartDom) {
             chartDom.innerHTML = '<div style="text-align:center;padding:60px;color:#888;">Failed to load availability chart</div>';
         }
+        window.DashboardChartLoading?.hide(chartDom);
     }
 }
 

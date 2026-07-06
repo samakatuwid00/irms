@@ -371,6 +371,8 @@ function buildHeatmapOption(result) {
 function reloadHeatmapChart() {
     if (!_heatmapChart) return;
 
+    const chartDom = document.getElementById('heatmap');
+    window.DashboardChartLoading?.show(chartDom);
     _heatmapChart.showLoading();
 
     const printTypeId = document.getElementById('printTypeFilter')?.value || null;
@@ -404,6 +406,7 @@ function reloadHeatmapChart() {
         })
         .finally(() => {
             _heatmapChart.hideLoading();
+            window.DashboardChartLoading?.hide(chartDom);
         });
 }
 
@@ -413,6 +416,8 @@ async function initHeatmapChart() {
         console.warn('Chart container #heatmap not found');
         return;
     }
+
+    window.DashboardChartLoading?.show(chartDom);
 
     try {
         const echarts = await import('echarts');
@@ -440,7 +445,10 @@ async function initHeatmapChart() {
         const ksSelect = document.getElementById('schoolYearFilter');
         if (ksSelect) {
             ksSelect.addEventListener('change', (e) => {
-                filterAndRenderHeatmapChart(e.target.value);
+                window.DashboardChartLoading?.transition(
+                    chartDom,
+                    () => filterAndRenderHeatmapChart(e.target.value)
+                );
             });
         }
 
@@ -454,8 +462,11 @@ async function initHeatmapChart() {
             myChart.dispose?.();
         });
 
+        window.DashboardChartLoading?.hide(chartDom);
+
     } catch (err) {
         console.error('Failed to initialize Heatmap chart:', err);
+        window.DashboardChartLoading?.hide(chartDom);
     }
 }
 

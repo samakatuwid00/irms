@@ -50,6 +50,10 @@ class ExportPrintResourceService
 
     private function getSearchParam(Request $request, int $level): string
     {
+        if ($level === self::LEVEL_REGION && $request->input('tab') === 'library-hub') {
+            return (string) $request->input('hub_search', '');
+        }
+
         // Level 1 division tab uses 'division_search' to avoid colliding with
         // the school tab's 'search' param — mirror the same logic as the list view.
         if ($level === self::LEVEL_SCHOOL && $request->input('tab') === 'division') {
@@ -189,6 +193,10 @@ class ExportPrintResourceService
 
     private function getLevel4LibraryIds(Request $request, string $stationId): Collection
     {
+        if ($request->input('tab') === 'library-hub') {
+            return $this->getLevel4HubLibraryIds($request, $stationId);
+        }
+
         $selectedDivision = $request->input('division');
         $selectedDistrict = $request->input('district');
         $selectedSchool   = $request->input('school');
@@ -223,6 +231,28 @@ class ExportPrintResourceService
         }
 
         return $this->getLevel4RegionSchoolLibraries($stationId);
+    }
+
+    private function getLevel4HubLibraryIds(Request $request, string $regionId): Collection
+    {
+        $selectedDivision = (string) $request->input('hub_division', '');
+        $selectedLibrary  = (string) $request->input('hub_library', '');
+
+        if ($selectedDivision === '' || !Division::where('region_id', $regionId)->whereKey($selectedDivision)->exists()) {
+            return collect();
+        }
+
+        if ($selectedLibrary !== '' && $selectedLibrary !== 'all') {
+            return DivisionLibrary::where('division_id', $selectedDivision)
+                ->whereKey($selectedLibrary)
+                ->pluck('id');
+        }
+
+        return Cache::remember(
+            "division_libraries_{$selectedDivision}",
+            self::CACHE_TTL_LIBRARIES,
+            fn() => DivisionLibrary::where('division_id', $selectedDivision)->pluck('id')
+        );
     }
 
     private function getLevel4DivisionLibraries(string $divisionId): Collection

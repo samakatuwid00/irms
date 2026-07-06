@@ -1118,6 +1118,8 @@
 
 </div>
 
+@include('pages.partials.resource-loading-skeleton')
+
 {{-- Seed edit-mode authors for JS --}}
 @if($isEditing)
 <script>window.__editAuthors = @json($editingAuthors ?? []);</script>
@@ -1889,8 +1891,11 @@
         function setLoading(tabId, loading) {
             const tab = document.getElementById(tabId);
             if (!tab) return;
-            const wrap = tab.querySelector('.overflow-x-auto');
-            if (wrap) wrap.style.opacity = loading ? '0.5' : '1';
+
+            const skeleton = window.ResourceLoadingSkeleton;
+            if (skeleton) {
+                loading ? skeleton.show(tab) : skeleton.hide(tab);
+            }
         }
 
         function rehydrateTab(tabId) {
@@ -1946,13 +1951,14 @@
 
         function ajaxFetch(url, tabId) {
             if (currentController) currentController.abort();
-            currentController = new AbortController();
+            const controller = new AbortController();
+            currentController = controller;
 
             setLoading(tabId, true);
             history.pushState({ tabId }, '', url);
 
             fetch(url, {
-                signal: currentController.signal,
+                signal: controller.signal,
                 headers: {
                     'X-Requested-With': 'XMLHttpRequest',
                     'Accept': 'text/html',
@@ -1979,8 +1985,10 @@
                 window.location.href = url;
             })
             .finally(() => {
-                setLoading(tabId, false);
-                currentController = null;
+                if (currentController === controller) {
+                    setLoading(tabId, false);
+                    currentController = null;
+                }
             });
         }
 

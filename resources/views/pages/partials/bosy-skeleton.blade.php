@@ -1,6 +1,7 @@
 {{-- resources/views/partials/bosy-skeleton.blade.php --}}
 @for ($i = 0; $i < 5; $i++)
-<div class="flex items-center gap-4 animate-pulse bosy-skeleton-item" style="height: 96px; contain: content;">
+<div class="flex items-center gap-4 animate-pulse bosy-skeleton-item"
+     style="height: 96px; contain: content; animation-delay: {{ $i * 70 }}ms;">
     <div class="w-16 h-16 rounded-full bg-gray-200 flex-shrink-0"></div>
     <div class="flex-1 grid grid-cols-12 gap-4 items-center">
         <div class="col-span-3 sm:col-span-2">

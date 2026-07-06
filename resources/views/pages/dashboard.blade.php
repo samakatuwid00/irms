@@ -199,7 +199,6 @@
                     id="schoolYearFilter"
                     label="Key Stages"
                     :options="[
-                        ['value' => 'All', 'label' => 'All Key Stages', 'selected' => true],
                         ['value' => 'K1', 'label' => 'Key Stage 1'],
                         ['value' => 'K2', 'label' => 'Key Stage 2'],
                         ['value' => 'JH', 'label' => 'Junior High'],

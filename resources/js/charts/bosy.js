@@ -158,10 +158,7 @@ function fetchBosyStatus(isFullRefresh = false, hubFilter = '', districtFilter =
             }
 
             renderAllItems(container);
-
-            setTimeout(() => {
-                container.style.opacity = '1';
-            }, 100);
+            animateBosyContent(container);
         })
         .catch(err => {
             console.error('BOSY fetch failed:', err);
@@ -600,6 +597,21 @@ function showSkeletonLoaders(container) {
         `;
         container.appendChild(skeleton);
     }
+
+    animateBosyContent(container);
+}
+
+function animateBosyContent(container) {
+    if (!container || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+
+    container.getAnimations().forEach(animation => animation.cancel());
+    container.animate(
+        [
+            { opacity: 0, transform: 'translateY(6px)' },
+            { opacity: 1, transform: 'translateY(0)' }
+        ],
+        { duration: 260, easing: 'cubic-bezier(0.22, 1, 0.36, 1)' }
+    );
 }
 
 function updateBosyPeriod(period) {
@@ -629,6 +641,7 @@ function showError(container, message) {
             </button>
         </div>
     `;
+    animateBosyContent(container);
 }
 
 function escapeHtml(unsafe) {

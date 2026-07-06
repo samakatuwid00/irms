@@ -48,17 +48,31 @@ async function showChart(value) {
     if (!container) return;
 
     container.classList.remove('hidden');
+    const wasLoaded = loaded.has(key);
+    window.DashboardChartLoading?.show(container);
 
-    if (!loaded.has(key)) {
+    if (!wasLoaded) {
         loaded.add(key);
         try {
             const path = moduleMap[key];
             if (modules[path]) {
                 await modules[path]();          // only one await — clean
             }
+            if (container.dataset.chartReady === 'true') {
+                window.setTimeout(() => {
+                    forceResize(key);
+                    window.DashboardChartLoading?.hide(container);
+                }, 160);
+            }
         } catch (err) {
             console.error(`Failed to load ${key}:`, err);
+            window.DashboardChartLoading?.hide(container);
         }
+    } else {
+        window.setTimeout(() => {
+            forceResize(key);
+            window.DashboardChartLoading?.hide(container);
+        }, 160);
     }
 
     forceResize(key);

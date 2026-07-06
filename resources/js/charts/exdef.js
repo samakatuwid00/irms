@@ -82,9 +82,12 @@ function filterAndRenderExdefChart(keyStage) {
 
     const allowedGrades = KEY_STAGE_RANGES[keyStage] ?? null;
 
-    const filtered = allowedGrades
+    let filtered = allowedGrades
         ? _exdefFullData.filter(item => allowedGrades.includes(item.grade))
         : _exdefFullData;
+
+    // Exclude zero ExDef values from chart display to prevent long gaps
+    filtered = filtered.filter(item => item.exdef !== 0);
 
     const totalItems    = filtered.length;
     const visibleRatio  = totalItems > 20 ? 0.20 : 0.35;
@@ -131,6 +134,7 @@ function buildExdefOption(result, chartDom, myChart) {
             grade:   item.grade,
             exdef:   item.difference ?? 0
         }))
+        .filter(item => item.exdef !== 0)
         .sort((a, b) => b.exdef - a.exdef);
 
     const totalItems   = fullData.length;
@@ -321,6 +325,9 @@ function buildExdefOption(result, chartDom, myChart) {
 async function reloadExdefChart() {
     if (!_exdefChart) return;
 
+    const chartDom = document.getElementById('exdef');
+    window.DashboardChartLoading?.show(chartDom);
+
     _exdefChart.showLoading({ text: 'Loading…', maskColor: 'rgba(255,255,255,0.7)' });
 
     try {
@@ -329,10 +336,10 @@ async function reloadExdefChart() {
         if (result.error) {
             console.error('Backend error:', result.error);
             _exdefChart.hideLoading();
+            window.DashboardChartLoading?.hide(chartDom);
             return;
         }
 
-        const chartDom = document.getElementById('exdef');
         const { option, fullData } = buildExdefOption(result, chartDom, _exdefChart);
 
         _exdefFullData = fullData;
@@ -343,11 +350,13 @@ async function reloadExdefChart() {
 
             const ksSelect = document.getElementById('schoolYearFilter');
             if (ksSelect) filterAndRenderExdefChart(ksSelect.value);
+            window.DashboardChartLoading?.hide(chartDom);
         }, 0);
 
     } catch (err) {
         console.error('Failed to reload ExDef chart:', err);
         _exdefChart.hideLoading();
+        window.DashboardChartLoading?.hide(chartDom);
     }
 }
 
@@ -357,6 +366,8 @@ async function initExdefChart() {
         console.warn('Chart container #exdef not found');
         return;
     }
+
+    window.DashboardChartLoading?.show(chartDom);
 
     try {
         const echarts = await import('echarts');
@@ -375,6 +386,7 @@ async function initExdefChart() {
                     style: { text: 'Failed to load data', fontSize: 16, fill: '#e74c3c' }
                 }]
             });
+            window.DashboardChartLoading?.hide(chartDom);
             return;
         }
 
@@ -389,7 +401,10 @@ async function initExdefChart() {
             filterAndRenderExdefChart(ksSelect.value);
 
             ksSelect.addEventListener('change', (e) => {
-                filterAndRenderExdefChart(e.target.value);
+                window.DashboardChartLoading?.transition(
+                    chartDom,
+                    () => filterAndRenderExdefChart(e.target.value)
+                );
             });
         }
 
@@ -410,6 +425,8 @@ async function initExdefChart() {
             myChart.dispose?.();
         });
 
+        window.DashboardChartLoading?.hide(chartDom);
+
     } catch (err) {
         console.error('Failed to initialize ExDef chart:', err);
         chartDom.innerHTML = `
@@ -418,6 +435,7 @@ async function initExdefChart() {
                 Failed to load chart
             </div>
         `;
+        window.DashboardChartLoading?.hide(chartDom);
     }
 }
 
