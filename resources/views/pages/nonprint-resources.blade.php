@@ -73,6 +73,8 @@
 
     </div>
 
+    @include('pages.partials.resource-loading-skeleton', ['defaultView' => 'card'])
+
     @vite('resources/js/nonprint-resources.js')
 
     @include('pages.modals.view-nonprint-modal')

@@ -57,15 +57,19 @@
             max-height: calc(100vh - 64px);
         }
 
-        /* Shimmer skeleton animation */
-        @keyframes shimmer {
-            0%   { background-position: -600px 0; }
-            100% { background-position:  600px 0; }
+        /* Page-specific skeleton animation */
+        @keyframes pageSkeletonShimmer {
+            0%   { background-position: 200% 0; }
+            100% { background-position: -200% 0; }
         }
-        .skeleton {
-            background: linear-gradient(90deg, #f0f0f0 25%, #e4e4e4 50%, #f0f0f0 75%);
-            background-size: 600px 100%;
-            animation: shimmer 1.4s infinite linear;
+        @keyframes pageSkeletonIn {
+            from { opacity: 0; }
+            to   { opacity: 1; }
+        }
+        .page-skeleton-block {
+            background: linear-gradient(90deg, #f1f5f9 25%, #e2e8f0 50%, #f1f5f9 75%);
+            background-size: 200% 100%;
+            animation: pageSkeletonShimmer 1.5s ease-in-out infinite;
             border-radius: 6px;
         }
 
@@ -78,7 +82,10 @@
         #sidebar-real-content { display: flex; flex-direction: column; flex: 1; min-height: 0; overflow: hidden; }
 
         /* Main content skeleton: shown until window load fires */
-        #content-skeleton { display: block; }
+        #content-skeleton {
+            display: block;
+            animation: pageSkeletonIn 180ms ease-out;
+        }
         #content-real     { display: none; }
         body.page-ready #content-skeleton { display: none; }
         body.page-ready #content-real     {
@@ -90,6 +97,8 @@
             to   { opacity: 1; }
         }
         @media (prefers-reduced-motion: reduce) {
+            .page-skeleton-block,
+            #content-skeleton,
             body.page-ready #content-real { animation: none; }
         }
     </style>
@@ -1263,48 +1272,7 @@
             <div class="flex-1 flex flex-col overflow-hidden">
                 <main class="p-6 overflow-y-auto mt-16 md:mt-0 flex-1">
 
-                    <!-- ══ CONTENT SKELETON (shown until page-ready) ══════════ -->
-                    <div id="content-skeleton" aria-hidden="true">
-                        <!-- Page title bar skeleton -->
-                        <div class="mb-6 flex items-center justify-between">
-                            <div class="space-y-2">
-                                <div class="skeleton h-7 w-48 rounded-lg"></div>
-                                <div class="skeleton h-4 w-72 rounded"></div>
-                            </div>
-                            <div class="skeleton h-9 w-28 rounded-lg"></div>
-                        </div>
-                        <!-- Stats row skeleton -->
-                        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-                            <div class="skeleton h-24 rounded-xl"></div>
-                            <div class="skeleton h-24 rounded-xl"></div>
-                            <div class="skeleton h-24 rounded-xl"></div>
-                            <div class="skeleton h-24 rounded-xl"></div>
-                        </div>
-                        <!-- Content cards skeleton -->
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-                            <div class="skeleton h-48 rounded-xl"></div>
-                            <div class="skeleton h-48 rounded-xl"></div>
-                        </div>
-                        <!-- Table skeleton -->
-                        <div class="bg-white rounded-xl border border-gray-100 overflow-hidden">
-                            <div class="p-4 border-b border-gray-100">
-                                <div class="skeleton h-5 w-32 rounded"></div>
-                            </div>
-                            <div class="divide-y divide-gray-50">
-                                @for ($i = 0; $i < 6; $i++)
-                                <div class="flex items-center gap-4 p-4">
-                                    <div class="skeleton w-8 h-8 rounded-full shrink-0"></div>
-                                    <div class="flex-1 space-y-1.5">
-                                        <div class="skeleton h-3.5 w-1/2 rounded"></div>
-                                        <div class="skeleton h-3 w-1/3 rounded"></div>
-                                    </div>
-                                    <div class="skeleton h-6 w-16 rounded-full"></div>
-                                </div>
-                                @endfor
-                            </div>
-                        </div>
-                    </div>
-                    <!-- ══ END CONTENT SKELETON ══════════════════════════════ -->
+                    @include('pages.partials.page-loading-skeleton')
 
                     <!-- ══ REAL PAGE CONTENT ═════════════════════════════════ -->
                     <div id="content-real">

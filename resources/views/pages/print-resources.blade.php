@@ -63,7 +63,7 @@
 
     </div>
 
-    @include('pages.partials.resource-loading-skeleton')
+    @include('pages.partials.resource-loading-skeleton', ['defaultView' => 'card'])
 
     <div id="print-export-progress"
          class="hidden fixed bottom-6 right-6 z-50 w-[calc(100%-3rem)] max-w-sm rounded-xl border border-gray-200 bg-white p-4 shadow-xl"

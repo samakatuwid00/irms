@@ -76,6 +76,15 @@ class DashboardController extends BaseController
         $canEditSchoolNec = $userLevel === 3
             && (string) $userTypeId === self::SDO_SUPPLY_OFFICER_USER_TYPE_ID;
         $totalLrData    = $this->totalLearningResourcesService->getTotalResourcesData(null, $userLevel, $stationId);
+        $showLrSourceToggle = $userLevel === 3 && $stationId !== null;
+
+        if ($showLrSourceToggle) {
+            $totalLrData = array_merge(
+                $totalLrData,
+                $this->totalLearningResourcesService->getDivisionSourceTotals($stationId)
+            );
+        }
+
         $populationData = $this->totalPopulationService->getPopulationData(null, $userLevel, $stationId);
         $lrNeedsData    = $this->lrNeedsService->getLrNeeds(null, $userLevel, $stationId, 3); // top 5 needs
 
@@ -165,7 +174,8 @@ class DashboardController extends BaseController
             'printTypeOptions',
             'bosySettings',
             'userTypeId',
-            'canEditSchoolNec'
+            'canEditSchoolNec',
+            'showLrSourceToggle'
         ));
     }
 

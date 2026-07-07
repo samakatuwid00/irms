@@ -96,6 +96,60 @@ class TotalLearningResourcesService
     }
 
     /**
+     * Return separate LR totals for the division hub(s) and schools belonging
+     * to a division. This is used only by the division dashboard toggle.
+     */
+    public function getDivisionSourceTotals(string $divisionId): array
+    {
+        $cacheKey = 'division_learning_resource_sources_' . sha1(json_encode([
+            $divisionId,
+            session('dashboard_chart_cache_version'),
+        ]));
+
+        return Cache::remember($cacheKey, now()->addHour(), function () use ($divisionId) {
+            $divisionLibraryIds = DB::table('division_libraries')
+                ->where('division_id', $divisionId)
+                ->pluck('id')
+                ->all();
+
+            $schoolLibraryIds = DB::table('school_libraries as sl')
+                ->join('schools as s', 's.id', '=', 'sl.school_id')
+                ->join('districts as d', 'd.id', '=', 's.district_id')
+                ->where('d.division_id', $divisionId)
+                ->pluck('sl.id')
+                ->all();
+
+            $divisionHubTotal = $this->sumResourcesForLibraries($divisionLibraryIds);
+            $schoolLrTotal = $this->sumResourcesForLibraries($schoolLibraryIds);
+
+            Log::info('Division resource source totals calculated', [
+                'division_id' => $divisionId,
+                'division_library_count' => count($divisionLibraryIds),
+                'school_library_count' => count($schoolLibraryIds),
+                'division_lr_hub' => $divisionHubTotal,
+                'school_lr' => $schoolLrTotal,
+            ]);
+
+            return [
+                'division_lr_hub' => $divisionHubTotal,
+                'school_lr' => $schoolLrTotal,
+            ];
+        });
+    }
+
+    private function sumResourcesForLibraries(array $libraryIds): int
+    {
+        if (empty($libraryIds)) {
+            return 0;
+        }
+
+        $printTotal = PrintAcquisition::whereIn('library_id', $libraryIds)->sum('total_qty');
+        $nonPrintTotal = NonprintAcquisition::whereIn('library_id', $libraryIds)->sum('total_qty');
+
+        return (int) $printTotal + (int) $nonPrintTotal;
+    }
+
+    /**
      * Get population summary for all user levels using real-time queries.
      * Now connects directly to the schema just like school level.
      */

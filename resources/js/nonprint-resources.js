@@ -8,6 +8,17 @@ import { initResetFilters } from './resource-table-modules/reset-filters.js';
 const levelElement = document.querySelector('[data-user-level]');
 const level = levelElement ? parseInt(levelElement.dataset.userLevel) : 0;
 
+function setDataLoading(container, loading) {
+    const skeleton = window.ResourceLoadingSkeleton;
+    if (!skeleton) return;
+
+    if (loading) {
+        skeleton.show(container);
+    } else {
+        skeleton.hide(container);
+    }
+}
+
 // ─────────────────────────────────────────────
 // AJAX Table Loader
 // ─────────────────────────────────────────────
@@ -16,7 +27,7 @@ async function loadTableAjax(url, containerId = 'table-results-container') {
     const container = document.getElementById(containerId);
     if (!container) return;
 
-    container.style.opacity = '0.5';
+    setDataLoading(container, true);
     container.style.pointerEvents = 'none';
 
     try {
@@ -63,7 +74,7 @@ async function loadTableAjax(url, containerId = 'table-results-container') {
                 Failed to load data. Please try again or refresh the page.
             </div>`;
     } finally {
-        container.style.opacity = '';
+        setDataLoading(container, false);
         container.style.pointerEvents = '';
     }
 }

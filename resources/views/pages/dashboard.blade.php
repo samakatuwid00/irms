@@ -19,16 +19,42 @@
 
             <!-- Total Learning Resources -->
             <div
-                class="bg-gradient-to-br from-blue-50/70 to-cyan-50/50 rounded-xl shadow-sm hover:shadow transition-shadow duration-200 p-4 sm:p-5 min-h-[152px] flex flex-col">
+                @if($showLrSourceToggle) x-data="{ divisionHubSelected: true, showAll: true }" @endif
+                class="group/icon bg-gradient-to-br from-blue-50/70 to-cyan-50/50 rounded-xl shadow-sm hover:shadow transition-shadow duration-200 p-4 sm:p-5 min-h-[152px] flex flex-col">
 
                 <div class="flex items-start justify-between gap-3 mb-3 sm:mb-4">
                     <div class="min-w-0 flex-1 space-y-0.5">
                         <p class="text-xs sm:text-sm text-gray-500 font-medium">Total Learning Resources</p>
-                        <p class="text-xl sm:text-2xl font-bold text-gray-800 tracking-tight">
-                            {{ number_format($totalLrData['total'] ?? 0) }}
-                        </p>
+                        @if($showLrSourceToggle)
+                            <p class="text-xl sm:text-2xl font-bold text-gray-800 tracking-tight">
+                                <span x-show="showAll">{{ number_format($totalLrData['total'] ?? 0) }}</span>
+                                <span x-cloak x-show="!showAll && divisionHubSelected">{{ number_format($totalLrData['division_lr_hub'] ?? 0) }}</span>
+                                <span x-cloak x-show="!showAll && !divisionHubSelected">{{ number_format($totalLrData['school_lr'] ?? 0) }}</span>
+                            </p>
+                            <div class="flex items-center gap-2 text-[11px] sm:text-xs text-gray-500 font-medium">
+                                <button type="button" aria-label="Previous source" @click="showAll ? (showAll = false, divisionHubSelected = true) : (divisionHubSelected ? divisionHubSelected = false : showAll = true)"
+                                    class="inline-flex items-center justify-center rounded text-gray-500 hover:text-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1">
+                                    <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7" />
+                                    </svg>
+                                </button>
+                                <span x-show="showAll">All</span>
+                                <span x-cloak x-show="!showAll && divisionHubSelected">Division Hub</span>
+                                <span x-cloak x-show="!showAll && !divisionHubSelected">School</span>
+                                <button type="button" aria-label="Next source" @click="showAll ? (showAll = false, divisionHubSelected = true) : (divisionHubSelected ? divisionHubSelected = false : showAll = true)"
+                                    class="inline-flex items-center justify-center rounded text-gray-500 hover:text-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1">
+                                    <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />
+                                    </svg>
+                                </button>
+                            </div>
+                        @else
+                            <p class="text-xl sm:text-2xl font-bold text-gray-800 tracking-tight">
+                                {{ number_format($totalLrData['total'] ?? 0) }}
+                            </p>
+                        @endif
                     </div>
-                    <div class="bg-blue-100/80 p-2 sm:p-2.5 rounded-full flex-shrink-0">
+                    <div class="bg-blue-100/80 p-2 sm:p-2.5 rounded-full flex-shrink-0 transition-transform duration-300 group-hover/icon:scale-110 group-hover/icon:-rotate-6">
                         <svg class="w-6 h-6 lg:w-7 lg:h-7 text-blue-600" fill="none" stroke="currentColor" stroke-width="2"
                             viewBox="0 0 24 24">
                             <path
@@ -58,7 +84,7 @@
 
             <!-- Total Population (same pattern - icon size & tooltip style) -->
             <div
-                class="bg-gradient-to-br from-blue-50/70 to-cyan-50/50 rounded-xl shadow-sm hover:shadow transition-shadow duration-200 p-4 sm:p-5 min-h-[152px] flex flex-col">
+                class="group/icon bg-gradient-to-br from-blue-50/70 to-cyan-50/50 rounded-xl shadow-sm hover:shadow transition-shadow duration-200 p-4 sm:p-5 min-h-[152px] flex flex-col">
                 <div class="flex items-start justify-between gap-3 mb-3 sm:mb-4">
                     <div class="min-w-0 flex-1 space-y-0.5">
                         <p class="text-xs sm:text-sm text-gray-500 font-medium">Total Population</p>
@@ -66,7 +92,7 @@
                             {{ number_format($populationData['total'] ?? 0) }}
                         </p>
                     </div>
-                    <div class="bg-green-100/80 p-2 sm:p-2.5 rounded-full flex-shrink-0">
+                    <div class="bg-green-100/80 p-2 sm:p-2.5 rounded-full flex-shrink-0 transition-transform duration-300 group-hover/icon:scale-110 group-hover/icon:-rotate-6">
                         <svg class="w-6 h-6 lg:w-7 lg:h-7 text-green-600" fill="none" stroke="currentColor" stroke-width="2"
                             viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round"
@@ -96,7 +122,7 @@
 
             <!-- Overall Ratio (same tooltip & icon style) -->
             <div
-                class="bg-gradient-to-br from-blue-50/70 to-cyan-50/50 rounded-xl shadow-sm hover:shadow transition-shadow duration-200 p-4 sm:p-5 min-h-[152px] flex flex-col">
+                class="group/icon bg-gradient-to-br from-blue-50/70 to-cyan-50/50 rounded-xl shadow-sm hover:shadow transition-shadow duration-200 p-4 sm:p-5 min-h-[152px] flex flex-col">
                 <div class="flex items-start justify-between gap-3 mb-3 sm:mb-4">
                     <div class="min-w-0 flex-1 space-y-0.5">
                         <p class="text-xs sm:text-sm text-gray-500 font-medium">Overall Ratio</p>
@@ -104,7 +130,7 @@
                             {{ $overallRatioData['ratio_display'] ?? '—' }}
                         </p>
                     </div>
-                    <div class="bg-yellow-100/80 p-2 sm:p-2.5 rounded-full flex-shrink-0">
+                    <div class="bg-yellow-100/80 p-2 sm:p-2.5 rounded-full flex-shrink-0 transition-transform duration-300 group-hover/icon:scale-110 group-hover/icon:-rotate-6">
                         <svg class="w-6 h-6 lg:w-7 lg:h-7 text-yellow-600" fill="none" stroke="currentColor"
                             stroke-width="2" viewBox="0 0 24 24">
                             <path
@@ -134,7 +160,7 @@
 
             <!-- LR Needs – now matches the hover behavior & reliability of the other cards -->
             <div
-                class="bg-gradient-to-br from-blue-50/70 to-cyan-50/50 rounded-xl shadow-sm hover:shadow transition-shadow duration-200 p-4 sm:p-5 min-h-[152px] flex flex-col">
+                class="group/icon bg-gradient-to-br from-blue-50/70 to-cyan-50/50 rounded-xl shadow-sm hover:shadow transition-shadow duration-200 p-4 sm:p-5 min-h-[152px] flex flex-col">
 
                 <div class="flex items-start justify-between gap-3 mb-3 sm:mb-4">
                     <div class="min-w-0 flex-1 space-y-0.5">
@@ -143,7 +169,7 @@
                             {{ number_format($lrNeedsData['total_needs'] ?? 0) }}
                         </p>
                     </div>
-                    <div class="bg-red-100/80 p-2 sm:p-2.5 rounded-full flex-shrink-0">
+                    <div class="bg-red-100/80 p-2 sm:p-2.5 rounded-full flex-shrink-0 transition-transform duration-300 group-hover/icon:scale-110 group-hover/icon:-rotate-6">
                         <svg class="w-6 h-6 lg:w-7 lg:h-7 text-red-600" fill="none" stroke="currentColor" stroke-width="2"
                             viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round"
