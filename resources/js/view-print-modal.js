@@ -66,6 +66,8 @@ if (resource.verified) {
         <span class="text-2xl font-semibold text-gray-900 leading-tight">${resource.title || 'N/A'}</span>
     `;
 }
+    document.getElementById('printAuthor').textContent    = resource.author    || '-';
+    document.getElementById('printPublisher').textContent = resource.publisher || '-';
     document.getElementById('printType').textContent      = resource.type      || '-';
     document.getElementById('printISBN').textContent      = resource.isbn      || 'N/A';
     document.getElementById('printCopyright').textContent = resource.copyright || '-';
