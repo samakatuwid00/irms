@@ -482,6 +482,7 @@
                     const incoming = doc.getElementById(containerId);
                     if (incoming) {
                         container.innerHTML = incoming.innerHTML;
+                        if (typeof initCoverImages === 'function') initCoverImages();
                     } else {
                         // Fallback: the server returned a bare fragment — use it whole
                         container.innerHTML = html;

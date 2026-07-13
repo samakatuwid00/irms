@@ -104,7 +104,7 @@
                                                 alt="{{ $item->printTitle->title }}"
                                                 class="cover-img w-12 h-16 object-cover rounded shadow cursor-pointer hover:scale-105 transition-transform duration-200"
                                                 loading="lazy"
-                                                onclick='openPrintModal(@json($item->showDetails($mainLibraryIds)))'
+                                                onclick='openPrintModal(@json($item->showDetails($mainLibraryIds)), "division")'
                                                 title="Click to view details">
                                         </td>
                                         <td class="px-2 py-3 font-medium text-gray-800 max-w-xs">{{ $item->printTitle->title }}</td>
@@ -179,7 +179,7 @@
                                         </td>
                                         <td class="px-4 py-3">
                                             <div class="flex justify-center gap-2">
-                                                <button onclick='openPrintModal(@json($item->showDetails($mainLibraryIds)))'
+                                                <button onclick='openPrintModal(@json($item->showDetails($mainLibraryIds)), "division")'
                                                     class="px-3 py-1 text-xs rounded-lg bg-blue-100 text-blue-600 hover:bg-blue-200">
                                                     View
                                                 </button>
@@ -218,8 +218,8 @@
                                 $qty = $item->scopedQuantities($mainLibraryIds);
                                 $total = array_sum($qty);
                             @endphp
-                            <div class="bg-white rounded-xl shadow overflow-hidden flex flex-col cursor-pointer group"
-                                 onclick='openPrintModal(@json($item->showDetails($mainLibraryIds)))'>
+                            <div class="bg-white rounded-xl shadow overflow-hidden flex flex-col cursor-pointer group transition-all duration-200 ease-out hover:-translate-y-1 hover:shadow-lg"
+                                 onclick='openPrintModal(@json($item->showDetails($mainLibraryIds)), "division")'>
                                 <div class="relative w-full" style="padding-bottom: 140%;">
                                     <img src="{{ $item->thumb_url }}" alt="{{ $item->printTitle->title }}"
                                         class="cover-img absolute inset-0 w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
@@ -420,7 +420,7 @@
                                                 alt="{{ $item->printTitle->title }}"
                                                 class="cover-img w-12 h-16 object-cover rounded shadow cursor-pointer hover:scale-105 transition-transform duration-200"
                                                 loading="lazy"
-                                                onclick='openPrintModal(@json($item->showDetails($filteredLibraryIds)))'
+                                                onclick='openPrintModal(@json($item->showDetails($filteredLibraryIds)), "school")'
                                                 title="Click to view details">
                                         </td>
                                         <td class="px-2 py-3 font-medium text-gray-800 max-w-xs">{{ $item->printTitle->title }}</td>
@@ -493,7 +493,7 @@
                                         </td>
                                         <td class="px-4 py-3">
                                             <div class="flex justify-center gap-2">
-                                                <button onclick='openPrintModal(@json($item->showDetails($filteredLibraryIds)))'
+                                                <button onclick='openPrintModal(@json($item->showDetails($filteredLibraryIds)), "school")'
                                                     class="px-3 py-1 text-xs rounded-lg bg-blue-100 text-blue-600 hover:bg-blue-200">
                                                     View
                                                 </button>
@@ -526,8 +526,8 @@
                                 $qty = $item->scopedQuantities($filteredLibraryIds);
                                 $total = array_sum($qty);
                             @endphp
-                            <div class="bg-white rounded-xl shadow overflow-hidden flex flex-col cursor-pointer group"
-                                 onclick='openPrintModal(@json($item->showDetails($filteredLibraryIds)))'>
+                            <div class="bg-white rounded-xl shadow overflow-hidden flex flex-col cursor-pointer group transition-all duration-200 ease-out hover:-translate-y-1 hover:shadow-lg"
+                                 onclick='openPrintModal(@json($item->showDetails($filteredLibraryIds)), "school")'>
                                 <div class="relative w-full" style="padding-bottom: 140%;">
                                     <img src="{{ $item->thumb_url }}" alt="{{ $item->printTitle->title }}"
                                         class="cover-img absolute inset-0 w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"

@@ -222,6 +222,11 @@ async function loadTableAjax(url, containerId = 'table-results-container') {
         // Re-attach cascade/filter listeners since the DOM was replaced
         reinitModules();
 
+        // Initialize fade-in for any newly swapped cover images
+        if (typeof initCoverImages === 'function') {
+            initCoverImages();
+        }
+
     } catch (err) {
         console.error('Failed to load table data:', err);
         container.innerHTML = `

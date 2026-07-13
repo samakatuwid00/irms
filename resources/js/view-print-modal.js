@@ -15,7 +15,45 @@
  * @param {Array}    resource.subjects      - [{ subject, grade }]
  * @param {Array}    resource.acquisitions  - [{ library_name, source, date_acquired, cost, iar, remarks, usable, partially_damaged, damaged, lost, condemnable }]
  */
-export function openPrintModal(resource) {
+function getPrintEditButton() {
+    return document.getElementById('printModalEditBtn');
+}
+
+function hidePrintEditButton() {
+    const editBtn = getPrintEditButton();
+    if (!editBtn) return;
+
+    editBtn.hidden = true;
+    editBtn.style.display = 'none';
+    editBtn.classList.add('hidden');
+    editBtn.classList.remove('inline-flex');
+    editBtn.setAttribute('aria-hidden', 'true');
+    editBtn.setAttribute('tabindex', '-1');
+    editBtn.removeAttribute('href');
+}
+
+function showPrintEditButton(url) {
+    const editBtn = getPrintEditButton();
+    if (!editBtn) return;
+
+    editBtn.href = url;
+    editBtn.hidden = false;
+    editBtn.style.display = '';
+    editBtn.classList.remove('hidden');
+    editBtn.classList.add('inline-flex');
+    editBtn.setAttribute('aria-hidden', 'false');
+    editBtn.removeAttribute('tabindex');
+}
+
+function getPrintUserLevel() {
+    const pageData = document.getElementById('print-resources-data');
+    const table = document.getElementById('printAcquisitionTable');
+
+    return parseInt(pageData?.dataset?.userLevel || table?.dataset?.userLevel || 0, 10);
+}
+
+export function openPrintModal(resource, context) {
+    const normalizedContext = String(context || '').toLowerCase();
     const safeInt = value => parseInt(value || 0, 10);
     const formatCost = cost => {
         if (!cost) return '-';
@@ -26,9 +64,9 @@ export function openPrintModal(resource) {
     };
 
     // ── Read user level from table data attribute ──────────────────────────
-    const table = document.getElementById('printAcquisitionTable');
-    const userLevel = parseInt(table?.dataset?.userLevel || 0, 10);
+    const userLevel = getPrintUserLevel();
     const isLevel4 = userLevel === 4;
+    hidePrintEditButton();
 
     const DEFAULT_IMAGE = '/assets/images/default.jpg';
 
@@ -179,15 +217,15 @@ if (resource.verified) {
     document.getElementById('printCondemnable').textContent = totals.condemnable;
     document.getElementById('printTotal').textContent       = grandTotal;
 
-    // ── Edit Button ──────────────────────────────────────────────────────
-    const editBtn = document.getElementById('printModalEditBtn');
-    if (editBtn) {
-        if (resource.id) {
-            editBtn.href = `/edit-resource/${encodeURIComponent(resource.id)}?tab=print`;
-            editBtn.classList.remove('hidden');
-        } else {
-            editBtn.classList.add('hidden');
-        }
+    // ── Edit Button (level + tab context) ───────────────────────────────
+    const canEdit =
+        (userLevel === 3 && normalizedContext === 'division') ||
+        (userLevel === 1 && normalizedContext === 'school');
+
+    if (resource.id && canEdit) {
+        showPrintEditButton(`/edit-resource/${encodeURIComponent(resource.id)}?tab=print`);
+    } else {
+        hidePrintEditButton();
     }
 
     // ── Show Modal ─────────────────────────────────────────────────────────
@@ -198,6 +236,7 @@ if (resource.verified) {
  * Close the Print Resource modal.
  */
 export function closePrintModal() {
+    hidePrintEditButton();
     document.getElementById('viewPrintModal').classList.add('hidden');
 }
 

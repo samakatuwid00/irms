@@ -1292,21 +1292,37 @@
     @stack('scripts')
 
     <script>
+        function initCoverImages() {
+            document.querySelectorAll('.cover-img').forEach(function (img) {
+                if (img.complete) {
+                    img.classList.add('loaded');
+                } else {
+                    if (img.loading === 'lazy') img.loading = 'eager';
+                    var timer = setTimeout(function () {
+                        img.classList.add('loaded');
+                    }, 3000);
+                    function done() { clearTimeout(timer); img.classList.add('loaded'); }
+                    img.addEventListener('load', done);
+                    img.addEventListener('error', done);
+                }
+            });
+        }
+
         /* ── Reveal real page content once the page is fully loaded ──────────
            Using 'load' ensures images/assets are ready so the swap looks clean.
            A 60ms delay lets Alpine finish its own init tick first.             */
         window.addEventListener('load', function () {
             setTimeout(function () {
                 document.body.classList.add('page-ready');
-                document.querySelectorAll('.cover-img').forEach(function (img) {
-                    if (img.complete) {
-                        img.classList.add('loaded');
-                    } else {
-                        img.addEventListener('load', function () { img.classList.add('loaded'); });
-                        img.addEventListener('error', function () { img.classList.add('loaded'); });
-                    }
-                });
+                initCoverImages();
             }, 60);
+        });
+
+        /* ── HTMX content swap handler ───────────────────────────────────────
+           When HTMX dynamically swaps new content (e.g. "Load Data" in print
+           resources), the cover-img handler must run again for the new images. */
+        document.addEventListener('htmx:afterSettle', function () {
+            initCoverImages();
         });
     </script>
 </body>

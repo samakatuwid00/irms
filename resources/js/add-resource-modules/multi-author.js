@@ -20,6 +20,18 @@ export class MultiAuthorInput {
                 this.addAuthor(this.authorInput.value.trim());
             }
         });
+
+        // Auto-register when the input loses focus
+        this.authorInput.addEventListener('blur', () => {
+            this.addAuthor(this.authorInput.value.trim());
+        });
+    }
+
+    /**
+     * Flush any unregistered text in the input — call before form submit
+     */
+    flushInput() {
+        this.addAuthor(this.authorInput.value.trim());
     }
 
     /**

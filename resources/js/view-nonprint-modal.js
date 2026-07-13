@@ -34,7 +34,7 @@ export function openNonPrintModal(resource) {
     const userLevel = parseInt(table?.dataset?.userLevel || 0, 10);
     const isLevel4 = userLevel === 4;
 
-    const DEFAULT_IMAGE = '/assets/images/default.jpg';
+    // const DEFAULT_IMAGE = '/assets/images/default.jpg';
 
     // ── Image ──────────────────────────────────────────────────────────────
     const imgElement = document.getElementById('nonprintImage');

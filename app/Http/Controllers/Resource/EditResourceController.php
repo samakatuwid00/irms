@@ -51,6 +51,12 @@ class EditResourceController extends BaseController
                 'type',
                 'printAcquisitions.printMasterlists',
             ])->find($id);
+
+            abort_unless(
+                $printResource && $this->canEditPrintResource($printResource),
+                403,
+                'Unauthorized access.'
+            );
         } else {
             $nonprintResource = NonprintResource::with([
                 'nonprintTitle',
@@ -129,6 +135,14 @@ class EditResourceController extends BaseController
 
     public function updatePrintResource(Request $request, $id)
     {
+        $printResource = PrintResource::with('printAcquisitions')->findOrFail($id);
+
+        abort_unless(
+            $this->canEditPrintResource($printResource),
+            403,
+            'Unauthorized access.'
+        );
+
         $validated = $request->validate([
             // library_id is required — an acquisition must always be assigned somewhere
             'library_id'   => 'required|string|max:36',
@@ -168,5 +182,39 @@ class EditResourceController extends BaseController
         return redirect()
             ->route('edit-resource', ['id' => $id, 'tab' => 'nonprint'])
             ->with('success', 'Acquisitions updated successfully.');
+    }
+
+    private function canEditPrintResource(PrintResource $printResource): bool
+    {
+        $libraryIds = $this->editablePrintLibraryIds();
+
+        if (empty($libraryIds)) {
+            return false;
+        }
+
+        $libraryIds = array_map('strval', $libraryIds);
+
+        return $printResource->printAcquisitions
+            ->contains(fn ($acquisition) => in_array((string) $acquisition->library_id, $libraryIds, true));
+    }
+
+    private function editablePrintLibraryIds(): array
+    {
+        $user = Auth::user();
+        $level = (int) ($user->userType?->level ?? 0);
+
+        if ($level === 1) {
+            return SchoolLibrary::where('school_id', $user->station_id)
+                ->pluck('id')
+                ->all();
+        }
+
+        if ($level === 3) {
+            return DivisionLibrary::where('division_id', $user->station_id)
+                ->pluck('id')
+                ->all();
+        }
+
+        return [];
     }
 }

@@ -21,6 +21,11 @@ export function initPrintResourceForm() {
     existingAuthors.forEach(name => authorInput.addAuthor(name));
 
     setupFormSubmit(form, 'savePrintBtn', 'savePrintText', 'savePrintLoading');
+
+    // Flush unregistered author text before submit
+    form.addEventListener('submit', function () {
+        authorInput.flushInput();
+    });
 }
 
 if (document.readyState === 'loading') {

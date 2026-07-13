@@ -10,6 +10,10 @@ use Illuminate\Routing\Controller as BaseController;
 
 use App\Services\Resource\Exports\ExportPrintResourceService;
 
+use App\Models\School;
+use App\Models\SchoolLibrary;
+use App\Models\DivisionLibrary;
+
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 use PhpOffice\PhpSpreadsheet\Style\Alignment;
@@ -55,6 +59,21 @@ class PrintResourceExportController extends BaseController
             ->setSubject('Library Resources')
             ->setDescription('Export of library print resources');
 
+        // Preload school names for all scoped library IDs
+        $schoolLibraries = SchoolLibrary::whereIn('id', $libraryIds)->get()->keyBy('id');
+        $schoolIds = $schoolLibraries->pluck('school_id')->unique()->values();
+        $schools = School::whereIn('id', $schoolIds)->get()->keyBy('id');
+        $librarySchoolMap = $schoolLibraries->mapWithKeys(function ($sl) use ($schools) {
+            $school = $schools->get($sl->school_id);
+            return [$sl->id => $school ? $school->school_name : null];
+        });
+
+        // Preload division library names
+        $divisionLibraries = DivisionLibrary::whereIn('id', $libraryIds)->get()->keyBy('id');
+
+        // Determine export context — hub (division/library-hub tab) or school
+        $isHubContext = in_array($request->input('tab'), ['division', 'library-hub'], true);
+
         $headers = [
             'A1' => 'Title',
             'B1' => 'Author(s)',
@@ -64,12 +83,13 @@ class PrintResourceExportController extends BaseController
             'F1' => 'ISBN',
             'G1' => 'Copyright',
             'H1' => 'Date Acquired',
-            'I1' => 'Usable',
-            'J1' => 'Partially Damaged',
-            'K1' => 'Damaged',
-            'L1' => 'Lost',
-            'M1' => 'Condemnable',
-            'N1' => 'Total Quantity'
+            'I1' => $isHubContext ? 'Division Library Hub' : 'School Name',
+            'J1' => 'Usable',
+            'K1' => 'Partially Damaged',
+            'L1' => 'Damaged',
+            'M1' => 'Lost',
+            'N1' => 'Condemnable',
+            'O1' => 'Total Quantity'
         ];
 
         foreach ($headers as $cell => $value) {
@@ -98,7 +118,7 @@ class PrintResourceExportController extends BaseController
             ]
         ];
 
-        $sheet->getStyle('A1:N1')->applyFromArray($headerStyle);
+        $sheet->getStyle('A1:O1')->applyFromArray($headerStyle);
 
         $columnWidths = [
             'A' => 35,
@@ -109,12 +129,13 @@ class PrintResourceExportController extends BaseController
             'F' => 15,
             'G' => 12,
             'H' => 16,
-            'I' => 10,
-            'J' => 12,
-            'K' => 10,
+            'I' => 20,
+            'J' => 10,
+            'K' => 12,
             'L' => 10,
-            'M' => 12,
-            'N' => 12
+            'M' => 10,
+            'N' => 12,
+            'O' => 12
         ];
 
         foreach ($columnWidths as $column => $width) {
@@ -150,25 +171,51 @@ class PrintResourceExportController extends BaseController
             $latestDate = $resource->printAcquisitions->pluck('date_acquired')->filter()->sortDesc()->first();
             $sheet->setCellValue('H' . $row, $latestDate ? date('M d, Y', strtotime($latestDate)) : '');
 
-            $sheet->setCellValue('I' . $row, $qty['usable']);
-            $sheet->setCellValue('J' . $row, $qty['partially_damaged']);
-            $sheet->setCellValue('K' . $row, $qty['damaged']);
-            $sheet->setCellValue('L' . $row, $qty['lost']);
-            $sheet->setCellValue('M' . $row, $qty['condemnable']);
-            $sheet->setCellValue('N' . $row, $total);
+            // Conditional column: School Name or Division Library Hub based on tab context
+            if ($isHubContext) {
+                $hubNames = $resource->printAcquisitions
+                    ->whereIn('library_id', $libraryIds)
+                    ->pluck('library_id')
+                    ->unique()
+                    ->map(fn($libId) => optional($divisionLibraries->get($libId))->library_name)
+                    ->filter()
+                    ->unique()
+                    ->values()
+                    ->implode(', ');
+                $sheet->setCellValue('I' . $row, $hubNames ?: '');
+            } else {
+                $schoolNames = $resource->printAcquisitions
+                    ->whereIn('library_id', $libraryIds)
+                    ->pluck('library_id')
+                    ->unique()
+                    ->map(fn($libId) => $librarySchoolMap->get($libId))
+                    ->filter()
+                    ->unique()
+                    ->values()
+                    ->implode(', ');
+                $sheet->setCellValue('I' . $row, $schoolNames ?: '');
+            }
+
+            $sheet->setCellValue('J' . $row, $qty['usable']);
+            $sheet->setCellValue('K' . $row, $qty['partially_damaged']);
+            $sheet->setCellValue('L' . $row, $qty['damaged']);
+            $sheet->setCellValue('M' . $row, $qty['lost']);
+            $sheet->setCellValue('N' . $row, $qty['condemnable']);
+            $sheet->setCellValue('O' . $row, $total);
 
             // Wrap text on columns that can get long so they stay readable without manual resizing
             $sheet->getStyle('A' . $row)->getAlignment()->setWrapText(true);
             $sheet->getStyle('E' . $row)->getAlignment()->setWrapText(true);
+            $sheet->getStyle('I' . $row)->getAlignment()->setWrapText(true);
 
-            $sheet->getStyle('I' . $row . ':N' . $row)
+            $sheet->getStyle('J' . $row . ':O' . $row)
                   ->getAlignment()
                   ->setHorizontal(Alignment::HORIZONTAL_CENTER);
 
             $row++;
         }
 
-        $dataRange = 'A1:N' . ($row - 1);
+        $dataRange = 'A1:O' . ($row - 1);
         $sheet->getStyle($dataRange)->applyFromArray([
             'borders' => [
                 'allBorders' => [
@@ -181,15 +228,15 @@ class PrintResourceExportController extends BaseController
         if ($row > 2) {
             $totalRow = $row;
             $sheet->setCellValue('A' . $totalRow, 'TOTAL');
-            $sheet->mergeCells('A' . $totalRow . ':G' . $totalRow);
+            $sheet->mergeCells('A' . $totalRow . ':I' . $totalRow);
 
             // Use Excel formulas so the totals stay correct if the user edits the file
-            $sheet->setCellValue('I' . $totalRow, '=SUM(I2:I' . ($row - 1) . ')');
             $sheet->setCellValue('J' . $totalRow, '=SUM(J2:J' . ($row - 1) . ')');
             $sheet->setCellValue('K' . $totalRow, '=SUM(K2:K' . ($row - 1) . ')');
             $sheet->setCellValue('L' . $totalRow, '=SUM(L2:L' . ($row - 1) . ')');
             $sheet->setCellValue('M' . $totalRow, '=SUM(M2:M' . ($row - 1) . ')');
             $sheet->setCellValue('N' . $totalRow, '=SUM(N2:N' . ($row - 1) . ')');
+            $sheet->setCellValue('O' . $totalRow, '=SUM(O2:O' . ($row - 1) . ')');
 
             $totalStyle = [
                 'font' => ['bold' => true],
@@ -202,7 +249,7 @@ class PrintResourceExportController extends BaseController
                     'vertical'   => Alignment::VERTICAL_CENTER
                 ]
             ];
-            $sheet->getStyle('A' . $totalRow . ':N' . $totalRow)->applyFromArray($totalStyle);
+            $sheet->getStyle('A' . $totalRow . ':O' . $totalRow)->applyFromArray($totalStyle);
         }
 
         // Keep the header visible while scrolling through large exports

@@ -199,27 +199,28 @@
                                 <td class="px-2 py-2 text-center">
                                     <div class="flex justify-center gap-2">
                                         <button type="button"
-                                                data-view-id="{{ $row->id }}"
-                                                data-cover="{{ $row->cover_url }}"
-                                                data-title="{{ $row->printTitle->title ?? '-' }}"
-                                                data-authors="{{ $row->printTitle->authors->pluck('author_name')->join(', ') ?: '-' }}"
-                                                data-type="{{ $row->type->type_name ?? '-' }}"
-                                                data-publisher="{{ $row->publisher ?? '-' }}"
-                                                data-volume="{{ $row->volume ?? '-' }}"
-                                                data-edition="{{ $row->edition ?? '-' }}"
-                                                data-copyright="{{ $row->copyright ?? '-' }}"
-                                                data-isbn="{{ $row->isbn ?? '-' }}"
-                                                data-pages="{{ $row->pages ?? '-' }}"
-                                                data-subjects="{{ $sglText }}"
-                                                data-verified="{{ $row->verified ? '1' : '0' }}"
-                                                data-verified-by-name="{{ $row->verifiedBy ? trim(($row->verifiedBy->firstname ?? '') . ' ' . ($row->verifiedBy->lastname ?? '')) : '' }}"
-                                                data-verified-by-role="{{ $row->verifiedBy?->userType?->type_name ?? '' }}"
-                                                data-verified-by-level="{{ $row->verifiedBy?->userType?->level ?? '' }}"
-                                                data-current-verifier-name="{{ $currentVerifierName }}"
-                                                data-current-verifier-role="{{ $currentVerifierRole }}"
-                                                data-current-verifier-level="{{ $currentVerifierLevel }}"
-                                                data-verification-history='@json($row->verification_history ?? [])'
-                                                class="view-resource-btn inline-flex items-center gap-1 text-xs px-3 py-1.5 bg-indigo-50 text-indigo-600 border border-indigo-200 rounded-lg hover:bg-indigo-100 transition-colors whitespace-nowrap font-medium">
+                                                 data-view-id="{{ $row->id }}"
+                                                 data-cover="{{ $row->cover_url }}"
+                                                 data-cover-thumb="{{ $row->thumb_url }}"
+                                                 data-title="{{ $row->printTitle->title ?? '-' }}"
+                                                 data-authors="{{ $row->printTitle->authors->pluck('author_name')->join(', ') ?: '-' }}"
+                                                 data-type="{{ $row->type->type_name ?? '-' }}"
+                                                 data-publisher="{{ $row->publisher ?? '-' }}"
+                                                 data-volume="{{ $row->volume ?? '-' }}"
+                                                 data-edition="{{ $row->edition ?? '-' }}"
+                                                 data-copyright="{{ $row->copyright ?? '-' }}"
+                                                 data-isbn="{{ $row->isbn ?? '-' }}"
+                                                 data-pages="{{ $row->pages ?? '-' }}"
+                                                 data-subjects="{{ $sglText }}"
+                                                 data-verified="{{ $row->verified ? '1' : '0' }}"
+                                                 data-verified-by-name="{{ $row->verifiedBy ? trim(($row->verifiedBy->firstname ?? '') . ' ' . ($row->verifiedBy->lastname ?? '')) : '' }}"
+                                                 data-verified-by-role="{{ $row->verifiedBy?->userType?->type_name ?? '' }}"
+                                                 data-verified-by-level="{{ $row->verifiedBy?->userType?->level ?? '' }}"
+                                                 data-current-verifier-name="{{ $currentVerifierName }}"
+                                                 data-current-verifier-role="{{ $currentVerifierRole }}"
+                                                 data-current-verifier-level="{{ $currentVerifierLevel }}"
+                                                 data-verification-history='@json($row->verification_history ?? [])'
+                                                 class="view-resource-btn inline-flex items-center gap-1 text-xs px-3 py-1.5 bg-indigo-50 text-indigo-600 border border-indigo-200 rounded-lg hover:bg-indigo-100 transition-colors whitespace-nowrap font-medium">
                                             <svg class="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
@@ -300,7 +301,7 @@
                             $currentVerifierRoleC = $currentVerifierC['role'] ?? ($row->verifiedBy?->userType?->type_name ?? '');
                             $currentVerifierLevelC = $currentVerifierC['level'] ?? ($row->verifiedBy?->userType?->level ?? '');
                         @endphp
-                        <div class="relative bg-white rounded-xl shadow overflow-hidden flex flex-col group cursor-pointer"
+                        <div class="relative bg-white rounded-xl shadow overflow-hidden flex flex-col cursor-pointer group transition-all duration-200 ease-out hover:-translate-y-1 hover:shadow-lg"
                              onclick="(function(el){
                                  var btn = el.querySelector('.view-resource-btn');
                                  if(btn) btn.click();
@@ -332,27 +333,28 @@
                                 <div class="mt-auto pt-2 flex items-center justify-between gap-1">
                                     {{-- hidden view btn so card click triggers it --}}
                                     <button type="button"
-                                            data-view-id="{{ $row->id }}"
-                                            data-cover="{{ $row->cover_url }}"
-                                            data-title="{{ $row->printTitle->title ?? '-' }}"
-                                            data-authors="{{ $row->printTitle->authors->pluck('author_name')->join(', ') ?: '-' }}"
-                                            data-type="{{ $row->type->type_name ?? '-' }}"
-                                            data-publisher="{{ $row->publisher ?? '-' }}"
-                                            data-volume="{{ $row->volume ?? '-' }}"
-                                            data-edition="{{ $row->edition ?? '-' }}"
-                                            data-copyright="{{ $row->copyright ?? '-' }}"
-                                            data-isbn="{{ $row->isbn ?? '-' }}"
-                                            data-pages="{{ $row->pages ?? '-' }}"
-                                            data-subjects="{{ $sglTextC }}"
-                                            data-verified="{{ $row->verified ? '1' : '0' }}"
-                                            data-verified-by-name="{{ $row->verifiedBy ? trim(($row->verifiedBy->firstname ?? '') . ' ' . ($row->verifiedBy->lastname ?? '')) : '' }}"
-                                            data-verified-by-role="{{ $row->verifiedBy?->userType?->type_name ?? '' }}"
-                                            data-verified-by-level="{{ $row->verifiedBy?->userType?->level ?? '' }}"
-                                            data-current-verifier-name="{{ $currentVerifierNameC }}"
-                                            data-current-verifier-role="{{ $currentVerifierRoleC }}"
-                                            data-current-verifier-level="{{ $currentVerifierLevelC }}"
-                                            data-verification-history='@json($row->verification_history ?? [])'
-                                            class="view-resource-btn hidden">
+                                             data-view-id="{{ $row->id }}"
+                                             data-cover="{{ $row->cover_url }}"
+                                             data-cover-thumb="{{ $row->thumb_url }}"
+                                             data-title="{{ $row->printTitle->title ?? '-' }}"
+                                             data-authors="{{ $row->printTitle->authors->pluck('author_name')->join(', ') ?: '-' }}"
+                                             data-type="{{ $row->type->type_name ?? '-' }}"
+                                             data-publisher="{{ $row->publisher ?? '-' }}"
+                                             data-volume="{{ $row->volume ?? '-' }}"
+                                             data-edition="{{ $row->edition ?? '-' }}"
+                                             data-copyright="{{ $row->copyright ?? '-' }}"
+                                             data-isbn="{{ $row->isbn ?? '-' }}"
+                                             data-pages="{{ $row->pages ?? '-' }}"
+                                             data-subjects="{{ $sglTextC }}"
+                                             data-verified="{{ $row->verified ? '1' : '0' }}"
+                                             data-verified-by-name="{{ $row->verifiedBy ? trim(($row->verifiedBy->firstname ?? '') . ' ' . ($row->verifiedBy->lastname ?? '')) : '' }}"
+                                             data-verified-by-role="{{ $row->verifiedBy?->userType?->type_name ?? '' }}"
+                                             data-verified-by-level="{{ $row->verifiedBy?->userType?->level ?? '' }}"
+                                             data-current-verifier-name="{{ $currentVerifierNameC }}"
+                                             data-current-verifier-role="{{ $currentVerifierRoleC }}"
+                                             data-current-verifier-level="{{ $currentVerifierLevelC }}"
+                                             data-verification-history='@json($row->verification_history ?? [])'
+                                             class="view-resource-btn hidden">
                                     </button>
                                     <span class="text-xs text-gray-400 whitespace-nowrap">{{ $row->copyright ?? '' }}</span>
                                     <span class="text-[11px] text-blue-600 sm:hidden">Tap card to view</span>
@@ -807,19 +809,20 @@
                                     <div class="flex justify-center gap-2">
                                         {{-- View --}}
                                         <button type="button"
-                                                data-view-id="{{ $req->id }}"
-                                                data-cover="{{ $req->cover_url }}"
-                                                data-title="{{ $req->printTitle->title ?? '-' }}"
-                                                data-authors="{{ $req->printTitle->authors->pluck('author_name')->join(', ') ?: '-' }}"
-                                                data-type="{{ $req->type->type_name ?? '-' }}"
-                                                data-publisher="{{ $req->publisher ?? '-' }}"
-                                                data-volume="{{ $req->volume ?? '-' }}"
-                                                data-edition="{{ $req->edition ?? '-' }}"
-                                                data-copyright="{{ $req->copyright ?? '-' }}"
-                                                data-isbn="{{ $req->isbn ?? '-' }}"
-                                                data-pages="{{ $req->pages ?? '-' }}"
-                                                data-subjects="{{ $reqSglText }}"
-                                                class="view-resource-btn inline-flex items-center gap-1 text-xs px-2.5 py-1.5 bg-indigo-50 text-indigo-600 border border-indigo-200 rounded-lg hover:bg-indigo-100 transition-colors font-medium whitespace-nowrap">
+                                                 data-view-id="{{ $req->id }}"
+                                                 data-cover="{{ $req->cover_url }}"
+                                                 data-cover-thumb="{{ $req->thumb_url }}"
+                                                 data-title="{{ $req->printTitle->title ?? '-' }}"
+                                                 data-authors="{{ $req->printTitle->authors->pluck('author_name')->join(', ') ?: '-' }}"
+                                                 data-type="{{ $req->type->type_name ?? '-' }}"
+                                                 data-publisher="{{ $req->publisher ?? '-' }}"
+                                                 data-volume="{{ $req->volume ?? '-' }}"
+                                                 data-edition="{{ $req->edition ?? '-' }}"
+                                                 data-copyright="{{ $req->copyright ?? '-' }}"
+                                                 data-isbn="{{ $req->isbn ?? '-' }}"
+                                                 data-pages="{{ $req->pages ?? '-' }}"
+                                                 data-subjects="{{ $reqSglText }}"
+                                                 class="view-resource-btn inline-flex items-center gap-1 text-xs px-2.5 py-1.5 bg-indigo-50 text-indigo-600 border border-indigo-200 rounded-lg hover:bg-indigo-100 transition-colors font-medium whitespace-nowrap">
                                             <svg class="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
@@ -899,7 +902,7 @@
                                 $reqSglTextC = $reqSglsC->map(fn($s) => ($s->subject->subject_name ?? '') . ' - ' . ($s->gradeLevel->grade ?? ''))->join('; ');
                             }
                         @endphp
-                        <div class="bg-white rounded-xl shadow overflow-hidden flex flex-col group cursor-pointer"
+                        <div class="bg-white rounded-xl shadow overflow-hidden flex flex-col cursor-pointer group transition-all duration-200 ease-out hover:-translate-y-1 hover:shadow-lg"
                              onclick="(function(el){ var btn = el.querySelector('.view-resource-btn'); if(btn) btn.click(); })(this)">
                             <div class="relative w-full" style="padding-bottom:140%;">
                                 <img src="{{ $req->thumb_url }}" alt="{{ $req->printTitle->title ?? '' }}"
@@ -923,19 +926,20 @@
                                 <div class="mt-auto pt-2 flex items-center justify-between gap-1 flex-wrap">
                                     {{-- hidden view btn so card click triggers it --}}
                                     <button type="button"
-                                            data-view-id="{{ $req->id }}"
-                                            data-cover="{{ $req->cover_url }}"
-                                            data-title="{{ $req->printTitle->title ?? '-' }}"
-                                            data-authors="{{ $req->printTitle->authors->pluck('author_name')->join(', ') ?: '-' }}"
-                                            data-type="{{ $req->type->type_name ?? '-' }}"
-                                            data-publisher="{{ $req->publisher ?? '-' }}"
-                                            data-volume="{{ $req->volume ?? '-' }}"
-                                            data-edition="{{ $req->edition ?? '-' }}"
-                                            data-copyright="{{ $req->copyright ?? '-' }}"
-                                            data-isbn="{{ $req->isbn ?? '-' }}"
-                                            data-pages="{{ $req->pages ?? '-' }}"
-                                            data-subjects="{{ $reqSglTextC }}"
-                                            class="view-resource-btn hidden">
+                                             data-view-id="{{ $req->id }}"
+                                             data-cover="{{ $req->cover_url }}"
+                                             data-cover-thumb="{{ $req->thumb_url }}"
+                                             data-title="{{ $req->printTitle->title ?? '-' }}"
+                                             data-authors="{{ $req->printTitle->authors->pluck('author_name')->join(', ') ?: '-' }}"
+                                             data-type="{{ $req->type->type_name ?? '-' }}"
+                                             data-publisher="{{ $req->publisher ?? '-' }}"
+                                             data-volume="{{ $req->volume ?? '-' }}"
+                                             data-edition="{{ $req->edition ?? '-' }}"
+                                             data-copyright="{{ $req->copyright ?? '-' }}"
+                                             data-isbn="{{ $req->isbn ?? '-' }}"
+                                             data-pages="{{ $req->pages ?? '-' }}"
+                                             data-subjects="{{ $reqSglTextC }}"
+                                             class="view-resource-btn hidden">
                                     </button>
                                     @if($req->can_manage_request)
                                         <form action="{{ route('masterlist.approve', $req->id) }}" method="POST"
@@ -1648,7 +1652,27 @@
     }
 
     function openViewModal(btn) {
-        document.getElementById('vm-cover').src              = btn.dataset.cover;
+        // ── Image with blur-to-clear transition ──
+        const vmCover = document.getElementById('vm-cover');
+        const DEFAULT_IMAGE = '/assets/images/default.jpg';
+        if (!btn.dataset.cover || btn.dataset.cover.includes('default.jpg')) {
+            vmCover.src = DEFAULT_IMAGE;
+            vmCover.style.filter = 'none';
+        } else {
+            vmCover.style.filter = 'blur(10px)';
+            vmCover.style.transition = 'filter 0.4s ease';
+            vmCover.src = btn.dataset.coverThumb || btn.dataset.cover;
+            const fullImg = new Image();
+            fullImg.onload = function () {
+                vmCover.src = fullImg.src;
+                vmCover.style.filter = 'blur(0px)';
+            };
+            fullImg.onerror = function () {
+                vmCover.style.filter = 'blur(0px)';
+            };
+            fullImg.src = btn.dataset.cover;
+        }
+
         document.getElementById('vm-title').textContent      = btn.dataset.title;
         document.getElementById('vm-authors').textContent    = btn.dataset.authors !== '-' ? btn.dataset.authors : '';
         document.getElementById('vm-type-badge').textContent = btn.dataset.type;
@@ -1692,6 +1716,9 @@
     }
 
     function closeViewModalFn() {
+        const vmCover = document.getElementById('vm-cover');
+        vmCover.style.filter = 'none';
+        vmCover.style.transition = '';
         viewModal.classList.add('hidden');
         document.body.style.overflow = '';
     }
@@ -1885,6 +1912,16 @@
                     authorInput.value = '';
                 }
             });
+
+            // Auto-register when the input loses focus (click/tab away)
+            authorInput.addEventListener('blur', function () {
+                const val = this.value.trim();
+                if (val && !authors.includes(val)) {
+                    authors.push(val);
+                    renderTags();
+                }
+                this.value = '';
+            });
         }
 
         renderTags();
@@ -1897,6 +1934,12 @@
     const editFormEl  = document.getElementById('editForm');
     if (editFormEl && saveBtn) {
         editFormEl.addEventListener('submit', () => {
+            // Flush any unregistered author text before submit
+            if (typeof authorInput !== 'undefined' && authorInput && authorInput.value.trim()) {
+                const name = authorInput.value.trim();
+                if (name && !authors.includes(name)) { authors.push(name); renderTags(); }
+                authorInput.value = '';
+            }
             saveBtn.disabled = true;
             if (saveText)    saveText.classList.add('hidden');
             if (saveLoading) saveLoading.classList.remove('hidden');

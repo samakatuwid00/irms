@@ -138,14 +138,19 @@
 
         <!-- Footer -->
         <div class="border-t border-gray-200 bg-gray-50 p-5 md:p-6 flex justify-end gap-3 sticky bottom-0 z-20">
+            @if(in_array($level, [1, 3]))
             <a id="printModalEditBtn"
-               href="#"
-               class="hidden inline-flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors font-medium shadow-sm">
+               class="hidden items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors font-medium shadow-sm"
+               hidden
+               aria-hidden="true"
+               tabindex="-1"
+               style="display: none;">
                 <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16.862 4.487l1.687-1.687a1.875 1.875 0 112.652 2.652L7.5 19.153 3 21l1.847-4.5L16.862 4.487z"/>
                 </svg>
                 Edit
             </a>
+            @endif
             <button type="button" onclick="closePrintModal()"
                     class="px-6 py-3 border border-gray-400 rounded-xl hover:bg-gray-100 transition-colors font-medium">
                 Close
