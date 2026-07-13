@@ -34,12 +34,31 @@ export function openPrintModal(resource) {
 
     // ── Image ──────────────────────────────────────────────────────────────
     const imgElement = document.getElementById('printImage');
-    imgElement.src = resource.image || DEFAULT_IMAGE;
+
+    // If no image, show default immediately
+    if (!resource.image || resource.image.includes('default.jpg')) {
+        imgElement.src = DEFAULT_IMAGE;
+        imgElement.style.filter = 'none';
+    } else {
+        // Step 1: Show thumbnail instantly (blurred placeholder effect)
+        imgElement.style.filter = 'blur(10px)';
+        imgElement.style.transition = 'filter 0.4s ease';
+        imgElement.src = resource.thumb_url || resource.image;
+
+        // Step 2: Preload full image in background
+        const fullImg = new Image();
+        fullImg.onload = function () {
+            imgElement.src = fullImg.src;
+            imgElement.style.filter = 'blur(0px)';
+        };
+        fullImg.onerror = function () {
+            // Thumbnail stays, no blank state
+            imgElement.style.filter = 'blur(0px)';
+        };
+        fullImg.src = resource.image;
+    }
+
     imgElement.alt = resource.title || 'Book Cover';
-    imgElement.onerror = function () {
-        this.src = DEFAULT_IMAGE;
-        this.onerror = null; // prevent infinite loop
-    };
 
     // ── Basic Info ─────────────────────────────────────────────────────────
 // ── Basic Info ─────────────────────────────────────────────────────────
@@ -159,6 +178,17 @@ if (resource.verified) {
     document.getElementById('printLost').textContent        = totals.lost;
     document.getElementById('printCondemnable').textContent = totals.condemnable;
     document.getElementById('printTotal').textContent       = grandTotal;
+
+    // ── Edit Button ──────────────────────────────────────────────────────
+    const editBtn = document.getElementById('printModalEditBtn');
+    if (editBtn) {
+        if (resource.id) {
+            editBtn.href = `/edit-resource/${encodeURIComponent(resource.id)}?tab=print`;
+            editBtn.classList.remove('hidden');
+        } else {
+            editBtn.classList.add('hidden');
+        }
+    }
 
     // ── Show Modal ─────────────────────────────────────────────────────────
     document.getElementById('viewPrintModal').classList.remove('hidden');

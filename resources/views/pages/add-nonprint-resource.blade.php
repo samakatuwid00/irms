@@ -370,7 +370,7 @@
                             <tr class="hover:bg-gray-50 transition-colors {{ $isEditing && $editResource->id === $resource->id ? 'bg-blue-50 ring-1 ring-blue-200' : '' }}">
                                 <td class="px-3 py-2">
                                     <img src="{{ $resource->cover ? asset('storage/' . $resource->cover) : asset('assets/images/def.jpg') }}"
-                                        alt="cover" class="w-9 h-12 object-cover rounded border border-gray-200 shadow-sm">
+alt="cover" class="cover-img w-9 h-12 object-cover rounded border border-gray-200 shadow-sm">
                                 </td>
                                 <td class="px-3 py-2 font-medium text-gray-900 max-w-40">
                                     <span title="{{ $resource->nonprintTitle->title ?? '' }}">{{ Str::limit($resource->nonprintTitle->title ?? '-', 38) }}</span>
@@ -816,7 +816,7 @@
             card.className = 'border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow bg-white';
             card.innerHTML = `
                 <div class="flex items-start gap-4">
-                    <img src="${esc(title.cover)}" alt="cover" class="w-12 h-16 object-cover rounded shadow-sm flex-shrink-0 border border-gray-200">
+                    <img src="${esc(title.cover)}" alt="cover" class="cover-img w-12 h-16 object-cover rounded shadow-sm flex-shrink-0 border border-gray-200">
                     <div class="flex-1 min-w-0 space-y-1.5">
                         <p class="font-semibold text-gray-900">${highlight(title.title, tokens)}</p>
                         <p class="text-xs text-gray-600 leading-relaxed">
@@ -876,7 +876,7 @@
             const tr = document.createElement('tr');
             tr.className = 'hover:bg-gray-50 transition-colors';
             tr.innerHTML = `
-                <td class="px-3 py-2"><img src="${esc(e.cover)}" alt="cover" class="w-9 h-12 object-cover rounded border border-gray-200 shadow-sm"></td>
+                <td class="px-3 py-2"><img src="${esc(e.cover)}" alt="cover" class="cover-img w-9 h-12 object-cover rounded border border-gray-200 shadow-sm"></td>
                 <td class="px-3 py-2 text-gray-700">${esc(e.type)}</td>
                 <td class="px-3 py-2 text-gray-700">${esc(e.brand)}</td>
                 <td class="px-3 py-2 text-gray-700">${esc(e.code)}</td>

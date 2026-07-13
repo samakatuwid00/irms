@@ -129,7 +129,7 @@
                                 <tr class="hover:bg-gray-50 border-b border-gray-300">
                                     <td class="px-2 py-3">
                                         <img src="{{ $item->thumb_url }}" alt="{{ $item->nonprintTitle->title }}"
-                                            class="w-12 h-16 object-cover rounded shadow" loading="lazy">
+                                            class="cover-img w-12 h-16 object-cover rounded shadow" loading="lazy">
                                     </td>
                                     <td class="px-2 py-3 font-medium text-gray-800 max-w-xs">
                                         {{ $item->nonprintTitle->title }}</td>
@@ -320,7 +320,7 @@
                                 <tr class="hover:bg-gray-50 border-b border-gray-300">
                                     <td class="px-2 py-3">
                                         <img src="{{ $item->thumb_url }}" alt="{{ $item->nonprintTitle->title }}"
-                                            class="w-12 h-16 object-cover rounded shadow" loading="lazy">
+                                            class="cover-img w-12 h-16 object-cover rounded shadow" loading="lazy">
                                     </td>
                                     <td class="px-4 py-3 font-medium text-gray-800 max-w-xs">
                                         {{ $item->nonprintTitle->title }}</td>

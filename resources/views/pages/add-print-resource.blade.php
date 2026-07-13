@@ -7,10 +7,10 @@
 @section('breadcrumb', 'Add Print Resource')
 
 @section('content')
-<div class="p-6 space-y-6">
+<div class="-mx-3 space-y-4 sm:-mx-2 lg:mx-0">
     <!-- Page Header -->
     <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-        <h1 class="text-2xl font-bold text-gray-800">Add Print Resource</h1>
+        <h1 class="text-xl sm:text-2xl font-bold text-gray-800">Add Print Resource</h1>
     </div>
 
     {{-- ===== FLASH MESSAGES ===== --}}
@@ -41,8 +41,8 @@
     @endphp
 
     {{-- ===== PAGE-LEVEL TABS ===== --}}
-    <div class="mb-6 border-b border-gray-200">
-        <nav class="-mb-px flex gap-6" id="pageTabs">
+    <div class="mb-5 sm:mb-6 border-b border-gray-200">
+        <nav class="-mb-px flex gap-4 overflow-x-auto sm:gap-6" id="pageTabs">
             <button type="button" data-page-tab="tab-search"
                     class="page-tab-btn whitespace-nowrap pb-3 px-1 text-sm font-medium border-b-2 border-transparent text-gray-500 hover:text-gray-700">
                 Search Masterlist
@@ -85,7 +85,7 @@
                 </p>
             </div>
             <div>
-                <div class="flex gap-3">
+                <div class="flex flex-col gap-3 sm:flex-row">
                     <div class="relative flex-1">
                         <input type="text" id="searchInput" placeholder="Search title, author, ISBN..."
                             class="w-full border border-gray-300 rounded-lg px-4 py-3 pr-10 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -97,7 +97,7 @@
                             </svg>
                         </span>
                     </div>
-                    <button id="searchBtn" class="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm font-medium transition-colors">Search</button>
+                    <button id="searchBtn" class="w-full px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm font-medium transition-colors sm:w-auto">Search</button>
                 </div>
                 <p class="text-xs text-gray-400 mt-1">Minimum 2 characters to search.</p>
             </div>
@@ -452,7 +452,7 @@
                             <tr class="hover:bg-gray-50 transition-colors {{ $isEditing && $editResource->id === $resource->id ? 'bg-blue-50 ring-1 ring-blue-200' : '' }}">
                                 <td class="px-3 py-2">
                                     <img src="{{ $resource->cover ? asset('storage/' . $resource->cover) : asset('assets/images/def.jpg') }}"
-                                        alt="cover" class="w-9 h-12 object-cover rounded border border-gray-200 shadow-sm">
+alt="cover" class="cover-img w-9 h-12 object-cover rounded border border-gray-200 shadow-sm">
                                 </td>
                                 <td class="px-3 py-2 font-medium text-gray-900 max-w-40">
                                     <span title="{{ $resource->printTitle->title ?? '' }}">{{ Str::limit($resource->printTitle->title ?? '-', 38) }}</span>
@@ -664,11 +664,11 @@
     {{-- ===== DETAIL MODAL (Search Existing tab) ===== --}}
     <div id="detailModal" class="fixed inset-0 z-50 hidden overflow-y-auto" role="dialog" aria-modal="true">
         <div id="modalBackdrop" class="fixed inset-0 bg-black/50 transition-opacity"></div>
-        <div class="relative min-h-screen flex items-start justify-center p-4 pt-10">
-            <div class="relative bg-white rounded-xl shadow-2xl w-full max-w-4xl z-10 mb-10">
-                <div class="flex items-center justify-between p-6 border-b border-gray-200">
-                    <h3 class="text-lg font-semibold text-gray-800" id="modalTitle">Resource Details</h3>
-                    <button id="closeModal" class="text-gray-400 hover:text-gray-600 transition-colors">
+        <div class="relative min-h-screen flex items-start justify-center p-3 pt-4 sm:p-4 sm:pt-8">
+            <div class="relative bg-white rounded-xl shadow-2xl w-full max-w-6xl z-10 mb-6 sm:mb-10 overflow-hidden">
+                <div class="sticky top-0 z-20 flex items-center justify-between gap-3 p-4 sm:p-5 border-b border-gray-200 bg-white">
+                    <h3 class="text-base sm:text-lg font-semibold text-gray-800" id="modalTitle">Resource Details</h3>
+                    <button id="closeModal" class="text-gray-400 hover:text-gray-600 transition-colors rounded-full p-2 hover:bg-gray-100">
                         <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
                         </svg>
@@ -680,17 +680,17 @@
                         <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"/>
                     </svg>
                 </div>
-                <div id="modalBody" class="hidden p-6 space-y-6">
-                    <div class="flex gap-5">
-                        <div class="shrink-0">
+                <div id="modalBody" class="hidden max-h-[calc(100vh-8rem)] overflow-y-auto p-4 space-y-5 sm:p-5 lg:p-6 lg:space-y-6">
+                    <div class="flex flex-col gap-4 sm:flex-row sm:gap-5">
+                        <div class="shrink-0 flex justify-center sm:block">
                             <img id="modalCover" src="" alt="Cover" class="w-28 h-40 object-cover rounded-lg border border-gray-200 shadow-sm">
                         </div>
-                        <div class="flex-1 space-y-2">
-                            <h4 id="modalBookTitle" class="text-xl font-bold text-gray-900 leading-snug"></h4>
-                            <p class="text-sm text-gray-600"><span class="font-medium">Author(s):</span> <span id="modalAuthors"></span></p>
+                        <div class="flex-1 min-w-0 space-y-2">
+                            <h4 id="modalBookTitle" class="text-lg sm:text-xl font-bold text-gray-900 leading-snug break-words"></h4>
+                            <p class="text-sm text-gray-600 break-words"><span class="font-medium">Author(s):</span> <span id="modalAuthors"></span></p>
                             <div class="pt-1">
                                 <p class="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Subject / Grade Level</p>
-                                <p id="modalSubjects" class="text-sm text-gray-700 leading-relaxed"></p>
+                                <p id="modalSubjects" class="text-sm text-gray-700 leading-relaxed break-words"></p>
                             </div>
                         </div>
                     </div>
@@ -699,8 +699,8 @@
                         <p class="text-sm font-semibold text-gray-700 mb-3">Available Editions
                             <span class="text-xs font-normal text-gray-400 ml-1">- click Add on the edition you want to copy to your library</span>
                         </p>
-                        <div class="overflow-x-auto rounded-lg border border-gray-200">
-                            <table class="w-full text-sm">
+                        <div class="-mx-4 overflow-x-auto border border-gray-200 sm:mx-0 sm:rounded-lg">
+                            <table class="min-w-[860px] w-full text-sm">
                                 <thead class="bg-gray-50 text-xs text-gray-500 uppercase tracking-wide">
                                     <tr>
                                         <th class="px-3 py-2 text-left w-12">Cover</th>
@@ -981,22 +981,22 @@
             const card = document.createElement('div');
             card.className = 'border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow bg-white';
             card.innerHTML = `
-                <div class="flex items-start gap-4">
-                    <img src="${esc(title.cover)}" alt="cover" class="w-12 h-16 object-cover rounded shadow-sm flex-shrink-0 border border-gray-200">
+                <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:gap-4">
+                    <img src="${esc(title.cover)}" alt="cover" class="cover-img w-16 h-22 object-cover rounded shadow-sm flex-shrink-0 border border-gray-200 sm:w-12 sm:h-16">
                     <div class="flex-1 min-w-0 space-y-1.5">
-                        <p class="font-semibold text-gray-900">${highlight(title.title, query)}</p>
+                        <p class="font-semibold text-gray-900 break-words">${highlight(title.title, query)}</p>
                         <p class="text-xs text-gray-500">${highlight(title.authors, query)}</p>
-                        <p class="text-xs text-gray-600 leading-relaxed">
+                        <p class="text-xs text-gray-600 leading-relaxed break-words">
                             <span class="font-medium">Subjects:</span> ${highlight(title.subjects, query)}
                         </p>
                         <div class="flex flex-wrap gap-1.5 pt-0.5">
                             ${editionBadges || '<span class="text-xs text-gray-400">No editions</span>'}
                         </div>
                     </div>
-                    <div class="flex-shrink-0 self-center">
+                    <div class="w-full flex-shrink-0 self-stretch sm:w-auto sm:self-center">
                         <button data-title-id="${esc(title.id)}"
                                 data-uniqueness-hash="${esc(title.uniqueness_hash)}"
-                                class="view-btn text-xs px-4 py-2 bg-indigo-50 text-indigo-700 border border-indigo-200 rounded-lg hover:bg-indigo-100 transition-colors whitespace-nowrap font-medium">
+                                class="view-btn w-full text-xs px-4 py-2 bg-indigo-50 text-indigo-700 border border-indigo-200 rounded-lg hover:bg-indigo-100 transition-colors whitespace-nowrap font-medium sm:w-auto">
                             View Details
                         </button>
                     </div>
@@ -1045,13 +1045,13 @@
             const tr = document.createElement('tr');
             tr.className = 'hover:bg-gray-50 transition-colors';
             tr.innerHTML = `
-                <td class="px-3 py-2"><img src="${esc(e.cover)}" alt="cover" class="w-9 h-12 object-cover rounded border border-gray-200 shadow-sm"></td>
+                <td class="px-3 py-2"><img src="${esc(e.cover)}" alt="cover" class="cover-img w-9 h-12 object-cover rounded border border-gray-200 shadow-sm"></td>
                 <td class="px-3 py-2 text-gray-700">${esc(e.type)}</td>
-                <td class="px-3 py-2 text-gray-700">${esc(e.publisher)}</td>
+                <td class="px-3 py-2 text-gray-700 break-words">${esc(e.publisher)}</td>
                 <td class="px-3 py-2 text-gray-700">${esc(e.edition)}</td>
                 <td class="px-3 py-2 text-gray-700">${esc(e.volume)}</td>
                 <td class="px-3 py-2 text-gray-700">${esc(e.copyright)}</td>
-                <td class="px-3 py-2 text-gray-700">${esc(e.isbn)}</td>
+                <td class="px-3 py-2 text-gray-700 break-all">${esc(e.isbn)}</td>
                 <td class="px-3 py-2 text-gray-700">${esc(e.pages)}</td>
                 <td class="px-3 py-2 text-center">
                     <a href="${esc(e.add_url)}"

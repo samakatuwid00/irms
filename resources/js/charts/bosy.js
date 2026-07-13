@@ -323,10 +323,11 @@ function createItemElement(item) {
             <img
                 src="${logoSource}"
                 alt="${escapeHtml(item.name)}"
-                class="w-full h-full rounded-full object-cover bg-white p-1 shadow-sm border border-gray-200"
+                class="bosy-logo w-full h-full rounded-full object-cover bg-gray-100 p-1 shadow-sm border border-gray-200"
                 loading="lazy"
                 decoding="async"
-                onerror="this.src='/assets/images/no_image.jpg'; this.onerror=null;">
+                onload="this.classList.add('bosy-logo-loaded')"
+                onerror="this.onerror=null; this.src='/assets/images/no_image.jpg'; this.classList.add('bosy-logo-loaded');">
         </div>
         <div class="flex-1 grid items-center bosy-row-grid gap-2 sm:gap-3 min-w-0">
 

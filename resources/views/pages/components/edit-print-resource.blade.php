@@ -34,7 +34,7 @@
 
 <form id="print-edit"
       action="{{ route('update-print-resource', $printResource->id) }}"
-      class="resource-form space-y-8"
+      class="resource-form min-w-0 space-y-6 sm:space-y-8"
       method="POST">
     @csrf
     @method('PUT')
@@ -71,7 +71,7 @@
     @endif
 
     {{-- ========================= RESOURCE DETAILS (READ-ONLY DISPLAY) ========================= --}}
-    <div class="bg-blue-50 border border-blue-200 rounded-xl p-5">
+    <div class="bg-blue-50 border border-blue-200 rounded-xl p-4 sm:p-5">
         <div class="flex items-center gap-2 mb-4">
             <svg class="h-4 w-4 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -80,10 +80,10 @@
             <span class="text-sm font-semibold text-blue-700">Resource Information (Read-only)</span>
         </div>
 
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
+        <div class="grid grid-cols-1 gap-4 lg:grid-cols-[9rem_minmax(0,1fr)] lg:gap-5">
 
             {{-- Cover Image --}}
-            <div class="flex justify-center md:justify-start">
+            <div class="flex justify-center lg:justify-start">
                 <img src="{{ $printResource->cover
                                 ? asset('storage/' . $printResource->cover)
                                 : asset('assets/images/default.jpg') }}"
@@ -92,24 +92,24 @@
             </div>
 
             {{-- Metadata --}}
-            <div class="md:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
-                <div>
+            <div class="grid min-w-0 grid-cols-1 gap-3 text-sm sm:grid-cols-2">
+                <div class="min-w-0">
                     <label class="block text-xs font-medium text-gray-500 mb-0.5">Title</label>
-                    <p class="font-semibold text-gray-900">{{ $printResource->printTitle->title ?? 'N/A' }}</p>
+                    <p class="break-words font-semibold text-gray-900">{{ $printResource->printTitle->title ?? 'N/A' }}</p>
                 </div>
-                <div>
+                <div class="min-w-0">
                     <label class="block text-xs font-medium text-gray-500 mb-0.5">Author(s)</label>
-                    <p class="text-gray-800">
+                    <p class="break-words text-gray-800">
                         {{ $printResource->printTitle->authors->pluck('author_name')->join(', ') ?: '-' }}
                     </p>
                 </div>
-                <div>
+                <div class="min-w-0">
                     <label class="block text-xs font-medium text-gray-500 mb-0.5">Type</label>
-                    <p class="text-gray-800">{{ $printResource->type->type_name ?? '-' }}</p>
+                    <p class="break-words text-gray-800">{{ $printResource->type->type_name ?? '-' }}</p>
                 </div>
-                <div>
+                <div class="min-w-0">
                     <label class="block text-xs font-medium text-gray-500 mb-0.5">Publisher</label>
-                    <p class="text-gray-800">{{ $printResource->publisher ?? '-' }}</p>
+                    <p class="break-words text-gray-800">{{ $printResource->publisher ?? '-' }}</p>
                 </div>
                 <div>
                     <label class="block text-xs font-medium text-gray-500 mb-0.5">Edition</label>
@@ -142,9 +142,9 @@
                     }
                 @endphp
                 @if($displaySubjects->isNotEmpty())
-                    <div class="sm:col-span-2">
+                    <div class="min-w-0 sm:col-span-2">
                         <label class="block text-xs font-medium text-gray-500 mb-1">Subject / Grade Level</label>
-                        <p class="text-sm text-gray-700">
+                        <p class="break-words text-sm text-gray-700">
                             {{ $displaySubjects->map(fn($sgl) =>
                                 ($sgl->subject->subject_name ?? 'N/A') . ' (' . ($sgl->gradeLevel->grade ?? 'N/A') . ')'
                             )->join(', ') }}
@@ -156,8 +156,8 @@
     </div>
 
     {{-- ========================= ACQUISITION & CONDITION (EDITABLE) ========================= --}}
-    <div class="bg-gray-50 border border-gray-300 rounded-xl p-6 space-y-6">
-        <h3 class="text-lg font-semibold text-gray-700">Acquisition & Condition Details</h3>
+    <div class="bg-gray-50 border border-gray-300 rounded-xl p-4 space-y-5 sm:p-5 lg:p-6 lg:space-y-6">
+        <h3 class="text-base sm:text-lg font-semibold text-gray-700">Acquisition & Condition Details</h3>
 
         {{-- Library selector --}}
         <div>
@@ -200,7 +200,7 @@
         </div>
 
         {{-- Source / Date / Cost / IAR --}}
-        <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
             <div>
                 <label class="block text-sm font-medium mb-1">Source <span class="text-red-500">*</span></label>
                 <select id="acqSource" class="w-full border border-gray-300 rounded px-3 py-2 text-sm">
@@ -231,7 +231,7 @@
             <h4 class="text-sm font-semibold mb-3 text-gray-600">
                 Condition & Quantity <span class="text-red-500">*</span>
             </h4>
-            <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4">
+            <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
                 <div>
                     <label class="block text-xs mb-1">Usable</label>
                     <input type="number" id="acqUsable" value="0" min="0"
@@ -257,7 +257,7 @@
                     <input type="number" id="acqCondemnable" value="0" min="0"
                            class="qty w-full border border-gray-300 rounded px-3 py-2 text-sm">
                 </div>
-                <div class="md:col-span-2">
+                <div>
                     <label class="block text-xs mb-1">Total Quantity</label>
                     <input type="number" id="totalQuantity" readonly
                            class="w-full bg-gray-100 border border-gray-300 rounded px-3 py-2 text-sm font-semibold">
@@ -267,7 +267,7 @@
 
         <div class="flex justify-end">
             <button type="button" id="addAcquisitionBtn"
-                    class="px-4 py-2 bg-gray-600 text-white text-sm rounded hover:bg-gray-700">
+                    class="w-full px-4 py-2 bg-gray-600 text-white text-sm rounded hover:bg-gray-700 sm:w-auto">
                 ➕ Add Acquisition
             </button>
         </div>
@@ -276,8 +276,8 @@
     {{-- ========================= ACQUISITION LIST ========================= --}}
     <div>
         <h3 class="text-lg font-semibold mb-3 text-gray-700">Acquisition List</h3>
-        <div class="overflow-x-auto">
-            <table class="w-full border border-gray-300 text-sm">
+        <div class="-mx-4 overflow-x-auto sm:mx-0">
+            <table class="min-w-[980px] w-full border border-gray-300 text-sm">
                 <thead class="bg-gray-100">
                     <tr>
                         <th class="border border-gray-300 px-2 py-1 text-left">Library</th>
@@ -307,9 +307,9 @@
     <input type="hidden" name="acquisitions" id="acquisitionsInput">
 
     {{-- ========================= SUBMIT ========================= --}}
-    <div class="flex items-center justify-between gap-3">
+    <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <a href="{{ route('print-resources') }}"
-           class="inline-flex items-center gap-1.5 px-4 py-2 bg-gray-100 text-gray-700 text-sm rounded hover:bg-gray-200 border border-gray-300">
+           class="inline-flex w-full items-center justify-center gap-1.5 px-4 py-2 bg-gray-100 text-gray-700 text-sm rounded hover:bg-gray-200 border border-gray-300 sm:w-auto">
             <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24"
                  stroke="currentColor" stroke-width="2">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
@@ -317,13 +317,13 @@
             Back to Print Resources
         </a>
 
-        <div class="flex gap-3">
+        <div class="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:gap-3">
             <a href="{{ route('print-resources') }}"
-               class="px-5 py-2 bg-white text-gray-600 text-sm rounded border border-gray-300 hover:bg-gray-50">
+               class="w-full px-5 py-2 bg-white text-center text-gray-600 text-sm rounded border border-gray-300 hover:bg-gray-50 sm:w-auto">
                 Cancel
             </a>
             <button type="submit" id="updatePrintBtn"
-                    class="px-6 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed">
+                    class="w-full px-6 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed sm:w-auto">
                 <span id="updatePrintText">Update Acquisitions</span>
                 <span id="updatePrintLoading" class="hidden">
                     <i class="fas fa-spinner fa-spin mr-2"></i>Saving...

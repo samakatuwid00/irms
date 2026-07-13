@@ -45,7 +45,17 @@ class ExportPrintResourceService
 
         $this->applySearch($query, $this->getSearchParam($request, $level));
 
-        return ['resources' => $query->get(), 'libraryIds' => $libraryIds];
+        $resources = $query->get();
+
+        $resources = $resources->sortByDesc(function ($resource) use ($libraryIds) {
+            return $resource->printAcquisitions
+                ->whereIn('library_id', $libraryIds)
+                ->pluck('date_acquired')
+                ->filter()
+                ->max();
+        })->values();
+
+        return ['resources' => $resources, 'libraryIds' => $libraryIds];
     }
 
     private function getSearchParam(Request $request, int $level): string

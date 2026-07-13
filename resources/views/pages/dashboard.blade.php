@@ -217,7 +217,7 @@
                     ['value' => 'lr-exdef',        'label' => 'Excess / Deficiency'],
                     ['value' => 'lr-heatmap',      'label' => 'Equitable Distribution'],
                 ]"
-                class="w-full sm:flex-1 min-w-0"
+                class="w-full sm:flex-1 min-w-0 mb-4"
             />
 
             @if($userLevel !== 1)
@@ -230,7 +230,7 @@
                         ['value' => 'JH', 'label' => 'Junior High'],
                         ['value' => 'SH', 'label' => 'Senior High'],
                     ]"
-                    class="w-full sm:flex-1 min-w-0"
+                    class="w-full sm:flex-1 min-w-0 mb-4"
                 />
             @endif
 
@@ -239,7 +239,7 @@
                 id="printTypeFilter"
                 label="Print Types"
                 :options="$printTypeOptions"
-                class="w-full sm:flex-1 min-w-0"
+                class="w-full sm:flex-1 min-w-0 mb-4"
             />
 
         </div>
@@ -294,11 +294,11 @@
                     id="regionFilter"
                     label="Region / Library Level"
                     :options="$regionOptions"
-                    class="w-full sm:flex-1 min-w-0"
+                    class="w-full sm:flex-1 min-w-0 mb-4"
                 />
             @endif
             @if($userLevel == 3)
-                <x-filter-select id="divisionFilter" label="District" class="w-full sm:flex-1 min-w-0">
+                <x-filter-select id="divisionFilter" label="District" class="w-full sm:flex-1 min-w-0 mb-4">
                     @foreach($divisions as $district)
                         <option value="{{ $district['id'] }}">{{ $district['name'] }}</option>
                     @endforeach
@@ -310,7 +310,7 @@
                 id="bosyPrintTypeFilter"
                 label="Print Types"
                 :options="$printTypeOptions"
-                class="w-full sm:flex-1 min-w-0"
+                class="w-full sm:flex-1 min-w-0 mb-4"
             />
 
         </div>

@@ -1298,6 +1298,14 @@
         window.addEventListener('load', function () {
             setTimeout(function () {
                 document.body.classList.add('page-ready');
+                document.querySelectorAll('.cover-img').forEach(function (img) {
+                    if (img.complete) {
+                        img.classList.add('loaded');
+                    } else {
+                        img.addEventListener('load', function () { img.classList.add('loaded'); });
+                        img.addEventListener('error', function () { img.classList.add('loaded'); });
+                    }
+                });
             }, 60);
         });
     </script>

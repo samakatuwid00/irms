@@ -417,3 +417,13 @@
             max-height: calc(4 * 72px);
         }
     }
+
+    /* ── Logo fade-in ── */
+    .bosy-logo {
+        opacity: 0;
+        transition: opacity 0.35s ease;
+    }
+
+    .bosy-logo.bosy-logo-loaded {
+        opacity: 1;
+    }

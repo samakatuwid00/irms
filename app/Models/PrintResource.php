@@ -193,6 +193,7 @@ class PrintResource extends Model
             'image' => $this->cover
                 ? asset('storage/'.$this->cover)
                 : asset('assets/images/default.jpg'),
+            'thumb_url' => $this->thumb_url,
             'title' => $this->printTitle->title ?? 'N/A',
             'author' => $this->printTitle->authors->pluck('author_name')->join(', ') ?: '-',
             'publisher' => $this->publisher ?? '-',

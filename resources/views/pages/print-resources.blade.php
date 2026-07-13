@@ -2,8 +2,8 @@
 
 @section('title', 'Print Resources')
 @section('page-title', 'Print Resources')
-@section('header-title', 'Welcome, '.Auth::user()->firstname.' '.Auth::user()->lastname)
-@section('header-subtitle', '')
+@section('header-title', 'List of Print Resources')
+@section('header-subtitle', 'Browse and manage your print learning resources')
 @section('breadcrumb', 'Print Resource')
 @section('content')
 
@@ -11,12 +11,11 @@
         $level = Auth::user()->userType?->level ?? 0;
     @endphp
 
-    <div class="p-6 space-y-6">
+    <div class="space-y-4">
         <!-- Page Header -->
         <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-            <h1 class="text-2xl font-bold text-gray-800">List of Print Resources</h1>
+            <h1 class="text-2xl font-bold text-gray-800">Print Resources</h1>
         </div>
-    </div>
     
     {{-- Hidden data attributes for JavaScript modules --}}
     <div id="print-resources-data"
@@ -31,7 +30,7 @@
          style="display: none;">
     </div>
 
-    <div id="print-resources-wrapper" class="space-y-4">
+    <div id="print-resources-wrapper" class="space-y-4 sm:space-y-6">
 
         <!-- ===================================================== -->
         <!-- LEVEL 1: School account -->
@@ -60,6 +59,8 @@
         @if($level == 4)
             @include('pages.components.print-resource-region-account')
         @endif
+
+    </div>
 
     </div>
 

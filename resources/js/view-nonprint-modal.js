@@ -38,12 +38,28 @@ export function openNonPrintModal(resource) {
 
     // ── Image ──────────────────────────────────────────────────────────────
     const imgElement = document.getElementById('nonprintImage');
-    imgElement.src = resource.image || DEFAULT_IMAGE;
+    const DEFAULT_IMAGE = '/assets/images/default.jpg';
+
+    if (!resource.image || resource.image.includes('default.jpg')) {
+        imgElement.src = DEFAULT_IMAGE;
+        imgElement.style.filter = 'none';
+    } else {
+        imgElement.style.filter = 'blur(10px)';
+        imgElement.style.transition = 'filter 0.4s ease';
+        imgElement.src = resource.thumb_url || resource.image;
+
+        const fullImg = new Image();
+        fullImg.onload = function () {
+            imgElement.src = fullImg.src;
+            imgElement.style.filter = 'blur(0px)';
+        };
+        fullImg.onerror = function () {
+            imgElement.style.filter = 'blur(0px)';
+        };
+        fullImg.src = resource.image;
+    }
+
     imgElement.alt = resource.title || 'Resource Cover';
-    imgElement.onerror = function () {
-        this.src = DEFAULT_IMAGE;
-        this.onerror = null;
-    };
 
     // ── Basic Info ─────────────────────────────────────────────────────────
     document.getElementById('nonprintTitle').textContent = resource.title   || 'N/A';

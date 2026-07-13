@@ -177,7 +177,7 @@
                             <tr class="hover:bg-gray-50 transition-colors">
                                 <td class="px-2 py-2">
                                     <img src="{{ $row->thumb_url }}" alt="cover"
-                                         class="w-14 h-18 object-cover rounded border border-gray-200 shadow-sm" loading="lazy">
+                                         class="cover-img w-14 h-18 object-cover rounded border border-gray-200 shadow-sm" loading="lazy">
                                 </td>
                                 <td class="px-2 py-2 font-medium text-gray-900 max-w-75">
                                     <span class="inline-flex items-center gap-1.5" title="{{ $row->verified ? 'Verified by SDO / Division librarian' : ($row->printTitle->title ?? '') }}">
@@ -226,7 +226,7 @@
                                             </svg>
                                             View
                                         </button>
-                                        <a href="{{ route('masterlist.edit', $row->id) }}?ml_page={{ $masterlist->currentPage() }}{{ request('ml_search') ? '&ml_search=' . urlencode(request('ml_search')) : '' }}"
+                                        <a href="{{ route('masterlist.edit', $row->id) }}?ml_page={{ $masterlist->currentPage() }}{{ request('ml_search') ? '&ml_search=' . urlencode(request('ml_search')) : '' }}&ml_view={{ request('ml_view', 'table') }}"
                                            class="inline-flex items-center gap-1 text-xs px-3 py-1.5 bg-blue-50 text-blue-600 border border-blue-200 rounded-lg hover:bg-blue-100 transition-colors whitespace-nowrap font-medium">
                                             <svg class="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16.862 4.487l1.687-1.687a1.875 1.875 0 112.652 2.652L7.5 19.153 3 21l1.847-4.5L16.862 4.487z"/>
@@ -279,7 +279,7 @@
 
             {{-- ── CARD VIEW ── --}}
             <div id="ml-card-view" class="hidden">
-                <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 mt-2">
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-3 sm:gap-4 mt-2">
                     @forelse($masterlist as $row)
                         @php
                             $sglIdsC  = $row->subject_grade_level_ids ? explode(',', $row->subject_grade_level_ids) : [];
@@ -300,15 +300,24 @@
                             $currentVerifierRoleC = $currentVerifierC['role'] ?? ($row->verifiedBy?->userType?->type_name ?? '');
                             $currentVerifierLevelC = $currentVerifierC['level'] ?? ($row->verifiedBy?->userType?->level ?? '');
                         @endphp
-                        <div class="bg-white rounded-xl shadow overflow-hidden flex flex-col group cursor-pointer"
+                        <div class="relative bg-white rounded-xl shadow overflow-hidden flex flex-col group cursor-pointer"
                              onclick="(function(el){
                                  var btn = el.querySelector('.view-resource-btn');
                                  if(btn) btn.click();
                              })(this)">
                             <div class="relative w-full" style="padding-bottom:140%;">
                                 <img src="{{ $row->thumb_url }}" alt="{{ $row->printTitle->title ?? '' }}"
-                                     class="absolute inset-0 w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+                                     class="cover-img absolute inset-0 w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
                                      loading="lazy">
+                                <a href="{{ route('masterlist.edit', $row->id) }}?ml_page={{ $masterlist->currentPage() }}{{ request('ml_search') ? '&ml_search=' . urlencode(request('ml_search')) : '' }}&ml_view=card"
+                                   onclick="event.stopPropagation()"
+                                   title="Edit resource"
+                                   aria-label="Edit resource"
+                                   class="absolute top-2 left-2 z-10 inline-flex h-9 w-9 items-center justify-center rounded-full border border-blue-200 bg-white/95 text-blue-600 shadow-sm backdrop-blur-sm transition-colors hover:bg-blue-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 sm:h-8 sm:w-8">
+                                    <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16.862 4.487l1.687-1.687a1.875 1.875 0 112.652 2.652L7.5 19.153 3 21l1.847-4.5L16.862 4.487z"/>
+                                    </svg>
+                                </a>
                                 <span class="absolute top-2 right-2 inline-flex items-center gap-1 bg-white/90 backdrop-blur-sm text-xs font-semibold px-2 py-0.5 rounded-full shadow text-blue-700">
                                     {{ $row->type->shortname ?? '' }}
                                 </span>
@@ -346,14 +355,7 @@
                                             class="view-resource-btn hidden">
                                     </button>
                                     <span class="text-xs text-gray-400 whitespace-nowrap">{{ $row->copyright ?? '' }}</span>
-                                    <a href="{{ route('masterlist.edit', $row->id) }}"
-                                       onclick="event.stopPropagation()"
-                                       class="inline-flex items-center gap-1 text-xs px-2 py-1 bg-blue-50 text-blue-600 border border-blue-200 rounded-lg hover:bg-blue-100 transition-colors font-medium">
-                                        <svg class="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16.862 4.487l1.687-1.687a1.875 1.875 0 112.652 2.652L7.5 19.153 3 21l1.847-4.5L16.862 4.487z"/>
-                                        </svg>
-                                        Edit
-                                    </a>
+                                    <span class="text-[11px] text-blue-600 sm:hidden">Tap card to view</span>
                                 </div>
                             </div>
                         </div>
@@ -410,7 +412,7 @@
                                  src="{{ $resource->cover_url }}"
                                  data-default-src="{{ $resource->cover_url }}"
                                  alt="Image preview"
-                                 class="w-full h-full object-cover rounded mb-4">
+                                 class="cover-img w-full h-full object-cover rounded mb-4">
                         </div>
                         <input type="file" name="image" id="imageUpload" class="hidden" accept="image/*">
                         <label for="imageUpload" class="cursor-pointer mt-2 px-4 py-2 bg-blue-600 text-white text-sm rounded-md hover:bg-blue-700">
@@ -773,7 +775,7 @@
                             <tr class="hover:bg-gray-50 transition-colors">
                                 <td class="px-3 py-2">
                                     <img src="{{ $req->thumb_url }}" alt="cover"
-                                        class="w-9 h-12 object-cover rounded border border-gray-200 shadow-sm cursor-pointer hover:opacity-80 transition-opacity"
+                                        class="cover-img w-9 h-12 object-cover rounded border border-gray-200 shadow-sm cursor-pointer hover:opacity-80 transition-opacity"
                                         loading="lazy"
                                         onclick="showImageModal('{{ $req->thumb_url }}', '{{ addslashes($req->printTitle->title ?? 'Image') }}')">
                                 </td>
@@ -901,7 +903,7 @@
                              onclick="(function(el){ var btn = el.querySelector('.view-resource-btn'); if(btn) btn.click(); })(this)">
                             <div class="relative w-full" style="padding-bottom:140%;">
                                 <img src="{{ $req->thumb_url }}" alt="{{ $req->printTitle->title ?? '' }}"
-                                     class="absolute inset-0 w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+                                     class="cover-img absolute inset-0 w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
                                      loading="lazy">
                                 <span class="absolute top-2 right-2 inline-flex items-center gap-1 bg-white/90 backdrop-blur-sm text-xs font-semibold px-2 py-0.5 rounded-full shadow text-blue-700">
                                     {{ $req->type->shortname ?? '' }}
@@ -1107,6 +1109,14 @@
 
                 {{-- Footer --}}
                 <div class="flex justify-end gap-3 px-5 sm:px-6 py-4 border-t border-gray-100 bg-gray-50">
+                    <a id="viewModalEditBtn"
+                       href="#"
+                       class="hidden inline-flex items-center gap-2 px-6 py-2.5 text-sm font-medium bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors shadow-sm">
+                        <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16.862 4.487l1.687-1.687a1.875 1.875 0 112.652 2.652L7.5 19.153 3 21l1.847-4.5L16.862 4.487z"/>
+                        </svg>
+                        Edit
+                    </a>
                     <button id="closeViewModalFooter"
                             class="px-6 py-2.5 text-sm font-medium border border-gray-300 text-gray-700 rounded-xl hover:bg-gray-100 transition-colors">
                         Close
@@ -1649,6 +1659,15 @@
         document.getElementById('vm-isbn').textContent       = btn.dataset.isbn;
         document.getElementById('vm-pages').textContent      = btn.dataset.pages;
         document.getElementById('vm-subjects').textContent   = btn.dataset.subjects;
+
+        // ── Edit button in view modal ──
+        const viewEditBtn = document.getElementById('viewModalEditBtn');
+        if (viewEditBtn && btn.dataset.viewId) {
+            viewEditBtn.href = '/print-masterlist/' + encodeURIComponent(btn.dataset.viewId) + '/edit';
+            viewEditBtn.classList.remove('hidden');
+        } else if (viewEditBtn) {
+            viewEditBtn.classList.add('hidden');
+        }
 
         const isVerified = btn.dataset.verified === '1';
         const history = parseVerificationHistory(btn.dataset.verificationHistory);

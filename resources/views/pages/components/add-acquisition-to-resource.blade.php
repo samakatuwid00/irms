@@ -6,21 +6,21 @@
 @section('breadcrumb', 'Add Acquisition')
 
 @section('content')
-<div class="p-6 space-y-6">
+<div class="-mx-3 space-y-4 sm:-mx-2 lg:mx-0">
     @include('pages.partials.page-header')
 
-    <div class="bg-white shadow rounded-xl p-6">
+    <div class="bg-white shadow rounded-xl p-3 sm:p-4 lg:p-5">
 
         {{-- Page Heading --}}
-        <div class="flex items-center gap-3 mb-6">
+        <div class="flex items-start gap-3 mb-5 sm:mb-6">
             <a href="{{ route('print-resource.create') }}"
-               class="text-gray-400 hover:text-gray-700 transition-colors" title="Back to Search">
+               class="mt-0.5 text-gray-400 hover:text-gray-700 transition-colors" title="Back to Search">
                 <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
                 </svg>
             </a>
-            <div>
-                <h2 class="text-xl font-semibold text-gray-800">Add Acquisition</h2>
+            <div class="min-w-0">
+                <h2 class="text-lg sm:text-xl font-semibold text-gray-800">Add Acquisition</h2>
                 <p class="text-sm text-gray-500">Resource details are locked. Fill in the acquisition information below.</p>
             </div>
         </div>
@@ -43,12 +43,12 @@
             id="addAcquisitionForm"
             action="{{ route('search-print-resource.store', $resource->id) }}"
             method="POST"
-            class="space-y-8"
+            class="min-w-0 space-y-6 sm:space-y-8"
         >
             @csrf
 
             {{-- ========================= RESOURCE DETAILS (READ-ONLY) ========================= --}}
-            <div class="bg-blue-50 border border-blue-200 rounded-xl p-5">
+            <div class="bg-blue-50 border border-blue-200 rounded-xl p-4 sm:p-5">
                 <div class="flex items-center gap-2 mb-4">
                     <svg class="h-4 w-4 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -57,9 +57,9 @@
                     <span class="text-sm font-semibold text-blue-700">Resource Information (Read-only)</span>
                 </div>
 
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
+                <div class="grid grid-cols-1 gap-4 lg:grid-cols-[9rem_minmax(0,1fr)] lg:gap-5">
                     {{-- Cover Image --}}
-                    <div class="flex justify-center md:justify-start">
+                    <div class="flex justify-center lg:justify-start">
                         <img
                             src="{{ $resource->cover ? asset('storage/' . $resource->cover) : asset('assets/images/def.jpg') }}"
                             alt="Cover"
@@ -68,22 +68,22 @@
                     </div>
 
                     {{-- Details --}}
-                    <div class="md:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
-                        <div>
+                    <div class="grid min-w-0 grid-cols-1 gap-3 text-sm sm:grid-cols-2">
+                        <div class="min-w-0">
                             <label class="block text-xs font-medium text-gray-500 mb-0.5">Title</label>
-                            <p class="font-semibold text-gray-900">{{ $resource->printTitle->title ?? 'N/A' }}</p>
+                            <p class="break-words font-semibold text-gray-900">{{ $resource->printTitle->title ?? 'N/A' }}</p>
                         </div>
-                        <div>
+                        <div class="min-w-0">
                             <label class="block text-xs font-medium text-gray-500 mb-0.5">Author(s)</label>
-                            <p class="text-gray-800">{{ $resource->printTitle->authors->pluck('author_name')->join(', ') ?: '-' }}</p>
+                            <p class="break-words text-gray-800">{{ $resource->printTitle->authors->pluck('author_name')->join(', ') ?: '-' }}</p>
                         </div>
-                        <div>
+                        <div class="min-w-0">
                             <label class="block text-xs font-medium text-gray-500 mb-0.5">Type</label>
-                            <p class="text-gray-800">{{ $resource->type->type_name ?? '-' }}</p>
+                            <p class="break-words text-gray-800">{{ $resource->type->type_name ?? '-' }}</p>
                         </div>
-                        <div>
+                        <div class="min-w-0">
                             <label class="block text-xs font-medium text-gray-500 mb-0.5">Publisher</label>
-                            <p class="text-gray-800">{{ $resource->publisher ?? '-' }}</p>
+                            <p class="break-words text-gray-800">{{ $resource->publisher ?? '-' }}</p>
                         </div>
                         <div>
                             <label class="block text-xs font-medium text-gray-500 mb-0.5">Edition</label>
@@ -108,9 +108,9 @@
 
                         {{-- Subjects --}}
                         @if($subjects->isNotEmpty())
-                        <div class="sm:col-span-2">
+                        <div class="min-w-0 sm:col-span-2">
                             <label class="block text-xs font-medium text-gray-500 mb-1">Subject / Grade Level</label>
-                            <p class="text-sm text-gray-700">
+                            <p class="break-words text-sm text-gray-700">
                                 {{ $subjects->map(fn($sgl) => ($sgl->subject->subject_name ?? 'N/A') . ' (' . ($sgl->gradeLevel->grade ?? 'N/A') . ')')->join(', ') }}
                             </p>
                         </div>
@@ -120,8 +120,8 @@
             </div>
 
             {{-- ========================= ACQUISITION & CONDITION ========================= --}}
-            <div class="bg-gray-50 border border-gray-300 rounded-xl p-6 space-y-6">
-                <h3 class="text-lg font-semibold text-gray-700">Acquisition & Condition Details</h3>
+            <div class="bg-gray-50 border border-gray-300 rounded-xl p-4 space-y-5 sm:p-5 lg:p-6 lg:space-y-6">
+                <h3 class="text-base sm:text-lg font-semibold text-gray-700">Acquisition & Condition Details</h3>
 
                 {{-- Library selector (now part of each acquisition) --}}
                 <div>
@@ -168,7 +168,7 @@
                 </div>
 
                 {{-- Source / Date / Cost / IAR --}}
-                <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
                     <div>
                         <label class="block text-sm font-medium mb-1">Source <span class="text-red-500">*</span></label>
                         <select id="acqSource" class="w-full border border-gray-300 rounded px-3 py-2 text-sm">
@@ -199,7 +199,7 @@
                     <h4 class="text-sm font-semibold mb-3 text-gray-600">
                         Condition & Quantity <span class="text-red-500">*</span>
                     </h4>
-                    <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4">
+                    <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
                         <div>
                             <label class="block text-xs mb-1">Usable</label>
                             <input type="number" id="acqUsable" value="0" min="0"
@@ -225,7 +225,7 @@
                             <input type="number" id="acqCondemnable" value="0" min="0"
                                 class="qty w-full border border-gray-300 rounded px-3 py-2 text-sm">
                         </div>
-                        <div class="md:col-span-2">
+                        <div>
                             <label class="block text-xs mb-1">Total Quantity</label>
                             <input type="number" id="totalQuantity" readonly
                                 class="w-full bg-gray-100 border border-gray-300 rounded px-3 py-2 text-sm font-semibold">
@@ -235,7 +235,7 @@
 
                 <div class="flex justify-end">
                     <button type="button" id="addAcquisitionBtn"
-                        class="px-4 py-2 bg-gray-600 text-white text-sm rounded hover:bg-gray-700">
+                        class="w-full px-4 py-2 bg-gray-600 text-white text-sm rounded hover:bg-gray-700 sm:w-auto">
                         ➕ Add Acquisition
                     </button>
                 </div>
@@ -244,8 +244,8 @@
             {{-- ========================= ACQUISITION LIST ========================= --}}
             <div>
                 <h3 class="text-lg font-semibold mb-3 text-gray-700">Acquisition List</h3>
-                <div class="overflow-x-auto">
-                    <table class="w-full border border-gray-300 text-sm">
+                <div class="-mx-4 overflow-x-auto sm:mx-0">
+                    <table class="min-w-[980px] w-full border border-gray-300 text-sm">
                         <thead class="bg-gray-100">
                             <tr>
                                 <th class="border border-gray-300 px-2 py-1 text-left">Library</th>
@@ -277,13 +277,13 @@
             <input type="hidden" name="acquisitions" id="acquisitionsInput">
 
             {{-- ========================= SUBMIT ========================= --}}
-            <div class="flex items-center justify-between pt-2">
+            <div class="flex flex-col gap-3 pt-2 sm:flex-row sm:items-center sm:justify-between">
                 <a href="{{ route('print-resource.create') }}"
-                   class="text-sm text-gray-500 hover:text-gray-700 underline">
+                   class="inline-flex w-full justify-center text-sm text-gray-500 hover:text-gray-700 underline sm:w-auto sm:justify-start">
                     ← Back to Search
                 </a>
                 <button type="submit" id="saveBtn"
-                    class="px-6 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
+                    class="w-full px-6 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors sm:w-auto">
                     <span id="saveBtnText">Save Acquisition(s)</span>
                     <span id="saveBtnLoading" class="hidden">
                         <svg class="inline animate-spin h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24">

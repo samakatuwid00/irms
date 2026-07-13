@@ -190,7 +190,7 @@
                                 <tr class="hover:bg-gray-50 transition-colors">
                                     <td class="px-2 py-2">
                                         <img src="{{ $item->thumb_url }}" alt="cover"
-                                            class="w-14 h-18 object-cover rounded border border-gray-200 shadow-sm"
+                                            class="cover-img w-14 h-18 object-cover rounded border border-gray-200 shadow-sm"
                                             loading="lazy">
                                     </td>
                                     <td class="px-2 py-2 font-medium text-gray-900 max-w-75">
@@ -279,7 +279,7 @@
                                  onclick="(function(el){ var btn = el.querySelector('.view-resource-btn'); if(btn) btn.click(); })(this)">
                                 <div class="relative w-full" style="padding-bottom:140%;">
                                     <img src="{{ $item->thumb_url }}" alt="{{ $item->nonprintTitle->title ?? '' }}"
-                                         class="absolute inset-0 w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+                                         class="cover-img absolute inset-0 w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
                                          loading="lazy">
                                     <span class="absolute top-2 right-2 inline-flex items-center gap-1 bg-white/90 backdrop-blur-sm text-xs font-semibold px-2 py-0.5 rounded-full shadow text-purple-700">
                                         {{ $item->type->type_name ?? '' }}
@@ -306,8 +306,8 @@
                                         <span class="text-xs text-gray-400 truncate">{{ $item->version ?? '' }}</span>
                                         <a href="{{ route('nonprint-masterlist.edit', $item->id) }}"
                                            onclick="event.stopPropagation()"
-                                           class="inline-flex items-center gap-1 text-xs px-2 py-1 bg-blue-50 text-blue-600 border border-blue-200 rounded-lg hover:bg-blue-100 transition-colors font-medium">
-                                            <svg class="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                           class="inline-flex items-center gap-1.5 text-sm px-3 py-1.5 bg-blue-50 text-blue-600 border border-blue-200 rounded-lg hover:bg-blue-100 transition-colors font-medium shadow-sm">
+                                            <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16.862 4.487l1.687-1.687a1.875 1.875 0 112.652 2.652L7.5 19.153 3 21l1.847-4.5L16.862 4.487z"/>
                                             </svg>
                                             Edit
@@ -365,7 +365,7 @@
                                     <img id="npImagePreview"
                                         src="{{ $resource->cover ? asset('storage/' . $resource->cover) : asset('assets/images/def.jpg') }}"
                                         data-default-src="{{ $resource->cover ? asset('storage/' . $resource->cover) : asset('assets/images/def.jpg') }}"
-                                        alt="Image preview" class="w-full h-full object-cover rounded mb-4">
+                                        alt="Image preview" class="cover-img w-full h-full object-cover rounded mb-4">
                                 </div>
                                 <input type="file" name="image" id="npImageUpload" class="hidden"
                                     accept="image/*">
@@ -645,7 +645,7 @@
                                     <tr class="hover:bg-gray-50 transition-colors">
                                         <td class="px-3 py-2">
                                             <img src="{{ $req->thumb_url }}" alt="cover"
-                                                class="w-9 h-12 object-cover rounded border border-gray-200 shadow-sm"
+                                                class="cover-img w-9 h-12 object-cover rounded border border-gray-200 shadow-sm"
                                                 loading="lazy">
                                         </td>
                                         <td class="px-3 py-2 font-medium text-gray-900 max-w-40">
@@ -778,7 +778,7 @@
                                      onclick="(function(el){ var btn = el.querySelector('.view-resource-btn'); if(btn) btn.click(); })(this)">
                                     <div class="relative w-full" style="padding-bottom:140%;">
                                         <img src="{{ $req->thumb_url }}" alt="{{ $req->nonprintTitle->title ?? '' }}"
-                                             class="absolute inset-0 w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+                                             class="cover-img absolute inset-0 w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
                                              loading="lazy">
                                         <span class="absolute top-2 right-2 inline-flex items-center gap-1 bg-white/90 backdrop-blur-sm text-xs font-semibold px-2 py-0.5 rounded-full shadow text-purple-700">
                                             {{ $req->type->type_name ?? '' }}

@@ -208,6 +208,7 @@ class NonprintResource extends Model
             'image'        => $this->cover
                                 ? asset('storage/' . $this->cover)
                                 : asset('assets/images/default.jpg'),
+            'thumb_url'    => $this->thumb_url,
             'title'        => $this->nonprintTitle->title ?? 'N/A',
             'type'         => $this->type->type_name ?? '-',
             'brand'        => $this->brand ?? '-',

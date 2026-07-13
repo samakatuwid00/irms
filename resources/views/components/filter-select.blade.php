@@ -5,9 +5,10 @@
     'name'      => null,
     'maxWidth'  => '300px',
     'class'     => '',
+    'selectClass' => '',
 ])
 
-<div class="relative mb-4 {{ $class }}" style="max-width: {{ $maxWidth }}">
+<div class="relative {{ $class }}" style="max-width: {{ $maxWidth }}">
 
     {{-- Floating label --}}
     <label for="{{ $id }}"
@@ -22,7 +23,7 @@
         {{ $attributes->merge([
             'class' => 'w-full px-3 py-2 text-sm bg-gray-100 border border-black rounded-lg
                         focus:ring-2 focus:ring-indigo-400 focus:border-black
-                        hover:border-gray-700 transition appearance-none cursor-pointer pr-9'
+                        hover:border-gray-700 transition appearance-none cursor-pointer pr-9 ' . $selectClass
         ]) }}
     >
         {{-- Named slot: lets callers write raw <option> tags if preferred --}}

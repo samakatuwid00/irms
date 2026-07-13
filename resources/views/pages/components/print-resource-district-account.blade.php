@@ -1,4 +1,4 @@
-<form method="GET" data-ajax class="bg-white p-4 rounded-xl shadow space-y-4">
+<form method="GET" data-ajax class="space-y-4">
 
     @if(request()->has('school') && request('school') !== 'all')
         <div class="flex items-center gap-2 px-3 py-2 bg-blue-50 border border-blue-200 rounded-lg text-sm text-blue-700">
@@ -10,47 +10,57 @@
         </div>
     @endif
 
-    <!-- TOP ROW: Search -->
-    <div class="flex gap-3">
-        <div class="relative w-full">
-            <input type="text" name="search" placeholder="Search by Title, Author, ISBN, Publisher, Grade, Subject..."
-                value="{{ request('search') }}" class="w-full h-10 pl-10 pr-3 border rounded-lg text-sm">
-            <svg class="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-gray-400"
-                xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-width="2"
-                viewBox="0 0 24 24">
-                <circle cx="11" cy="11" r="8" />
-                <path d="m21 21-4.3-4.3" />
-            </svg>
+    <!-- Header + Search -->
+    <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+            <h3 class="text-base font-semibold text-gray-700">District Library Resources</h3>
+            <p class="text-xs text-gray-400 mt-0.5">Resources from all schools in your district.</p>
         </div>
-
-        <button type="submit" class="h-10 w-32 bg-blue-600 text-white rounded-lg">
-            Search
-        </button>
+        <div class="flex flex-col gap-2 sm:flex-row sm:items-center">
+            <div class="relative">
+                @include('pages.partials.search-input', [
+                    'name' => 'search',
+                    'placeholder' => 'Search title, author, ISBN...',
+                    'value' => request('search'),
+                ])
+            </div>
+            <button type="submit" class="px-6 py-3 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors">
+                Search
+            </button>
+        </div>
     </div>
 
-    <!-- SECOND ROW -->
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+    <!-- Filters Row -->
+    <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-end">
+        <div class="flex flex-col gap-3 sm:flex-row sm:items-center">
+            <div class="w-full sm:w-48">
+                <x-filter-select
+                    id="school"
+                    label="School"
+                    name="school"
+                    maxWidth="none"
+                    class="mb-0"
+                >
+                    <option value="all" {{ request('school') === 'all' ? 'selected' : '' }}>
+                        All Schools (this District)
+                    </option>
+                    @foreach ($schools as $school)
+                        <option value="{{ $school->id }}" {{ request('school') == $school->id ? 'selected' : '' }}>
+                            {{ $school->school_name }}
+                        </option>
+                    @endforeach
+                </x-filter-select>
+            </div>
 
-        <select name="school" id="school" class="h-10 border px-3 rounded-lg">
-            <option value="all" {{ request('school') === 'all' ? 'selected' : '' }}>
-                All Schools (this District)
-            </option>
-            @foreach ($schools as $school)
-                <option value="{{ $school->id }}" {{ request('school') == $school->id ? 'selected' : '' }}>
-                    {{ $school->school_name }}
-                </option>
-            @endforeach
-        </select>
-
-        <div class="flex gap-3">
-            <button type="submit" class="h-10 w-32 bg-blue-600 text-white rounded-lg">
-                Load Data
-            </button>
-
-            <button type="button" id="resetFilters"
-                class="h-10 w-32 bg-gray-200 hover:bg-gray-300 text-sm text-gray-800 rounded-lg">
-                Reset
-            </button>
+            <div class="flex gap-2">
+                <button type="submit" class="px-6 py-3 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors">
+                    Load Data
+                </button>
+                <button type="button" id="resetFilters"
+                    class="px-6 py-3 bg-gray-200 hover:bg-gray-300 text-sm font-medium text-gray-800 rounded-lg transition-colors">
+                    Reset
+                </button>
+            </div>
         </div>
     </div>
 
@@ -63,61 +73,15 @@
 <div id="table-results-container">
     @if (request()->has('school'))
 
-        <!-- Toolbar: Export + Per Page + View Toggle -->
-        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mt-4">
-            
-            <!-- Export Button -->
-            <a href="{{ route('print-resources.export', request()->query()) }}"
-                class="inline-flex items-center justify-center sm:justify-start gap-2 px-5 py-2.5 bg-green-600 hover:bg-green-700 text-white rounded-xl transition-colors text-sm font-medium w-full sm:w-auto">
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                        d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                </svg>
-                <span class="hidden xs:inline">Export to Excel</span>
-                <span class="xs:hidden">Export to Excel</span>
-            </a>
-
-            <div class="flex items-center justify-between sm:justify-end gap-3 w-full sm:w-auto">
-                
-                <!-- Per Page Selector -->
-                <div class="flex items-center gap-2 text-sm text-gray-600">
-                    <label for="district-per-page" class="whitespace-nowrap font-medium hidden sm:inline">Show entries:</label>
-                    <label for="district-per-page" class="whitespace-nowrap font-medium sm:hidden">Show:</label>
-                    <select id="district-per-page"
-                        class="per-page-select border border-gray-300 rounded-xl px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
-                        data-context="default">
-                        @foreach ($perPageOptions as $opt)
-                            <option value="{{ $opt }}" {{ $perPage == $opt ? 'selected' : '' }}>{{ $opt }}</option>
-                        @endforeach
-                    </select>
-                </div>
-
-                <!-- View Toggle Buttons -->
-                <div class="flex items-center bg-gray-100 p-1 rounded-xl">                               
-                
-                    <button type="button"
-                        class="view-toggle-btn px-4 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-1.5 text-gray-500 hover:text-gray-700"
-                        data-view="card">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
-                        </svg>
-                        <span class="hidden md:inline">Cards</span>
-                    </button>
-                    
-                    <button type="button"
-                        class="view-toggle-btn px-4 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-1.5 bg-white shadow text-blue-600"
-                        data-view="table">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                d="M3 10h18M3 6h18M3 14h18M3 18h18" />
-                        </svg>
-                        <span class="hidden md:inline">Table</span>
-                    </button>
-                    
-                </div>
-            </div>
-        </div>
+        @include('pages.partials.resource-toolbar', [
+            'exportHref' => route('print-resources.export', request()->query()),
+            'perPageId' => 'district-per-page',
+            'perPage' => $perPage,
+            'perPageOptions' => $perPageOptions,
+            'context' => 'default',
+            'target' => null,
+            'activeView' => request('view', 'card'),
+        ])
 
         <!-- ── TABLE VIEW ── -->
         <div id="table-view" class="bg-white rounded-xl shadow overflow-hidden mt-4">
@@ -151,7 +115,7 @@
                                     <img 
                                         src="{{ $item->thumb_url }}" 
                                         alt="{{ $item->printTitle->title }}"
-                                        class="w-12 h-16 object-cover rounded shadow cursor-pointer hover:scale-105 transition-transform duration-200"
+                                        class="cover-img w-12 h-16 object-cover rounded shadow cursor-pointer hover:scale-105 transition-transform duration-200"
                                         loading="lazy"
                                         onclick='openPrintModal(@json($item->showDetails($filteredLibraryIds)))'
                                         title="Click to view details">
@@ -260,63 +224,71 @@
         <!-- ── CARD VIEW ── -->
         <div id="card-view" class="hidden mt-4">
             <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-                @forelse ($filteredResources as $item)
-                    @php
-                        $authors = $item->printTitle->authors->pluck('author_name')->join(', ');
-                        $qty = $item->scopedQuantities($filteredLibraryIds);
-                        $total = array_sum($qty);
-                    @endphp
-                    <div class="bg-white rounded-xl shadow overflow-hidden flex flex-col cursor-pointer group"
-                         onclick='openPrintModal(@json($item->showDetails($filteredLibraryIds)))'>
+                @if ($filteredResources->count() > 0)
+                    @foreach ($filteredResources as $item)
+                        @php
+                            $authors = $item->printTitle->authors->pluck('author_name')->join(', ');
+                            $qty = $item->scopedQuantities($filteredLibraryIds);
+                            $total = array_sum($qty);
+                        @endphp
+                        <div class="bg-white rounded-xl shadow overflow-hidden flex flex-col cursor-pointer group"
+                             onclick='openPrintModal(@json($item->showDetails($filteredLibraryIds)))'>
 
-                        <!-- Cover image -->
-                        <div class="relative w-full" style="padding-bottom: 140%;">
-                            <img src="{{ $item->thumb_url }}" alt="{{ $item->printTitle->title }}"
-                                class="absolute inset-0 w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
-                                loading="lazy">
+                            <!-- Cover image -->
+                            <div class="relative w-full" style="padding-bottom: 140%;">
+                                <img src="{{ $item->thumb_url }}" alt="{{ $item->printTitle->title }}"
+                                    class="cover-img absolute inset-0 w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+                                    loading="lazy">
 
-                            <!-- Total copies dot badge -->
-                            <span class="absolute top-2 right-2 inline-flex items-center gap-1 bg-white/90 backdrop-blur-sm text-xs font-semibold px-2 py-0.5 rounded-full shadow
-                                {{ $qty['usable'] > 0 ? 'text-green-700' : 'text-red-600' }}">
-                                <span class="w-1.5 h-1.5 rounded-full inline-block {{ $qty['usable'] > 0 ? 'bg-green-500' : 'bg-red-500' }}"></span>
-                                {{ $total }}
-                            </span>
-                        </div>
-
-                        <!-- Card footer info -->
-                        <div class="p-3 flex flex-col gap-1 flex-1">
-                            <h3 class="text-xs font-semibold text-gray-900 leading-tight line-clamp-2 inline-flex items-start gap-1">
-                                @include('pages.components.verified-badge', ['verified' => $item->verified, 'class' => 'w-3.5 h-3.5 text-blue-600 shrink-0 mt-0.5'])
-                                <span>{{ $item->printTitle->title }}</span>
-                            </h3>
-                            @if ($authors)
-                                <p class="text-xs text-gray-500 truncate">{{ $authors }}</p>
-                            @endif
-                            <div class="mt-auto pt-2 flex items-center justify-between gap-1">
-                                <span class="px-1.5 py-0.5 text-xs rounded bg-blue-50 text-blue-700 font-medium truncate max-w-[70%]">
-                                    {{ $item->type->shortname }}
+                                <!-- Total copies dot badge -->
+                                <span class="absolute top-2 right-2 inline-flex items-center gap-1 bg-white/90 backdrop-blur-sm text-xs font-semibold px-2 py-0.5 rounded-full shadow
+                                    {{ $qty['usable'] > 0 ? 'text-green-700' : 'text-red-600' }}">
+                                    <span class="w-1.5 h-1.5 rounded-full inline-block {{ $qty['usable'] > 0 ? 'bg-green-500' : 'bg-red-500' }}"></span>
+                                    {{ $total }}
                                 </span>
-                                <span class="text-xs text-gray-400 whitespace-nowrap">{{ $total }} copies</span>
+                            </div>
+
+                            <!-- Card footer info -->
+                            <div class="p-3 flex flex-col gap-1 flex-1">
+                                <h3 class="text-xs font-semibold text-gray-900 leading-tight line-clamp-2 inline-flex items-start gap-1">
+                                    @include('pages.components.verified-badge', ['verified' => $item->verified, 'class' => 'w-3.5 h-3.5 text-blue-600 shrink-0 mt-0.5'])
+                                    <span>{{ $item->printTitle->title }}</span>
+                                </h3>
+                                @if ($authors)
+                                    <p class="text-xs text-gray-500 truncate">{{ $authors }}</p>
+                                @endif
+                                <div class="mt-auto pt-2 flex items-center justify-between gap-1">
+                                    <span class="px-1.5 py-0.5 text-xs rounded bg-blue-50 text-blue-700 font-medium truncate max-w-[70%]">
+                                        {{ $item->type->shortname }}
+                                    </span>
+                                    <span class="text-xs text-gray-400 whitespace-nowrap">{{ $total }} copies</span>
+                                </div>
                             </div>
                         </div>
+                    @endforeach
+                    @if ($filteredResources instanceof \Illuminate\Pagination\LengthAwarePaginator)
+                        <div class="col-span-full p-4">
+                            {{ $filteredResources->appends(request()->query())->links('pagination::print-resource') }}
+                        </div>
+                    @endif
+                @else
+                    <div class="col-span-full text-center py-16 text-gray-400">
+                        <svg class="mx-auto mb-4 h-14 w-14 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/>
+                        </svg>
+                        <p class="font-medium">No resources found.</p>
                     </div>
-                @empty
-                    <div class="col-span-full bg-white rounded-xl shadow p-8 text-center text-gray-500">
-                        No resources found.
-                    </div>
-                @endforelse
+                @endif
             </div>
-
-            @if ($filteredResources instanceof \Illuminate\Pagination\LengthAwarePaginator)
-                <div class="bg-white rounded-xl shadow p-4 mt-4">
-                    {{ $filteredResources->appends(request()->query())->links('pagination::print-resource') }}
-                </div>
-            @endif
         </div>
 
     @else
-        <div class="bg-white p-6 rounded-xl shadow text-center text-gray-600 mt-4">
-            Select a school (or All Schools) and click "Load Data" to view school library resources.
+        <div class="text-center py-16 text-gray-400">
+            <svg class="mx-auto mb-4 h-14 w-14 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/>
+            </svg>
+            <p class="font-medium">Start by loading data to view records</p>
+            <p class="text-sm mt-1">Select a school (or All Schools) and click "Load Data" to view school library resources.</p>
         </div>
     @endif
 </div>
