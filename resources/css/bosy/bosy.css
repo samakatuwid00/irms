@@ -427,3 +427,118 @@
     .bosy-logo.bosy-logo-loaded {
         opacity: 1;
     }
+
+/* Dark mode */
+.dark .bosy-search-bar {
+    background: #0f172a;
+    border-color: #475569;
+}
+
+.dark .bosy-search-bar:focus-within {
+    background: #111827;
+    border-color: #93c5fd;
+    box-shadow: 0 0 0 3px rgba(147, 197, 253, 0.16);
+}
+
+.dark .bosy-search-input {
+    color: #f8fafc;
+}
+
+.dark .bosy-search-input::placeholder {
+    color: #94a3b8;
+}
+
+.dark .bosy-search-icon,
+.dark .bosy-search-clear {
+    color: #cbd5e1;
+}
+
+.dark .bosy-search-clear {
+    background: #334155;
+}
+
+.dark .bosy-search-clear:hover {
+    background: #475569;
+    color: #f8fafc;
+}
+
+.dark .bosy-search-count {
+    color: #bfdbfe;
+    background: rgba(37, 99, 235, 0.28);
+}
+
+.dark .bosy-x-scroll-wrapper::-webkit-scrollbar-track,
+.dark .bosy-scroll-container::-webkit-scrollbar-track {
+    background: #111827;
+}
+
+.dark .bosy-x-scroll-wrapper::-webkit-scrollbar-thumb,
+.dark .bosy-scroll-container::-webkit-scrollbar-thumb {
+    background: #475569;
+}
+
+.dark .bosy-x-scroll-wrapper::-webkit-scrollbar-thumb:hover,
+.dark .bosy-scroll-container::-webkit-scrollbar-thumb:hover {
+    background: #64748b;
+}
+
+.dark .bosy-item {
+    transition: background-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.dark .bosy-item:hover {
+    background-color: rgba(30, 41, 59, 0.88);
+    box-shadow: inset 0 0 0 1px rgba(96, 165, 250, 0.14);
+}
+
+.dark .bosy-division-item:hover {
+    background-color: #1e293b;
+}
+
+.dark .bosy-col-bar > div {
+    background-color: #020617 !important;
+    border: 1px solid rgba(100, 116, 139, 0.78);
+    box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.5);
+}
+
+.dark .bosy-col-bar > div > div {
+    box-shadow: 0 0 12px rgba(96, 165, 250, 0.22);
+}
+
+.dark .bosy-logo {
+    background-color: #0f172a !important;
+    border-color: #475569 !important;
+}
+
+.dark .status-complete {
+    background-color: rgba(22, 101, 52, 0.28);
+    color: #bbf7d0;
+    border-color: rgba(134, 239, 172, 0.42);
+}
+
+.dark .status-review,
+.dark .status-advanced,
+.dark .status-progress,
+.dark .status-partial {
+    background-color: #334155;
+    color: #e2e8f0;
+    border-color: #64748b;
+}
+
+.dark .status-ongoing {
+    background-color: rgba(30, 64, 175, 0.32);
+    color: #bfdbfe;
+    border-color: rgba(147, 197, 253, 0.45);
+}
+
+.dark .status-pending {
+    background-color: rgba(146, 64, 14, 0.32);
+    color: #fde68a;
+    border-color: rgba(252, 211, 77, 0.45);
+}
+
+.dark .status-no-population {
+    background-color: rgba(153, 27, 27, 0.32);
+    color: #fecaca;
+    border-color: rgba(252, 165, 165, 0.45);
+}

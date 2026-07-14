@@ -45,6 +45,36 @@ class LibraryScopeService
         });
     }
 
+    /**
+     * Get only school library IDs within the same account scope.
+     *
+     * Regional and division dashboards use this when the UI hides Division
+     * Library Hub data but still needs all school LR data in scope.
+     */
+    public function getAllowedSchoolLibraryIds(?string $explicitLibraryId, int $userLevel, ?string $stationId): Collection
+    {
+        if ($explicitLibraryId !== null && $explicitLibraryId !== '') {
+            return SchoolLibrary::where('id', $explicitLibraryId)->pluck('id');
+        }
+
+        if (!$stationId || $userLevel === 0) {
+            return collect();
+        }
+
+        $cacheKey = "school_library_scope_{$userLevel}_{$stationId}";
+        $ttl = 3600 * 4;
+
+        return Cache::remember($cacheKey, $ttl, function () use ($userLevel, $stationId) {
+            return match ($userLevel) {
+                1 => $this->getSchoolLibraries($stationId),
+                2 => $this->getDistrictLibraries($stationId),
+                3 => $this->getDivisionSchoolLibraries($stationId),
+                4 => $this->getRegionSchoolLibraries($stationId),
+                default => collect(),
+            };
+        });
+    }
+
     // ← NEW: Add this method
     private function getDistrictLibraries(string $districtId): Collection
     {
@@ -68,6 +98,14 @@ class LibraryScopeService
         return $ownLibs->merge($schoolLibs);
     }
 
+    private function getDivisionSchoolLibraries(string $divisionId): Collection
+    {
+        $districtIds = District::where('division_id', $divisionId)->pluck('id');
+        $schoolIds = School::whereIn('district_id', $districtIds)->pluck('id');
+
+        return SchoolLibrary::whereIn('school_id', $schoolIds)->pluck('id');
+    }
+
     private function getRegionLibraries(string $regionId): Collection
     {
         $regionLibs = RegionLibrary::where('region_id', $regionId)->pluck('id');
@@ -80,5 +118,14 @@ class LibraryScopeService
         $schoolLibs = SchoolLibrary::whereIn('school_id', $schoolIds)->pluck('id');
 
         return $regionLibs->merge($divisionLibs)->merge($schoolLibs);
+    }
+
+    private function getRegionSchoolLibraries(string $regionId): Collection
+    {
+        $divisionIds = Division::where('region_id', $regionId)->pluck('id');
+        $districtIds = District::whereIn('division_id', $divisionIds)->pluck('id');
+        $schoolIds = School::whereIn('district_id', $districtIds)->pluck('id');
+
+        return SchoolLibrary::whereIn('school_id', $schoolIds)->pluck('id');
     }
 }

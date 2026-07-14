@@ -1,5 +1,16 @@
 // ratio.js
 
+import {
+    applyChartTheme,
+    bindChartTheme,
+    chartFullscreenBackground,
+    chartLoadingOptions,
+    themedDataViewStyles,
+    themedErrorHtml,
+    themedNoDataHtml,
+} from './theme';
+import { applySchoolOnlyParam, bindDivisionHubToggle } from './source-filter';
+
 const KEY_STAGE_RANGES = {
     'K1': ['Kindergarten', 'Grade 1', 'Grade 2', 'Grade 3'],
     'K2': ['Grade 4', 'Grade 5', 'Grade 6'],
@@ -113,7 +124,7 @@ function filterAndRenderRatioChart(keyStage) {
     const filteredPop       = filteredGrades.map(g => population[g] || 0);
     const filteredRatioDummy = new Array(filteredGrades.length).fill(0);
 
-    _ratioChart.setOption({
+    _ratioChart.setOption(applyChartTheme({
         yAxis: { data: filteredGrades },
         series: [
             { name: 'Total LR', data: filteredDirect },
@@ -140,20 +151,20 @@ function filterAndRenderRatioChart(keyStage) {
                             return `${Math.round(lrCount / pop).toLocaleString()} : 1`;
                         }
                     },
-                    color: '#333',
+                    color: document.documentElement.classList.contains('dark') ? '#e2e8f0' : '#333',
                     fontSize: 13,
                     fontWeight: 'bold'
                 }
             }
         ]
-    });
+    }));
 }
 
 async function fetchRatioData() {
     const printTypeSelect = document.getElementById('printTypeFilter');
     const printTypeId = printTypeSelect ? printTypeSelect.value : '';
 
-    const url = new URL('/chart/lr-ratio', window.location.origin);
+    const url = applySchoolOnlyParam(new URL('/chart/lr-ratio', window.location.origin));
     if (printTypeId) url.searchParams.set('print_type_id', printTypeId);
 
     const response = await fetch(url.toString(), {
@@ -171,7 +182,7 @@ function buildRatioOption(chartData, chartDom, myChart) {
     const directData = chartData.directData || [];
     const mailData   = chartData.mailData   || [];
 
-    const option = {
+    const option = applyChartTheme({
         tooltip: {
             trigger: 'axis',
             axisPointer: { type: 'shadow' },
@@ -201,41 +212,10 @@ function buildRatioOption(chartData, chartDom, myChart) {
                     // === Excel-style Table ===
                     optionToContent: function (opt) {
                         const data = getCurrentRatioData();
-                        if (!data) return '<div style="padding:20px;color:#666;">No data available</div>';
+                        if (!data) return themedNoDataHtml();
 
                         let tableHTML = `
-                            <style>
-                                #ratio-excel-table {
-                                    width: 100%;
-                                    border-collapse: collapse;
-                                    font-family: 'Segoe UI', Arial, sans-serif;
-                                    font-size: 14px;
-                                    margin: 10px 0;
-                                    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-                                }
-                                #ratio-excel-table th, #ratio-excel-table td {
-                                    border: 1px solid #999;
-                                    padding: 10px 12px;
-                                    text-align: center;
-                                    white-space: nowrap;
-                                }
-                                #ratio-excel-table th {
-                                    background: linear-gradient(#f8f8f8, #e8e8e8);
-                                    font-weight: bold;
-                                    color: #333;
-                                    position: sticky;
-                                    top: 0;
-                                    z-index: 1;
-                                }
-                                #ratio-excel-table tr:nth-child(even) {
-                                    background-color: #f9f9f9;
-                                }
-                                #ratio-excel-table td:first-child {
-                                    font-weight: bold;
-                                    background-color: #f0f0f0;
-                                    text-align: left;
-                                }
-                            </style>
+                            ${themedDataViewStyles('ratio-excel-table')}
                             <table id="ratio-excel-table">
                                 <thead>
                                     <tr>
@@ -293,7 +273,7 @@ function buildRatioOption(chartData, chartDom, myChart) {
                     onclick: function () {
                         if (!document.fullscreenElement) {
                             chartDom.dataset.originalBg = chartDom.style.backgroundColor || '';
-                            chartDom.style.backgroundColor = '#ffffff';
+                            chartDom.style.backgroundColor = chartFullscreenBackground();
                             chartDom.requestFullscreen()
                                 .then(() => myChart.resize())
                                 .catch(err => {
@@ -377,7 +357,7 @@ function buildRatioOption(chartData, chartDom, myChart) {
                 data: new Array(grades.length).fill(0)
             }
         ]
-    };
+    });
 
     return { option, grades, population, directData, mailData };
 }
@@ -389,7 +369,7 @@ async function reloadRatioChart() {
     const chartDom = document.getElementById('main');
     window.DashboardChartLoading?.show(chartDom);
 
-    _ratioChart.showLoading({ text: 'Loading…', maskColor: 'rgba(255,255,255,0.7)' });
+    _ratioChart.showLoading(chartLoadingOptions('Loading...'));
 
     try {
         const chartData = await fetchRatioData();
@@ -439,6 +419,14 @@ async function initRatioChart() {
         myChart.setOption(option);
         window.ratioChart = myChart;
 
+        bindChartTheme(myChart, () => {
+            if (!_ratioFullData) return;
+            const rebuilt = buildRatioOption(_ratioFullData, chartDom, myChart);
+            myChart.setOption(rebuilt.option, true);
+            const currentKsSelect = document.getElementById('schoolYearFilter');
+            if (currentKsSelect) filterAndRenderRatioChart(currentKsSelect.value);
+        });
+
         const ksSelect = document.getElementById('schoolYearFilter');
         if (ksSelect) {
             filterAndRenderRatioChart(ksSelect.value);
@@ -458,6 +446,12 @@ async function initRatioChart() {
             });
         }
 
+        bindDivisionHubToggle(() => {
+            reloadRatioChart();
+        });
+
+        if (window.registerChart) window.registerChart('main', myChart);
+
         const resizeObserver = new ResizeObserver(() => myChart.resize());
         resizeObserver.observe(chartDom);
 
@@ -471,7 +465,7 @@ async function initRatioChart() {
     } catch (err) {
         console.error('Failed to initialize LR Ratio chart:', err);
         if (chartDom) {
-            chartDom.innerHTML = '<div style="text-align:center; padding:50px;">Failed to load chart data</div>';
+            chartDom.innerHTML = themedErrorHtml('Failed to load chart data');
         }
         window.DashboardChartLoading?.hide(chartDom);
     }

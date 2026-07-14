@@ -1,4 +1,10 @@
 // lr.js
+import {
+    applyChartTheme,
+    bindChartTheme,
+    chartFullscreenBackground,
+} from './theme';
+
 async function initLRChart() {
     const chartDom = document.getElementById('lr');
     if (!chartDom) {
@@ -45,7 +51,7 @@ async function initLRChart() {
             };
         });
 
-        const option = {
+        const option = applyChartTheme({
             tooltip: {
                 trigger: 'axis',
                 axisPointer: {
@@ -77,7 +83,7 @@ async function initLRChart() {
                         onclick: function () {
                             if (!document.fullscreenElement) {
                                 chartDom.dataset.originalBg = chartDom.style.backgroundColor || '';
-                                chartDom.style.backgroundColor = '#ffffff';
+                                chartDom.style.backgroundColor = chartFullscreenBackground();
                                 chartDom.requestFullscreen()
                                     .then(() => myChart.resize())
                                     .catch(err => {
@@ -106,9 +112,10 @@ async function initLRChart() {
                 data: ['School 1', 'School 2', 'School 3', 'School 4', 'School 5', 'School 6', 'School 7']
             },
             series
-        };
+        });
 
         myChart.setOption(option);
+        bindChartTheme(myChart, () => myChart.setOption(applyChartTheme(option), true));
 
         // Register the chart instance so controller can resize it after show
         if (window.registerChart) {

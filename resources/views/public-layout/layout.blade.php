@@ -7,6 +7,22 @@
     <link rel="icon" type="image/png" href="{{ asset('assets/images/logo.png') }}">
     <link rel="apple-touch-icon" href="{{ asset('assets/images/logo.png') }}">
 
+    <script>
+        (function () {
+            try {
+                var stored = localStorage.getItem('lrmis.theme');
+                var theme = stored === 'dark' || stored === 'light'
+                    ? stored
+                    : (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+
+                document.documentElement.classList.toggle('dark', theme === 'dark');
+                document.documentElement.setAttribute('data-theme', theme);
+            } catch (e) {
+                document.documentElement.setAttribute('data-theme', 'light');
+            }
+        })();
+    </script>
+
     <!-- Tailwind -->
     @vite(['resources/css/app.css', 'resources/js/app.js'])
     <!-- Font Awesome -->
@@ -40,7 +56,11 @@
     @stack('styles')
 </head>
 
-<body class="bg-gradient-to-br from-[#A0F0FF] via-[#B0C8E0] to-[#FFB49A] text-gray-900 font-sans min-h-screen flex flex-col">
+<body class="bg-gradient-to-br from-[#A0F0FF] via-[#B0C8E0] to-[#FFB49A] text-gray-900 font-sans min-h-screen flex flex-col dark:from-slate-950 dark:via-slate-900 dark:to-slate-800 dark:text-slate-100">
+
+    <div class="fixed right-4 top-4 z-50">
+        <x-theme-toggle compact class="h-10 w-10 px-0" />
+    </div>
 
     {{-- Page Content --}}
     <main class="flex-1 flex items-center justify-center px-4 py-12">

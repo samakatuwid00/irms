@@ -7,12 +7,27 @@
     <link rel="icon" type="image/png" href="{{ asset('assets/images/logo.png') }}">
     <link rel="apple-touch-icon" href="{{ asset('assets/images/logo.png') }}">
 
+    <script>
+        (function () {
+            try {
+                var stored = localStorage.getItem('lrmis.theme');
+                var theme = stored === 'dark' || stored === 'light'
+                    ? stored
+                    : (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+
+                document.documentElement.classList.toggle('dark', theme === 'dark');
+                document.documentElement.setAttribute('data-theme', theme);
+            } catch (e) {
+                document.documentElement.setAttribute('data-theme', 'light');
+            }
+        })();
+    </script>
+
     <!-- echarts -->
     @vite(['resources/js/charts/availability.js'])
     @vite(['resources/js/charts/ratio.js'])
     @vite(['resources/js/charts/lr.js'])
     @vite(['resources/js/charts/exdef.js'])
-    @vite(['resources/js/charts/heatmap.js'])
     @vite(['resources/js/charts/visualization.js'])
     @vite(['resources/js/charts/bosy.js'])
     @vite(['resources/css/bosy/bosy.css'])
@@ -57,20 +72,9 @@
             max-height: calc(100vh - 64px);
         }
 
-        /* Page-specific skeleton animation */
-        @keyframes pageSkeletonShimmer {
-            0%   { background-position: 200% 0; }
-            100% { background-position: -200% 0; }
-        }
         @keyframes pageSkeletonIn {
             from { opacity: 0; }
             to   { opacity: 1; }
-        }
-        .page-skeleton-block {
-            background: linear-gradient(90deg, #f1f5f9 25%, #e2e8f0 50%, #f1f5f9 75%);
-            background-size: 200% 100%;
-            animation: pageSkeletonShimmer 1.5s ease-in-out infinite;
-            border-radius: 6px;
         }
 
         /* Correct sidebar width from the very first paint — zero layout shift */
@@ -119,7 +123,7 @@
     </script>
     @stack('styles')
 </head>
-<body class="bg-gray-100">
+<body class="bg-gray-100 text-gray-900 dark:bg-slate-950 dark:text-slate-100">
 
     <!-- Mobile Top Navigation Bar -->
     <nav class="md:hidden fixed top-0 left-0 right-0 z-50 bg-white shadow-lg">
@@ -130,15 +134,17 @@
                 <img
                     src="{{ asset('assets/images/logo.png') }}"
                     alt="iRIMS-V Logo"
-                    class="w-8 h-8 object-contain"
+                    class="brand-logo-img w-8 h-8 object-contain"
                 />
                 <h2 class="text-lg font-bold tracking-wide">
-                    <span class="text-[#0AC4E0]">i</span><span class="text-[#1A3263]">RIMS-</span><span class="text-[#DA3D20]">V</span>
+                    <span class="text-[#0AC4E0]">i</span><span class="brand-main text-[#1A3263]">RIMS-</span><span class="text-[#DA3D20]">V</span>
                 </h2>
             </div>
 
             <!-- User Avatar and Menu Toggle -->
             <div class="flex items-center gap-3">
+                <x-theme-toggle compact class="h-9 w-9 px-0" />
+
                 <img class="w-8 h-8 rounded-full border-2 border-gray-200"
                      src="{{ auth()->user()->photo ? asset('storage/' . auth()->user()->photo) : asset('assets/images/default.jpg') }}"
                      alt="User Avatar">
@@ -579,19 +585,27 @@
                  :class="collapsed ? 'flex-col gap-3 py-4 px-2' : 'justify-between'">
                 <div class="flex items-center gap-3">
                     <img src="{{ asset('assets/images/logo.png') }}" alt="iRIMS-V Logo"
-                         class="w-10 h-10 object-contain shrink-0">
+                         class="brand-logo-img w-10 h-10 object-contain shrink-0">
                     <h2 x-show="!collapsed" x-cloak x-transition.opacity.duration.200ms
                         class="text-xl font-bold tracking-wide whitespace-nowrap">
-                        <span class="text-[#0AC4E0]">i</span><span class="text-[#1A3263]">RIMS-</span><span class="text-[#DA3D20]">V</span>
+                        <span class="text-[#0AC4E0]">i</span><span class="brand-main text-[#1A3263]">RIMS-</span><span class="text-[#DA3D20]">V</span>
                     </h2>
                 </div>
-                <button @click="toggleSidebar()" aria-label="Toggle sidebar"
-                        class="flex items-center justify-center w-8 h-8 rounded-lg
-                               hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors">
-                    <svg :class="collapsed ? 'rotate-180' : ''"
-                         class="w-5 h-5 transition-transform duration-300"
-                         fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 19l-7-7 7-7m8 14l-7-7 7-7"/>
+                <button @click="toggleSidebar()"
+                        class="sidebar-collapse-button flex items-center justify-center w-10 h-10 rounded-lg hover:bg-gray-100 text-gray-500 hover:text-gray-700 transition-[color,background-color,transform] duration-150 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        aria-controls="desktop-sidebar"
+                        :aria-expanded="(!collapsed).toString()"
+                        :aria-label="collapsed ? 'Expand sidebar' : 'Collapse sidebar'"
+                        :title="collapsed ? 'Expand sidebar' : 'Collapse sidebar'">
+                    <svg x-show="!collapsed" x-cloak class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"
+                         stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <rect width="18" height="18" x="3" y="3" rx="2"/>
+                        <path d="M9 3v18M16 15l-3-3 3-3"/>
+                    </svg>
+                    <svg x-show="collapsed" x-cloak class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"
+                         stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <rect width="18" height="18" x="3" y="3" rx="2"/>
+                        <path d="M9 3v18M14 9l3 3-3 3"/>
                     </svg>
                 </button>
             </div>
@@ -1086,6 +1100,14 @@
             <!-- User Menu -->
             <footer class="shrink-0 border-t border-gray-300 p-2 mb-5 relative"
                     x-data="{ accountOpen: false }" @click.outside="accountOpen = false">
+
+                <div x-show="collapsed" x-cloak class="mb-2 flex justify-center">
+                    <x-theme-toggle compact class="h-10 w-10 px-0" />
+                </div>
+
+                <div x-show="!collapsed" x-cloak class="mb-2">
+                    <x-theme-toggle class="w-full justify-start" />
+                </div>
 
                 {{-- ── COLLAPSED: avatar-only button + fixed portal flyout ──
                      The dropdown is teleported to <body> via x-teleport so it

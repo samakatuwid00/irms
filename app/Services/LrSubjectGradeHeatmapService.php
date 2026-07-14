@@ -14,17 +14,18 @@ class LrSubjectGradeHeatmapService
         private readonly SchoolDashboardCurriculumScopeService $curriculumScopeService,
     ) {}
 
-    public function getHeatmapData(?string $explicitLibraryId, int $userLevel, ?string $stationId, ?string $printTypeId = null): array
+    public function getHeatmapData(?string $explicitLibraryId, int $userLevel, ?string $stationId, ?string $printTypeId = null, bool $schoolOnly = false): array
     {
         $cacheKey = 'heatmap_chart_' . sha1(json_encode([
             $explicitLibraryId,
             $userLevel,
             $stationId,
             $printTypeId,
+            $schoolOnly,
             session('dashboard_chart_cache_version'),
         ]));
 
-        return Cache::remember($cacheKey, 3600, function () use ($explicitLibraryId, $userLevel, $stationId, $printTypeId) {
+        return Cache::remember($cacheKey, 3600, function () use ($explicitLibraryId, $userLevel, $stationId, $printTypeId, $schoolOnly) {
         $curriculumScope = $this->curriculumScopeService->resolve($userLevel, $stationId);
         $gradeLevels = $curriculumScope['grade_levels'];
 
@@ -52,6 +53,7 @@ class LrSubjectGradeHeatmapService
             'station_id'    => $stationId,
             'explicit_library' => $explicitLibraryId,
             'print_type_id' => $printTypeId ?: 'all',
+            'school_only'   => $schoolOnly,
             'using_mv'      => false,
             'source'        => 'live_query_direct_schema'
         ]);
@@ -60,7 +62,8 @@ class LrSubjectGradeHeatmapService
             $explicitLibraryId, $userLevel, $stationId, $printTypeId,
             $subjects, $gradeLevels, $subjectIndexMap, $gradeIndexMap,
             $curriculumScope['subject_grade_pairs'],
-            $curriculumScope['is_school_scoped']
+            $curriculumScope['is_school_scoped'],
+            $schoolOnly
         );
 
         $libraryScope = match ($userLevel) {
@@ -78,12 +81,13 @@ class LrSubjectGradeHeatmapService
                 ->toArray(),
             'y_axis'        => $gradeLevels->pluck('grade')->toArray(),
             'series_data'   => $heatmapData,
-            'library_scope' => $explicitLibraryId ? 'single_library' : $libraryScope,
+            'library_scope' => $schoolOnly ? 'school_libraries_only' : ($explicitLibraryId ? 'single_library' : $libraryScope),
             'library_id'    => $explicitLibraryId ?: 'auto',
             'station_id'    => $stationId,
             'min_value'     => 0,
             'max_value'     => $this->getApproximateMax($heatmapData),
             'print_type_id' => $printTypeId,
+            'school_only'   => $schoolOnly,
             'using_mv'      => false,
             'user_level'    => $userLevel,
             'source'        => 'live_query_direct_schema',
@@ -102,11 +106,12 @@ class LrSubjectGradeHeatmapService
         array   $subjectIndexMap,
         array   $gradeIndexMap,
         Collection $subjectGradePairs,
-        bool    $isSchoolCurriculumScoped
+        bool    $isSchoolCurriculumScoped,
+        bool    $schoolOnly = false
     ): array {
-        $allowedLibraryIds = $this->libraryScopeService->getAllowedLibraryIds(
-            $explicitLibraryId, $userLevel, $stationId
-        );
+        $allowedLibraryIds = $schoolOnly
+            ? $this->libraryScopeService->getAllowedSchoolLibraryIds($explicitLibraryId, $userLevel, $stationId)
+            : $this->libraryScopeService->getAllowedLibraryIds($explicitLibraryId, $userLevel, $stationId);
 
         $libraryIds = $allowedLibraryIds?->values()->toArray() ?? [];
 
@@ -115,6 +120,7 @@ class LrSubjectGradeHeatmapService
             'station_id'    => $stationId,
             'explicit_library' => $explicitLibraryId,
             'print_type_id' => $printTypeId ?: 'all',
+            'school_only'   => $schoolOnly,
             'library_count' => count($libraryIds),
         ]);
 

@@ -1,5 +1,16 @@
 // availability.js
 
+import {
+    applyChartTheme,
+    bindChartTheme,
+    chartFullscreenBackground,
+    chartLoadingOptions,
+    themedDataViewStyles,
+    themedErrorHtml,
+    themedNoDataHtml,
+} from './theme';
+import { applySchoolOnlyParam, bindDivisionHubToggle } from './source-filter';
+
 // Key Stage grade index ranges
 const KEY_STAGE_RANGES = {
     'K1': { label: 'Kindergarten', grades: ['Kindergarten', 'Grade 1', 'Grade 2', 'Grade 3'] },
@@ -134,7 +145,7 @@ async function fetchAvailabilityData() {
     const printTypeSelect = document.getElementById('printTypeFilter');
     const printTypeId = printTypeSelect ? printTypeSelect.value : '';
 
-    const url = new URL('/chart/lr-availability', window.location.origin);
+    const url = applySchoolOnlyParam(new URL('/chart/lr-availability', window.location.origin));
     if (printTypeId) url.searchParams.set('print_type_id', printTypeId);
 
     const response = await fetch(url.toString(), {
@@ -163,7 +174,7 @@ function buildChartOption(result, chartDom, myChart) {
         s.type === 'bar' ? { ...s, label: labelOption } : s
     );
 
-    const option = {
+    const option = applyChartTheme({
         tooltip: {
             trigger: 'axis',
             axisPointer: { type: 'shadow' },
@@ -186,41 +197,10 @@ function buildChartOption(result, chartDom, myChart) {
                     // Excel-style table when Data View is opened
                     optionToContent: function (opt) {
                         const data = getCurrentChartData();
-                        if (!data) return '<div style="padding:20px;color:#666;">No data available</div>';
+                        if (!data) return themedNoDataHtml();
 
                         let tableHTML = `
-                            <style>
-                                #excel-data-table {
-                                    width: 100%;
-                                    border-collapse: collapse;
-                                    font-family: 'Segoe UI', Arial, sans-serif;
-                                    font-size: 14px;
-                                    margin: 10px 0;
-                                    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-                                }
-                                #excel-data-table th, #excel-data-table td {
-                                    border: 1px solid #999;
-                                    padding: 10px 12px;
-                                    text-align: center;
-                                    white-space: nowrap;
-                                }
-                                #excel-data-table th {
-                                    background: linear-gradient(#f8f8f8, #e8e8e8);
-                                    font-weight: bold;
-                                    color: #333;
-                                    position: sticky;
-                                    top: 0;
-                                    z-index: 1;
-                                }
-                                #excel-data-table tr:nth-child(even) {
-                                    background-color: #f9f9f9;
-                                }
-                                #excel-data-table td:first-child {
-                                    font-weight: bold;
-                                    background-color: #f0f0f0;
-                                    text-align: left;
-                                }
-                            </style>
+                            ${themedDataViewStyles('excel-data-table')}
                             <table id="excel-data-table">
                                 <thead>
                                     <tr>
@@ -268,7 +248,7 @@ function buildChartOption(result, chartDom, myChart) {
                     onclick: function () {
                         if (!document.fullscreenElement) {
                             chartDom.dataset.originalBg = chartDom.style.backgroundColor || '';
-                            chartDom.style.backgroundColor = '#ffffff';
+                            chartDom.style.backgroundColor = chartFullscreenBackground();
                             chartDom.requestFullscreen()
                                 .then(() => myChart.resize())
                                 .catch(err => {
@@ -305,7 +285,7 @@ function buildChartOption(result, chartDom, myChart) {
         }],
         yAxis: [{ type: 'value' }],
         series: finalSeries
-    };
+    });
 
     return { option, finalSeries };
 }
@@ -316,7 +296,7 @@ async function reloadAvailabilityChart() {
     const chartDom = document.getElementById('chart');
     window.DashboardChartLoading?.show(chartDom);
 
-    _availabilityChart.showLoading({ text: 'Loading…', maskColor: 'rgba(255,255,255,0.7)' });
+    _availabilityChart.showLoading(chartLoadingOptions('Loading...'));
 
     try {
         const result = await fetchAvailabilityData();
@@ -380,7 +360,19 @@ async function initAvailabilityChart() {
             });
         }
 
+        bindDivisionHubToggle(() => {
+            reloadAvailabilityChart();
+        });
+
         if (window.registerChart) window.registerChart('chart', myChart);
+
+        bindChartTheme(myChart, () => {
+            if (!_availabilityFullData) return;
+            const rebuilt = buildChartOption(_availabilityFullData, chartDom, myChart);
+            myChart.setOption(rebuilt.option, true);
+            const currentKsSelect = document.getElementById('schoolYearFilter');
+            if (currentKsSelect) filterAndRenderChart(currentKsSelect.value);
+        });
 
         const resizeObserver = new ResizeObserver(() => myChart.resize());
         resizeObserver.observe(chartDom);
@@ -395,7 +387,7 @@ async function initAvailabilityChart() {
     } catch (err) {
         console.error('Failed to initialize LR Availability chart:', err);
         if (chartDom) {
-            chartDom.innerHTML = '<div style="text-align:center;padding:60px;color:#888;">Failed to load availability chart</div>';
+            chartDom.innerHTML = themedErrorHtml('Failed to load availability chart');
         }
         window.DashboardChartLoading?.hide(chartDom);
     }

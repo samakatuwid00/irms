@@ -16,17 +16,18 @@ class LrAvailabilityService
         private readonly SchoolDashboardCurriculumScopeService $curriculumScopeService,
     ) {}
 
-    public function getChartData(?string $explicitLibraryId, int $userLevel, ?string $stationId, ?string $printTypeId = null): array
+    public function getChartData(?string $explicitLibraryId, int $userLevel, ?string $stationId, ?string $printTypeId = null, bool $schoolOnly = false): array
     {
         $cacheKey = 'availability_chart_' . sha1(json_encode([
             $explicitLibraryId,
             $userLevel,
             $stationId,
             $printTypeId,
+            $schoolOnly,
             session('dashboard_chart_cache_version'),
         ]));
 
-        return Cache::remember($cacheKey, 3600, function () use ($explicitLibraryId, $userLevel, $stationId, $printTypeId) {
+        return Cache::remember($cacheKey, 3600, function () use ($explicitLibraryId, $userLevel, $stationId, $printTypeId, $schoolOnly) {
         $curriculumScope = $this->curriculumScopeService->resolve($userLevel, $stationId);
         $gradeLevels = $curriculumScope['grade_levels'];
 
@@ -61,11 +62,9 @@ class LrAvailabilityService
         // This includes: School (1), District (2), Division (3), Region (4)
         // ────────────────────────────────────────────────
         
-        $allowedLibraryIds = $this->libraryScopeService->getAllowedLibraryIds(
-            $explicitLibraryId,
-            $userLevel,
-            $stationId
-        );
+        $allowedLibraryIds = $schoolOnly
+            ? $this->libraryScopeService->getAllowedSchoolLibraryIds($explicitLibraryId, $userLevel, $stationId)
+            : $this->libraryScopeService->getAllowedLibraryIds($explicitLibraryId, $userLevel, $stationId);
 
         if ($allowedLibraryIds === null || $allowedLibraryIds->isEmpty()) {
             Log::warning('No libraries in scope → returning zero quantities');
@@ -110,12 +109,13 @@ class LrAvailabilityService
         return [
             'grade_level' => $gradeNames,
             'series' => $series,
-            'library_scope' => $explicitLibraryId ? 'single_library' : $libraryScope,
+            'library_scope' => $schoolOnly ? 'school_libraries_only' : ($explicitLibraryId ? 'single_library' : $libraryScope),
             'library_id' => $explicitLibraryId ?: 'auto',
             'source' => 'live_query_direct_schema',
             'user_level' => $userLevel,
             'station_id' => $stationId,
             'print_type_id' => $printTypeId ?: null,
+            'school_only' => $schoolOnly,
             'school_curriculum_scoped' => $curriculumScope['is_school_scoped'],
         ];
         });

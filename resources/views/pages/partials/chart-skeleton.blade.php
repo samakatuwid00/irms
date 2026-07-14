@@ -1,6 +1,6 @@
 <div data-chart-skeleton
      data-chart-skeleton-variant="{{ $variant }}"
-     class="pointer-events-none absolute inset-0 z-10 hidden translate-y-1 overflow-hidden rounded-xl bg-gradient-to-br from-blue-50 via-white to-cyan-50 opacity-0 transition-all duration-300 ease-out"
+     class="pointer-events-none absolute inset-0 z-10 hidden translate-y-1 overflow-hidden rounded-xl bg-gradient-to-br from-blue-50 via-white to-cyan-50 opacity-0 transition-all duration-300 ease-out dark:from-slate-800 dark:via-slate-900 dark:to-slate-800"
      aria-hidden="true">
     <div class="flex h-full min-h-[320px] flex-col p-4 md:p-6 animate-pulse">
         <div class="mb-5 flex items-center justify-between gap-4">
@@ -8,7 +8,10 @@
                 <div class="h-3 w-28 rounded-full bg-blue-100"></div>
                 <div class="h-4 w-48 max-w-[60vw] rounded-full bg-gray-200"></div>
             </div>
-            <div class="h-9 w-24 rounded-lg bg-gray-200"></div>
+            <div class="flex h-10 items-center gap-2 rounded-lg border border-blue-100/70 bg-white/70 px-3 shadow-sm dark:border-slate-700 dark:bg-slate-800/80">
+                <div class="h-7 w-7 rounded-md bg-blue-100 dark:bg-slate-700"></div>
+                <div class="hidden h-3 w-20 rounded-full bg-gray-200 sm:block"></div>
+            </div>
         </div>
 
         @if ($variant === 'availability')
@@ -132,11 +135,14 @@
                 const card = resolveCard(target);
                 const skeleton = card?.querySelector('[data-chart-skeleton]');
                 const content = card?.querySelector('[data-chart-card-content]');
+                const actions = card?.querySelector('[data-chart-card-actions]');
                 if (!card || !skeleton || !content) return;
 
                 window.clearTimeout(hideTimers.get(card));
                 card.setAttribute('aria-busy', 'true');
                 content.classList.add('pointer-events-none', 'opacity-0', 'translate-y-1');
+                actions?.classList.add('pointer-events-none', 'opacity-0');
+                actions?.setAttribute('aria-hidden', 'true');
                 skeleton.classList.remove('hidden');
 
                 requestAnimationFrame(() => {
@@ -149,12 +155,15 @@
                 const card = resolveCard(target);
                 const skeleton = card?.querySelector('[data-chart-skeleton]');
                 const content = card?.querySelector('[data-chart-card-content]');
+                const actions = card?.querySelector('[data-chart-card-actions]');
                 if (!card || !skeleton || !content) return;
 
                 skeleton.classList.remove('opacity-100', 'translate-y-0');
                 skeleton.classList.add('opacity-0', 'translate-y-1');
                 content.classList.remove('pointer-events-none', 'opacity-0', 'translate-y-1');
                 content.classList.add('opacity-100', 'translate-y-0');
+                actions?.classList.remove('pointer-events-none', 'opacity-0');
+                actions?.removeAttribute('aria-hidden');
                 card.removeAttribute('aria-busy');
                 card.dataset.chartReady = 'true';
 

@@ -15,22 +15,23 @@ class LrRatioService
         private readonly SchoolDashboardCurriculumScopeService $curriculumScopeService,
     ) {}
 
-    public function getChartDataCached($explicitLibraryId, $userLevel, $stationId, ?string $printTypeId = null)
+    public function getChartDataCached($explicitLibraryId, $userLevel, $stationId, ?string $printTypeId = null, bool $schoolOnly = false)
     {
         $cacheKey = 'ratio_chart_' . sha1(json_encode([
             $explicitLibraryId,
             $userLevel,
             $stationId,
             $printTypeId,
+            $schoolOnly,
             session('dashboard_chart_cache_version'),
         ]));
 
-        return Cache::remember($cacheKey, 3600, function () use ($explicitLibraryId, $userLevel, $stationId, $printTypeId) {
-            return $this->getChartData($explicitLibraryId, $userLevel, $stationId, $printTypeId);
+        return Cache::remember($cacheKey, 3600, function () use ($explicitLibraryId, $userLevel, $stationId, $printTypeId, $schoolOnly) {
+            return $this->getChartData($explicitLibraryId, $userLevel, $stationId, $printTypeId, $schoolOnly);
         });
     }
 
-    private function getChartData($explicitLibraryId, $userLevel, $stationId, ?string $printTypeId = null)
+    private function getChartData($explicitLibraryId, $userLevel, $stationId, ?string $printTypeId = null, bool $schoolOnly = false)
     {
         $curriculumScope = $this->curriculumScopeService->resolve($userLevel, $stationId);
         $gradeLevels = $curriculumScope['grade_levels'];
@@ -52,11 +53,9 @@ class LrRatioService
             'print_type_id'    => $printTypeId ?: 'all',
         ]);
 
-        $allowedLibraryIds = $this->libraryScopeService->getAllowedLibraryIds(
-            $explicitLibraryId,
-            $userLevel,
-            $stationId
-        );
+        $allowedLibraryIds = $schoolOnly
+            ? $this->libraryScopeService->getAllowedSchoolLibraryIds($explicitLibraryId, $userLevel, $stationId)
+            : $this->libraryScopeService->getAllowedLibraryIds($explicitLibraryId, $userLevel, $stationId);
 
         if ($allowedLibraryIds === null || $allowedLibraryIds->isEmpty()) {
             Log::warning('No libraries in scope → returning zero results', [
@@ -95,7 +94,8 @@ class LrRatioService
             $userLevel,
             $stationId,
             $printTypeId,
-            $curriculumScope['is_school_scoped']
+            $curriculumScope['is_school_scoped'],
+            $schoolOnly
         );
     }
 
@@ -164,7 +164,8 @@ class LrRatioService
         int $userLevel,
         ?string $stationId,
         ?string $printTypeId = null,
-        bool $isSchoolCurriculumScoped = false
+        bool $isSchoolCurriculumScoped = false,
+        bool $schoolOnly = false
     ): array {
         $directData  = [];
         $ratioLabels = [];
@@ -183,12 +184,13 @@ class LrRatioService
             'directData'    => $directData,
             'mailData'      => array_fill(0, count($gradeNames), 0),
             'ratioLabels'   => $ratioLabels,
-            'library_scope' => $explicitLibraryId ? 'single_library' : $libraryScope,
+            'library_scope' => $schoolOnly ? 'school_libraries_only' : ($explicitLibraryId ? 'single_library' : $libraryScope),
             'library_id'    => $explicitLibraryId ?: 'auto',
             'source'        => 'live_query_direct_schema',
             'user_level'    => $userLevel,
             'station_id'    => $stationId,
             'print_type_id' => $printTypeId ?: null,
+            'school_only'   => $schoolOnly,
             'school_curriculum_scoped' => $isSchoolCurriculumScoped,
         ];
     }

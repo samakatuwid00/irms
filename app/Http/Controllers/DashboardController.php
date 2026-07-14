@@ -61,6 +61,56 @@ class DashboardController extends BaseController
         $this->bosyStatusService              = $bosyStatusService;
     }
 
+    private function buildOverallRatioData(array $totalLrData, array $populationData): array
+    {
+        $totalLr  = (int) ($totalLrData['total'] ?? 0);
+        $totalPop = (int) ($populationData['total'] ?? 0);
+        $ratioDisplay = 'N/A';
+
+        if ($totalLr > 0 && $totalPop > 0) {
+            $learnersPerResource = $totalPop / $totalLr;
+            $rounded = round($learnersPerResource);
+
+            if ($rounded >= 1) {
+                $ratioDisplay = '1 : ' . number_format($rounded);
+            } else {
+                $resourcesPerLearner = round($totalLr / $totalPop);
+                $ratioDisplay = number_format($resourcesPerLearner) . ' : 1';
+            }
+        }
+
+        return [
+            'ratio_display' => $ratioDisplay,
+            'total_lr' => $totalLr,
+            'total_population' => $totalPop,
+        ];
+    }
+
+    private function summaryTotalLrData(array $totalLrData): array
+    {
+        return [
+            'total' => (int) ($totalLrData['total'] ?? 0),
+            'print' => (int) ($totalLrData['print'] ?? 0),
+            'non_print' => (int) ($totalLrData['non_print'] ?? 0),
+            'division_lr_hub' => (int) ($totalLrData['division_lr_hub'] ?? 0),
+            'school_lr' => (int) ($totalLrData['school_lr'] ?? $totalLrData['total'] ?? 0),
+        ];
+    }
+
+    private function summaryLrNeedsData(array $lrNeedsData): array
+    {
+        return [
+            'total_needs' => (int) ($lrNeedsData['total_needs'] ?? 0),
+            'needs' => collect($lrNeedsData['needs'] ?? [])
+                ->map(fn ($need) => [
+                    'subject_grade' => (string) ($need['subject_grade'] ?? ''),
+                    'needed' => (int) ($need['needed'] ?? 0),
+                ])
+                ->values()
+                ->all(),
+        ];
+    }
+
     // =========================================================================
     // Main dashboard view
     // =========================================================================
@@ -75,7 +125,11 @@ class DashboardController extends BaseController
         $userTypeId = $user->usertype_id ?? '';
         $canEditSchoolNec = $userLevel === 3
             && (string) $userTypeId === self::SDO_SUPPLY_OFFICER_USER_TYPE_ID;
+        $hideLibraryHubAffectsSummary = in_array($userLevel, [3, 4], true) && $stationId !== null;
         $totalLrData    = $this->totalLearningResourcesService->getTotalResourcesData(null, $userLevel, $stationId);
+        $totalLrSchoolData = $hideLibraryHubAffectsSummary
+            ? $this->totalLearningResourcesService->getTotalResourcesData(null, $userLevel, $stationId, true)
+            : $totalLrData;
         $showLrSourceToggle = $userLevel === 3 && $stationId !== null;
 
         if ($showLrSourceToggle) {
@@ -86,24 +140,15 @@ class DashboardController extends BaseController
         }
 
         $populationData = $this->totalPopulationService->getPopulationData(null, $userLevel, $stationId);
-        $lrNeedsData    = $this->lrNeedsService->getLrNeeds(null, $userLevel, $stationId, 3); // top 5 needs
+        $lrNeedsData    = $this->lrNeedsService->getLrNeeds(null, $userLevel, $stationId, 3);
+        $lrNeedsSchoolData = $hideLibraryHubAffectsSummary
+            ? $this->lrNeedsService->getLrNeeds(null, $userLevel, $stationId, 3, true)
+            : $lrNeedsData;
 
-        $totalLr  = (int) ($totalLrData['total']    ?? 0);
-        $totalPop = (int) ($populationData['total'] ?? 0);
-
-        $ratioDisplay = 'N/A';
-
-        if ($totalLr > 0 && $totalPop > 0) {
-            $learnersPerResource = $totalPop / $totalLr;
-            $rounded             = round($learnersPerResource);
-
-            if ($rounded >= 1) {
-                $ratioDisplay = '1 : ' . number_format($rounded);
-            } else {
-                $resourcesPerLearner = round($totalLr / $totalPop);
-                $ratioDisplay        = number_format($resourcesPerLearner) . ' : 1';
-            }
-        }
+        $overallRatioData = $this->buildOverallRatioData($totalLrData, $populationData);
+        $overallRatioSchoolData = $hideLibraryHubAffectsSummary
+            ? $this->buildOverallRatioData($totalLrSchoolData, $populationData)
+            : $overallRatioData;
 
         // ------------------------------------------------------------------
         // BOSY Settings — loaded from DB so all users see the same values
@@ -144,11 +189,23 @@ class DashboardController extends BaseController
             $divisions = $query->get()->toArray();
         }
 
-        $overallRatioData = [
-            'ratio_display'    => $ratioDisplay,
-            'total_lr'         => $totalLr,
-            'total_population' => $totalPop,
+        $dashboardSummaryData = [
+            'all' => [
+                'total_lr' => $this->summaryTotalLrData($totalLrData),
+                'overall_ratio' => $overallRatioData,
+                'lr_needs' => $this->summaryLrNeedsData($lrNeedsData),
+            ],
+            'school' => [
+                'total_lr' => $this->summaryTotalLrData($totalLrSchoolData),
+                'overall_ratio' => $overallRatioSchoolData,
+                'lr_needs' => $this->summaryLrNeedsData($lrNeedsSchoolData),
+            ],
         ];
+
+        $summaryInitialMode = $hideLibraryHubAffectsSummary ? 'school' : 'all';
+        $summaryInitialTotalLrData = $dashboardSummaryData[$summaryInitialMode]['total_lr'];
+        $summaryInitialOverallRatioData = $dashboardSummaryData[$summaryInitialMode]['overall_ratio'];
+        $summaryInitialLrNeedsData = $dashboardSummaryData[$summaryInitialMode]['lr_needs'];
 
         $printTypes = \App\Models\PrintType::select('id', 'type_name')
             ->orderBy('type_name')
@@ -175,7 +232,13 @@ class DashboardController extends BaseController
             'bosySettings',
             'userTypeId',
             'canEditSchoolNec',
-            'showLrSourceToggle'
+            'showLrSourceToggle',
+            'hideLibraryHubAffectsSummary',
+            'dashboardSummaryData',
+            'summaryInitialMode',
+            'summaryInitialTotalLrData',
+            'summaryInitialOverallRatioData',
+            'summaryInitialLrNeedsData'
         ));
     }
 
@@ -331,19 +394,21 @@ class DashboardController extends BaseController
         $user              = Auth::user();
         $userLevel         = $this->determineUserLevel($user);
         $stationId         = $this->determineStationId($user, $userLevel);
+        $schoolOnly        = $request->boolean('school_only') && in_array($userLevel, [3, 4], true);
 
         Log::info('LR Availability chart requested', [
             'explicit_library_id' => $explicitLibraryId ?: 'none (auto-scope)',
             'print_type_id'       => $printTypeId ?: 'all',
             'user_level'          => $userLevel,
             'station_id'          => $stationId,
+            'school_only'         => $schoolOnly,
             'user_id'             => Auth::id(),
             'ip'                  => $request->ip(),
         ]);
 
         try {
             $data = $this->lrAvailabilityService->getChartData(
-                $explicitLibraryId, $userLevel, $stationId, $printTypeId
+                $explicitLibraryId, $userLevel, $stationId, $printTypeId, $schoolOnly
             );
             return response()->json($data);
         } catch (\Exception $e) {
@@ -365,19 +430,21 @@ class DashboardController extends BaseController
         $user              = Auth::user();
         $userLevel         = $this->determineUserLevel($user);
         $stationId         = $this->determineStationId($user, $userLevel);
+        $schoolOnly        = $request->boolean('school_only') && in_array($userLevel, [3, 4], true);
 
         Log::info('LR Ratio chart requested', [
             'explicit_library_id' => $explicitLibraryId ?: 'none (auto-scope)',
             'print_type_id'       => $printTypeId ?: 'all',
             'user_level'          => $userLevel,
             'station_id'          => $stationId,
+            'school_only'         => $schoolOnly,
             'user_id'             => Auth::id(),
             'ip'                  => $request->ip(),
         ]);
 
         try {
             $data = $this->lrRatioService->getChartDataCached(
-                $explicitLibraryId, $userLevel, $stationId, $printTypeId
+                $explicitLibraryId, $userLevel, $stationId, $printTypeId, $schoolOnly
             );
             return response()->json($data);
         } catch (\Exception $e) {
@@ -399,10 +466,11 @@ class DashboardController extends BaseController
         $user              = Auth::user();
         $userLevel         = $this->determineUserLevel($user);
         $stationId         = $this->determineStationId($user, $userLevel);
+        $schoolOnly        = $request->boolean('school_only') && in_array($userLevel, [3, 4], true);
 
         try {
             $data = $this->lrSufficiencyService->getSufficiencyData(
-                $explicitLibraryId, $userLevel, $stationId, $printTypeId
+                $explicitLibraryId, $userLevel, $stationId, $printTypeId, $schoolOnly
             );
             return response()->json($data);
         } catch (\Exception $e) {
@@ -411,6 +479,7 @@ class DashboardController extends BaseController
                 'user_level'    => $userLevel,
                 'station_id'    => $stationId,
                 'print_type_id' => $printTypeId ?: 'all',
+                'school_only'   => $schoolOnly,
             ]);
             return response()->json(['error' => $e->getMessage()], 500);
         }
@@ -423,17 +492,19 @@ class DashboardController extends BaseController
         $user              = Auth::user();
         $userLevel         = $this->determineUserLevel($user);
         $stationId         = $this->determineStationId($user, $userLevel);
+        $schoolOnly        = $request->boolean('school_only') && in_array($userLevel, [3, 4], true);
 
         Log::info('LR Heatmap data requested', [
             'explicit_library_id' => $explicitLibraryId ?: 'none (auto-scope)',
             'print_type_id'       => $printTypeId ?: 'all',
             'user_level'          => $userLevel,
             'station_id'          => $stationId,
+            'school_only'         => $schoolOnly,
         ]);
 
         try {
             $data = $this->lrHeatmapService->getHeatmapData(
-                $explicitLibraryId, $userLevel, $stationId, $printTypeId
+                $explicitLibraryId, $userLevel, $stationId, $printTypeId, $schoolOnly
             );
             return response()->json($data);
         } catch (\Exception $e) {

@@ -20,17 +20,19 @@ class LrSufficiencyService
         ?string $explicitLibraryId,
         int     $userLevel,
         ?string $stationId,
-        ?string $printTypeId = null
+        ?string $printTypeId = null,
+        bool    $schoolOnly = false
     ): array {
         $cacheKey = 'exdef_chart_' . sha1(json_encode([
             $explicitLibraryId,
             $userLevel,
             $stationId,
             $printTypeId,
+            $schoolOnly,
             session('dashboard_chart_cache_version'),
         ]));
 
-        return Cache::remember($cacheKey, 3600, function () use ($explicitLibraryId, $userLevel, $stationId, $printTypeId) {
+        return Cache::remember($cacheKey, 3600, function () use ($explicitLibraryId, $userLevel, $stationId, $printTypeId, $schoolOnly) {
         $curriculumScope = $this->curriculumScopeService->resolve($userLevel, $stationId);
         $gradeLevels = $curriculumScope['grade_levels'];
 
@@ -54,14 +56,15 @@ class LrSufficiencyService
             );
         }
 
-        $allowedLibraryIds = $this->libraryScopeService->getAllowedLibraryIds(
-            $explicitLibraryId, $userLevel, $stationId
-        );
+        $allowedLibraryIds = $schoolOnly
+            ? $this->libraryScopeService->getAllowedSchoolLibraryIds($explicitLibraryId, $userLevel, $stationId)
+            : $this->libraryScopeService->getAllowedLibraryIds($explicitLibraryId, $userLevel, $stationId);
 
         Log::info('LR Sufficiency data source decision', [
             'user_level'     => $userLevel,
             'station_id'     => $stationId,
             'print_type_id'  => $printTypeId ?: 'all',
+            'school_only'    => $schoolOnly,
             'library_count'  => $allowedLibraryIds?->count() ?? 0,
             'source'         => 'live_query_direct_schema',
         ]);
@@ -69,7 +72,8 @@ class LrSufficiencyService
         return $this->buildFromLiveQuery(
             $subjects, $gradeLevels, $allowedLibraryIds,
             $userLevel, $stationId, $explicitLibraryId, $printTypeId,
-            $curriculumScope['is_school_scoped']
+            $curriculumScope['is_school_scoped'],
+            $schoolOnly
         );
         });
     }
@@ -84,7 +88,8 @@ class LrSufficiencyService
         ?string     $stationId,
         ?string     $explicitLibraryId,
         ?string     $printTypeId = null,
-        bool        $isSchoolCurriculumScoped = false
+        bool        $isSchoolCurriculumScoped = false,
+        bool        $schoolOnly = false
     ): array {
         $libraryIds  = $this->normalizeLibraryIds($allowedLibraryIds);
         $gradeIds    = $gradeLevels->pluck('id')->all();
@@ -141,7 +146,8 @@ class LrSufficiencyService
         return $this->wrapResult(
             $tableData, $gradeLevels, false, $libraryScope, $userLevel,
             $explicitLibraryId, $stationId, $printTypeId,
-            $isSchoolCurriculumScoped
+            $isSchoolCurriculumScoped,
+            $schoolOnly
         );
     }
 
@@ -252,17 +258,19 @@ class LrSufficiencyService
         ?string    $explicitLibraryId = null,
         ?string    $stationId = null,
         ?string    $printTypeId = null,
-        bool       $isSchoolCurriculumScoped = false
+        bool       $isSchoolCurriculumScoped = false,
+        bool       $schoolOnly = false
     ): array {
         return [
             'grade_levels'  => $gradeLevels->pluck('grade')->toArray(),
             'table_data'    => $tableData,
-            'library_scope' => $explicitLibraryId ? 'single' : $libraryScope,
+            'library_scope' => $schoolOnly ? 'school_libraries_only' : ($explicitLibraryId ? 'single' : $libraryScope),
             'library_id'    => $explicitLibraryId ?: 'auto',
             'using_mv'      => $useMv,
             'user_level'    => $userLevel,
             'station_id'    => $stationId,
             'print_type_id' => $printTypeId ?: null,
+            'school_only'   => $schoolOnly,
             'source'        => 'live_query_direct_schema',
             'school_curriculum_scoped' => $isSchoolCurriculumScoped,
         ];

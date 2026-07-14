@@ -11,4 +11,4 @@
     placeholder="{{ $placeholder }}"
     value="{{ $value }}"
     autocomplete="off"
-    {{ $attributes->merge(['class' => 'w-full md:w-[300px] lg:w-[400px] xl:w-[500px] 2xl:w-[600px] border border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition']) }}>
+    {{ $attributes->merge(['class' => 'w-full md:w-[300px] lg:w-[400px] xl:w-[500px] 2xl:w-[600px] border border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100 dark:placeholder:text-slate-400']) }}>

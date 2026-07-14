@@ -23,26 +23,26 @@ class TotalLearningResourcesService
         $this->libraryScopeService = $libraryScopeService;
     }
 
-    public function getTotalResourcesData(?string $explicitLibraryId, int $userLevel, ?string $stationId): array
+    public function getTotalResourcesData(?string $explicitLibraryId, int $userLevel, ?string $stationId, bool $schoolOnly = false): array
     {
         $cacheKey = 'total_learning_resources_' . sha1(json_encode([
             $explicitLibraryId,
             $userLevel,
             $stationId,
+            $schoolOnly,
             session('dashboard_chart_cache_version'),
         ]));
 
-        return Cache::remember($cacheKey, now()->addHour(), function () use ($explicitLibraryId, $userLevel, $stationId) {
-        $allowedLibraryIds = $this->libraryScopeService->getAllowedLibraryIds(
-            $explicitLibraryId,
-            $userLevel,
-            $stationId
-        );
+        return Cache::remember($cacheKey, now()->addHour(), function () use ($explicitLibraryId, $userLevel, $stationId, $schoolOnly) {
+        $allowedLibraryIds = $schoolOnly
+            ? $this->libraryScopeService->getAllowedSchoolLibraryIds($explicitLibraryId, $userLevel, $stationId)
+            : $this->libraryScopeService->getAllowedLibraryIds($explicitLibraryId, $userLevel, $stationId);
 
         Log::info('Total Learning Resources Data Request', [
             'user_level' => $userLevel,
             'station_id' => $stationId,
             'explicit_library' => $explicitLibraryId,
+            'school_only' => $schoolOnly,
             'library_count' => $allowedLibraryIds?->count() ?? 0,
         ]);
 
@@ -91,6 +91,7 @@ class TotalLearningResourcesService
             'source' => 'live_query_direct_schema',
             'user_level' => $userLevel,
             'station_id' => $stationId,
+            'school_only' => $schoolOnly,
         ];
         });
     }

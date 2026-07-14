@@ -1,5 +1,16 @@
 // exdef.js
 
+import {
+    applyChartTheme,
+    bindChartTheme,
+    chartFullscreenBackground,
+    chartLoadingOptions,
+    themedDataViewStyles,
+    themedErrorHtml,
+    themedNoDataHtml,
+} from './theme';
+import { applySchoolOnlyParam, bindDivisionHubToggle } from './source-filter';
+
 const KEY_STAGE_RANGES = {
     'K1': ['Kindergarten', 'Grade 1', 'Grade 2', 'Grade 3'],
     'K2': ['Grade 4', 'Grade 5', 'Grade 6'],
@@ -115,7 +126,7 @@ async function fetchExdefData() {
     const printTypeSelect = document.getElementById('printTypeFilter');
     const printTypeId = printTypeSelect ? printTypeSelect.value : '';
 
-    const url = new URL('/chart/exdef', window.location.origin);
+    const url = applySchoolOnlyParam(new URL('/chart/exdef', window.location.origin));
     if (printTypeId) url.searchParams.set('print_type_id', printTypeId);
 
     const response = await fetch(url.toString(), {
@@ -141,7 +152,7 @@ function buildExdefOption(result, chartDom, myChart) {
     const visibleRatio = totalItems > 20 ? 0.20 : 0.35;
     const startPercent = Math.max(0, 100 - (visibleRatio * 100));
 
-    const option = {
+    const option = applyChartTheme({
         tooltip: {
             trigger: 'axis',
             axisPointer: { type: 'shadow' },
@@ -164,41 +175,11 @@ function buildExdefOption(result, chartDom, myChart) {
                     optionToContent: function (opt) {
                         const data = getCurrentExdefData();
                         if (!data || data.length === 0) {
-                            return '<div style="padding:20px;color:#666;">No data available</div>';
+                            return themedNoDataHtml();
                         }
 
                         let tableHTML = `
-                            <style>
-                                #exdef-excel-table {
-                                    width: 100%;
-                                    border-collapse: collapse;
-                                    font-family: 'Segoe UI', Arial, sans-serif;
-                                    font-size: 14px;
-                                    margin: 10px 0;
-                                    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-                                }
-                                #exdef-excel-table th, #exdef-excel-table td {
-                                    border: 1px solid #999;
-                                    padding: 10px 12px;
-                                    text-align: center;
-                                    white-space: nowrap;
-                                }
-                                #exdef-excel-table th {
-                                    background: linear-gradient(#f8f8f8, #e8e8e8);
-                                    font-weight: bold;
-                                    color: #333;
-                                    position: sticky;
-                                    top: 0;
-                                    z-index: 1;
-                                }
-                                #exdef-excel-table tr:nth-child(even) {
-                                    background-color: #f9f9f9;
-                                }
-                                #exdef-excel-table td:first-child {
-                                    text-align: left;
-                                    font-weight: bold;
-                                }
-                            </style>
+                            ${themedDataViewStyles('exdef-excel-table')}
                             <table id="exdef-excel-table">
                                 <thead>
                                     <tr>
@@ -246,7 +227,7 @@ function buildExdefOption(result, chartDom, myChart) {
                     onclick: function () {
                         if (!document.fullscreenElement) {
                             chartDom.dataset.originalBg = chartDom.style.backgroundColor || '';
-                            chartDom.style.backgroundColor = '#ffffff';
+                            chartDom.style.backgroundColor = chartFullscreenBackground();
                             chartDom.requestFullscreen()
                                 .then(() => myChart.resize())
                                 .catch(err => {
@@ -317,7 +298,7 @@ function buildExdefOption(result, chartDom, myChart) {
             barWidth: '58%',
             itemStyle: { borderRadius: [4, 4, 0, 0] }
         }]
-    };
+    });
 
     return { option, fullData };
 }
@@ -328,7 +309,7 @@ async function reloadExdefChart() {
     const chartDom = document.getElementById('exdef');
     window.DashboardChartLoading?.show(chartDom);
 
-    _exdefChart.showLoading({ text: 'Loading…', maskColor: 'rgba(255,255,255,0.7)' });
+    _exdefChart.showLoading(chartLoadingOptions('Loading...'));
 
     try {
         const result = await fetchExdefData();
@@ -396,6 +377,20 @@ async function initExdefChart() {
 
         myChart.setOption(option, true);
 
+        bindChartTheme(myChart, () => {
+            if (!_exdefFullData) return;
+            const rebuilt = buildExdefOption({
+                table_data: _exdefFullData.map(item => ({
+                    subject: item.subject,
+                    grade: item.grade,
+                    difference: item.exdef,
+                })),
+            }, chartDom, myChart);
+            myChart.setOption(rebuilt.option, true);
+            const currentKsSelect = document.getElementById('schoolYearFilter');
+            if (currentKsSelect) filterAndRenderExdefChart(currentKsSelect.value);
+        });
+
         const ksSelect = document.getElementById('schoolYearFilter');
         if (ksSelect) {
             filterAndRenderExdefChart(ksSelect.value);
@@ -415,6 +410,10 @@ async function initExdefChart() {
             });
         }
 
+        bindDivisionHubToggle(() => {
+            reloadExdefChart();
+        });
+
         if (window.registerChart) window.registerChart('exdef', myChart);
 
         const resizeObserver = new ResizeObserver(() => myChart.resize());
@@ -429,12 +428,7 @@ async function initExdefChart() {
 
     } catch (err) {
         console.error('Failed to initialize ExDef chart:', err);
-        chartDom.innerHTML = `
-            <div style="display:flex; align-items:center; justify-content:center;
-                        height:100%; color:#e74c3c; font-size:1.1rem;">
-                Failed to load chart
-            </div>
-        `;
+        chartDom.innerHTML = themedErrorHtml('Failed to load chart');
         window.DashboardChartLoading?.hide(chartDom);
     }
 }

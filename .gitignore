@@ -23,6 +23,15 @@ Homestead.json
 Homestead.yaml
 Thumbs.db
 
+# Local AI, design, and specification tooling
+/.agents/
+/.codex/
+/.impeccable/
+/.openspec/
+/.openspecs/
+/openspec/
+/openspecs/
+
 # Graphify generated files
 graphify-out/
 .graphify/

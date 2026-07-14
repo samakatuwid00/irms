@@ -576,7 +576,7 @@ function showSkeletonLoaders(container) {
     container.innerHTML = '';
     for (let i = 0; i < 6; i++) {
         const skeleton = document.createElement('div');
-        skeleton.className = 'flex items-center gap-3 animate-pulse py-2';
+        skeleton.className = 'bosy-skeleton-item flex items-center gap-3 animate-pulse py-2';
         skeleton.innerHTML = `
             <div class="w-12 h-12 sm:w-14 sm:h-14 rounded-full bg-gray-200 flex-shrink-0"></div>
             <div class="flex-1 grid bosy-row-grid gap-2 sm:gap-3">

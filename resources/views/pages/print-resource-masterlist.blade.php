@@ -503,16 +503,16 @@
 
                     @if(in_array($level, [3, 4]))
                         @if($resource->verified)
-                            <div class="border border-blue-100 rounded-lg px-4 py-3 bg-blue-50/40">
+                            <div class="border border-blue-100 rounded-lg px-4 py-3 bg-blue-50/40 dark:border-blue-400/40 dark:bg-blue-950/30">
                                 <div class="flex items-start gap-3">
                                     @include('pages.components.verified-badge', ['verified' => true, 'class' => 'w-5 h-5 text-blue-600 shrink-0 mt-0.5'])
                                     <div class="flex-1 min-w-0">
-                                        <span class="block text-sm font-medium text-gray-800">Verified learning resource</span>
-                                        <span class="block text-xs text-gray-500 mt-0.5">
+                                        <span class="block text-sm font-medium text-gray-800 dark:text-slate-100">Verified learning resource</span>
+                                        <span class="block text-xs text-gray-500 mt-0.5 dark:text-slate-300">
                                             This LR remains verified. Editing it will be added to the verification history and will not replace the original verifier.
                                         </span>
                                         @if($resource->verified_at)
-                                            <span class="block text-xs text-blue-600 mt-1">
+                                            <span class="block text-xs text-blue-600 mt-1 dark:text-blue-300">
                                                 First verified on {{ $resource->verified_at->format('M d, Y') }}
                                                 @if($resource->verifiedBy)
                                                     by {{ $resource->verifiedBy->firstname }} {{ $resource->verifiedBy->lastname }}
@@ -522,38 +522,38 @@
 
                                         @if(!empty($verificationHistory))
                                             {{-- ── Verification Timeline Accordion ── --}}
-                                            <div class="mt-3 border-t border-blue-100 pt-3">
+                                            <div class="mt-3 border-t border-blue-100 pt-3 dark:border-blue-400/30">
                                                 <button type="button"
                                                         onclick="toggleVerificationTimeline(this)"
-                                                        class="flex items-center gap-2 text-xs font-semibold text-blue-700 hover:text-blue-900 transition-colors group w-full text-left">
+                                                        class="flex items-center gap-2 text-xs font-semibold text-blue-700 hover:text-blue-900 transition-colors group w-full text-left dark:text-blue-300 dark:hover:text-blue-200">
                                                     <svg class="timeline-chevron w-3.5 h-3.5 shrink-0 transition-transform duration-200"
                                                          fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7"/>
                                                     </svg>
                                                     <span>Verification Timeline</span>
-                                                    <span class="ml-auto font-normal text-blue-500">
+                                                    <span class="ml-auto font-normal text-blue-500 dark:text-blue-300">
                                                         {{ count($verificationHistory) }} record{{ count($verificationHistory) === 1 ? '' : 's' }}
                                                     </span>
                                                 </button>
 
                                                 <div class="timeline-panel hidden mt-3 space-y-3">
                                                     @foreach($verificationHistory as $historyItem)
-                                                        <div class="rounded-lg border border-blue-100 bg-white px-4 py-3">
+                                                        <div class="rounded-lg border border-blue-100 bg-white px-4 py-3 dark:border-slate-700 dark:bg-slate-900">
                                                             <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-1">
                                                                 <div>
-                                                                    <p class="text-sm font-semibold text-gray-800">{{ $historyItem['name'] ?? 'Unknown user' }}</p>
-                                                                    <p class="text-xs text-gray-500">
+                                                                    <p class="text-sm font-semibold text-gray-800 dark:text-slate-100">{{ $historyItem['name'] ?? 'Unknown user' }}</p>
+                                                                    <p class="text-xs text-gray-500 dark:text-slate-400">
                                                                         {{ $historyItem['role'] ?? 'User' }}
                                                                     </p>
                                                                 </div>
                                                                 <div class="sm:text-right">
-                                                                    <p class="text-xs font-semibold text-blue-700">{{ $historyItem['action_label'] ?? 'Verification Action' }}</p>
-                                                                    <p class="text-xs text-gray-500 mt-0.5">{{ $historyItem['created_at'] ?? '-' }}</p>
+                                                                    <p class="text-xs font-semibold text-blue-700 dark:text-blue-300">{{ $historyItem['action_label'] ?? 'Verification Action' }}</p>
+                                                                    <p class="text-xs text-gray-500 mt-0.5 dark:text-slate-400">{{ $historyItem['created_at'] ?? '-' }}</p>
                                                                 </div>
                                                             </div>
 
                                                             @if(!empty($historyItem['comment']))
-                                                                <p class="text-sm text-gray-600 mt-2 border-t border-blue-50 pt-2">{{ $historyItem['comment'] }}</p>
+                                                                <p class="text-sm text-gray-600 mt-2 border-t border-blue-50 pt-2 dark:border-slate-700 dark:text-slate-300">{{ $historyItem['comment'] }}</p>
                                                             @endif
                                                         </div>
                                                     @endforeach
@@ -577,7 +577,7 @@
                                 <p class="text-xs text-gray-500 mt-1">Required for edits after verification.</p>
                             </div>
                         @else
-                            <div class="border border-blue-100 rounded-lg px-4 py-3 bg-blue-50/40">
+                            <div class="border border-blue-100 rounded-lg px-4 py-3 bg-blue-50/40 dark:border-blue-400/40 dark:bg-blue-950/30">
                                 <label class="flex items-start gap-3 cursor-pointer">
                                     <input type="checkbox"
                                            name="verified"
@@ -585,8 +585,8 @@
                                            {{ old('verified', false) ? 'checked' : '' }}
                                            class="mt-1 rounded border-gray-300 text-blue-600 focus:ring-blue-500">
                                     <span>
-                                        <span class="block text-sm font-medium text-gray-800">Verified learning resource</span>
-                                        <span class="block text-xs text-gray-500 mt-0.5">
+                                        <span class="block text-sm font-medium text-gray-800 dark:text-slate-100">Verified learning resource</span>
+                                        <span class="block text-xs text-gray-500 mt-0.5 dark:text-slate-300">
                                             Mark this LR as reviewed and trusted by the SDO librarian or division office.
                                         </span>
                                     </span>
@@ -1972,6 +1972,11 @@
             }
             if (tabId === 'tab-requests') {
                 setupRequestsViewToggle();
+            }
+
+            // Fade in any new cover images (opacity 0 → 1)
+            if (typeof initCoverImages === 'function') {
+                initCoverImages();
             }
 
             const tab = document.getElementById(tabId);

@@ -22,21 +22,25 @@ class LrNeedsService
         ?string $explicitLibraryId,
         int $userLevel,
         ?string $stationId,
-        int $limit = 3
+        int $limit = 3,
+        bool $schoolOnly = false
     ): array {
         $cacheKey = 'lr_needs_' . sha1(json_encode([
             $explicitLibraryId,
             $userLevel,
             $stationId,
             $limit,
+            $schoolOnly,
             session('dashboard_chart_cache_version'),
         ]));
 
-        return Cache::remember($cacheKey, now()->addHour(), function () use ($explicitLibraryId, $userLevel, $stationId, $limit) {
+        return Cache::remember($cacheKey, now()->addHour(), function () use ($explicitLibraryId, $userLevel, $stationId, $limit, $schoolOnly) {
         $sufficiencyData = $this->sufficiencyService->getSufficiencyData(
             $explicitLibraryId,
             $userLevel,
-            $stationId
+            $stationId,
+            null,
+            $schoolOnly
         );
 
         if (isset($sufficiencyData['error']) || empty($sufficiencyData['table_data'])) {

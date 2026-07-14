@@ -15,34 +15,33 @@
         @include('pages.partials.page-header')
 
         <!-- ================= SUMMARY CARDS ================= -->
-        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-5 lg:gap-6">
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-5 lg:gap-6"
+             data-dashboard-summary
+             data-summary-mode="{{ $summaryInitialMode }}">
 
             <!-- Total Learning Resources -->
             <div
-                @if($showLrSourceToggle) x-data="{ divisionHubSelected: true, showAll: true }" @endif
-                class="group/icon bg-gradient-to-br from-blue-50/70 to-cyan-50/50 rounded-xl shadow-sm hover:shadow transition-shadow duration-200 p-4 sm:p-5 min-h-[152px] flex flex-col">
+                data-total-lr-card
+                data-total-lr-source="{{ $summaryInitialMode === 'school' ? 'school' : 'all' }}"
+                class="dashboard-summary-card group/icon bg-gradient-to-br from-blue-50/70 to-cyan-50/50 rounded-xl shadow-sm hover:shadow transition-shadow duration-200 p-4 sm:p-5 min-h-[152px] flex flex-col">
 
                 <div class="flex items-start justify-between gap-3 mb-3 sm:mb-4">
                     <div class="min-w-0 flex-1 space-y-0.5">
                         <p class="text-xs sm:text-sm text-gray-500 font-medium">Total Learning Resources</p>
                         @if($showLrSourceToggle)
                             <p class="text-xl sm:text-2xl font-bold text-gray-800 tracking-tight">
-                                <span x-show="showAll">{{ number_format($totalLrData['total'] ?? 0) }}</span>
-                                <span x-cloak x-show="!showAll && divisionHubSelected">{{ number_format($totalLrData['division_lr_hub'] ?? 0) }}</span>
-                                <span x-cloak x-show="!showAll && !divisionHubSelected">{{ number_format($totalLrData['school_lr'] ?? 0) }}</span>
+                                <span data-summary-value="total_lr.total">{{ number_format($summaryInitialTotalLrData['total'] ?? 0) }}</span>
                             </p>
                             <div class="flex items-center gap-2 text-[11px] sm:text-xs text-gray-500 font-medium">
-                                <button type="button" aria-label="Previous source" @click="showAll ? (showAll = false, divisionHubSelected = true) : (divisionHubSelected ? divisionHubSelected = false : showAll = true)"
-                                    class="inline-flex items-center justify-center rounded text-gray-500 hover:text-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1">
+                                <button type="button" aria-label="Previous source" data-total-lr-source-prev
+                                    class="inline-flex items-center justify-center rounded text-gray-500 transition hover:text-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1 disabled:cursor-not-allowed disabled:opacity-40">
                                     <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true">
                                         <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7" />
                                     </svg>
                                 </button>
-                                <span x-show="showAll">All</span>
-                                <span x-cloak x-show="!showAll && divisionHubSelected">Division Hub</span>
-                                <span x-cloak x-show="!showAll && !divisionHubSelected">School</span>
-                                <button type="button" aria-label="Next source" @click="showAll ? (showAll = false, divisionHubSelected = true) : (divisionHubSelected ? divisionHubSelected = false : showAll = true)"
-                                    class="inline-flex items-center justify-center rounded text-gray-500 hover:text-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1">
+                                <span data-summary-source-label>{{ $summaryInitialMode === 'school' ? 'School' : 'All' }}</span>
+                                <button type="button" aria-label="Next source" data-total-lr-source-next
+                                    class="inline-flex items-center justify-center rounded text-gray-500 transition hover:text-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1 disabled:cursor-not-allowed disabled:opacity-40">
                                     <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true">
                                         <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />
                                     </svg>
@@ -50,7 +49,7 @@
                             </div>
                         @else
                             <p class="text-xl sm:text-2xl font-bold text-gray-800 tracking-tight">
-                                {{ number_format($totalLrData['total'] ?? 0) }}
+                                <span data-summary-value="total_lr.total">{{ number_format($summaryInitialTotalLrData['total'] ?? 0) }}</span>
                             </p>
                         @endif
                     </div>
@@ -67,8 +66,8 @@
                     @foreach(['Print' => 'print', 'Non-Print' => 'non_print'] as $label => $key)
                         <div class="group relative flex justify-between text-gray-600">
                             <span class="truncate pr-3">{{ $label }}</span>
-                            <span class="font-semibold text-gray-800 whitespace-nowrap">
-                                {{ number_format($totalLrData[$key] ?? 0) }}
+                            <span class="font-semibold text-gray-800 whitespace-nowrap" data-summary-value="total_lr.{{ $key }}">
+                                {{ number_format($summaryInitialTotalLrData[$key] ?? 0) }}
                             </span>
                             <div class="absolute right-0 bottom-full mb-2 hidden group-hover:block z-20 pointer-events-none">
                                 <div
@@ -84,7 +83,7 @@
 
             <!-- Total Population (same pattern - icon size & tooltip style) -->
             <div
-                class="group/icon bg-gradient-to-br from-blue-50/70 to-cyan-50/50 rounded-xl shadow-sm hover:shadow transition-shadow duration-200 p-4 sm:p-5 min-h-[152px] flex flex-col">
+                class="dashboard-summary-card group/icon bg-gradient-to-br from-blue-50/70 to-cyan-50/50 rounded-xl shadow-sm hover:shadow transition-shadow duration-200 p-4 sm:p-5 min-h-[152px] flex flex-col">
                 <div class="flex items-start justify-between gap-3 mb-3 sm:mb-4">
                     <div class="min-w-0 flex-1 space-y-0.5">
                         <p class="text-xs sm:text-sm text-gray-500 font-medium">Total Population</p>
@@ -122,12 +121,12 @@
 
             <!-- Overall Ratio (same tooltip & icon style) -->
             <div
-                class="group/icon bg-gradient-to-br from-blue-50/70 to-cyan-50/50 rounded-xl shadow-sm hover:shadow transition-shadow duration-200 p-4 sm:p-5 min-h-[152px] flex flex-col">
+                class="dashboard-summary-card group/icon bg-gradient-to-br from-blue-50/70 to-cyan-50/50 rounded-xl shadow-sm hover:shadow transition-shadow duration-200 p-4 sm:p-5 min-h-[152px] flex flex-col">
                 <div class="flex items-start justify-between gap-3 mb-3 sm:mb-4">
                     <div class="min-w-0 flex-1 space-y-0.5">
                         <p class="text-xs sm:text-sm text-gray-500 font-medium">Overall Ratio</p>
                         <p class="text-xl sm:text-2xl font-bold text-gray-800 tracking-tight break-all">
-                            {{ $overallRatioData['ratio_display'] ?? '—' }}
+                            <span data-summary-value="overall_ratio.ratio_display">{{ $summaryInitialOverallRatioData['ratio_display'] ?? 'N/A' }}</span>
                         </p>
                     </div>
                     <div class="bg-yellow-100/80 p-2 sm:p-2.5 rounded-full flex-shrink-0 transition-transform duration-300 group-hover/icon:scale-110 group-hover/icon:-rotate-6">
@@ -143,8 +142,8 @@
                     @foreach(['Total LR' => 'total_lr', 'Total Population' => 'total_population'] as $label => $key)
                         <div class="group relative flex justify-between text-gray-600">
                             <span class="truncate pr-3">{{ $label }}</span>
-                            <span class="font-semibold text-gray-800 whitespace-nowrap">
-                                {{ number_format($overallRatioData[$key] ?? 0) }}
+                            <span class="font-semibold text-gray-800 whitespace-nowrap" data-summary-value="overall_ratio.{{ $key }}">
+                                {{ number_format($summaryInitialOverallRatioData[$key] ?? 0) }}
                             </span>
                             <div class="absolute right-0 bottom-full mb-2 hidden group-hover:block z-20 pointer-events-none">
                                 <div
@@ -160,13 +159,13 @@
 
             <!-- LR Needs – now matches the hover behavior & reliability of the other cards -->
             <div
-                class="group/icon bg-gradient-to-br from-blue-50/70 to-cyan-50/50 rounded-xl shadow-sm hover:shadow transition-shadow duration-200 p-4 sm:p-5 min-h-[152px] flex flex-col">
+                class="dashboard-summary-card group/icon bg-gradient-to-br from-blue-50/70 to-cyan-50/50 rounded-xl shadow-sm hover:shadow transition-shadow duration-200 p-4 sm:p-5 min-h-[152px] flex flex-col">
 
                 <div class="flex items-start justify-between gap-3 mb-3 sm:mb-4">
                     <div class="min-w-0 flex-1 space-y-0.5">
                         <p class="text-xs sm:text-sm text-gray-500 font-medium">LR Needs</p>
                         <p class="text-xl sm:text-2xl font-bold text-gray-800 tracking-tight">
-                            {{ number_format($lrNeedsData['total_needs'] ?? 0) }}
+                            <span data-summary-value="lr_needs.total_needs">{{ number_format($summaryInitialLrNeedsData['total_needs'] ?? 0) }}</span>
                         </p>
                     </div>
                     <div class="bg-red-100/80 p-2 sm:p-2.5 rounded-full flex-shrink-0 transition-transform duration-300 group-hover/icon:scale-110 group-hover/icon:-rotate-6">
@@ -178,8 +177,8 @@
                     </div>
                 </div>
 
-                <div class="mt-auto space-y-1.5 text-xs sm:text-sm">
-                    @forelse($lrNeedsData['needs'] as $need)
+                <div class="mt-auto space-y-1.5 text-xs sm:text-sm" data-lr-needs-list>
+                    @forelse($summaryInitialLrNeedsData['needs'] as $need)
                         <div class="group relative flex justify-between text-gray-600">
                             <span class="truncate pr-3">{{ $need['subject_grade'] }}</span>
                             <span class="font-semibold text-red-700 whitespace-nowrap">
@@ -205,6 +204,8 @@
             </div>
 
         </div>
+
+        <script type="application/json" id="dashboardSummaryData">{!! json_encode($dashboardSummaryData, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT) !!}</script>
 
         <div class="flex flex-col sm:flex-row flex-wrap items-stretch sm:items-end gap-4 md:gap-6 mb-0">
             
@@ -246,43 +247,67 @@
   
         <!-- LR Availability -->
         <x-chart-card id="lr-availability" title="LR Availability" class="chart-container">
+            @if(in_array($userLevel, [3, 4], true))
+                <x-slot:actions>
+                    @include('pages.partials.chart-school-only-toggle')
+                </x-slot:actions>
+            @endif
+
             <p class="text-xs text-gray-500">Subject Level LR Availability</p>
             <p class="text-m font-bold mb-2">Available Learning Resources Per Subject</p>
 
             <!-- Give this div a sensible aspect ratio or min-height -->
-            <div class="w-full aspect-[4/3] min-h-[340px] max-h-[700px]">
+            <div class="dashboard-chart-frame">
                 <div id="chart" class="w-full h-full"></div>
             </div>
         </x-chart-card>
 
         <!-- LR Ratio -->
         <x-chart-card id="lr-ratio" title="LR Ratio" class="chart-container hidden">
+            @if(in_array($userLevel, [3, 4], true))
+                <x-slot:actions>
+                    @include('pages.partials.chart-school-only-toggle')
+                </x-slot:actions>
+            @endif
+
             <p class="text-xs text-gray-500">Learning Resources To Learner Ratio</p>
             <p class="text-m font-bold mb-2">Ratio of Learning Resources Per Grade Level</p>
-            <div class="w-full aspect-[4/3] min-h-[340px] max-h-[700px]">
+            <div class="dashboard-chart-frame">
                 <div id="main" class="w-full h-full"></div>
             </div>
         </x-chart-card>
 
         <!-- LR Exdef -->
         <x-chart-card id="lr-exdef" title="LR Exdef" class="chart-container hidden">
+            @if(in_array($userLevel, [3, 4], true))
+                <x-slot:actions>
+                    @include('pages.partials.chart-school-only-toggle')
+                </x-slot:actions>
+            @endif
+
             <div class="space-y-1.5">
                 <p class="text-xs text-gray-500">Grade-Subject ExDef</p>
                 <p class="text-m font-bold mb-2">Excess | Deficiency</p>
             </div>
 
             <!-- Responsive container – no fixed px height -->
-            <div class="w-full aspect-[4/3] min-h-[420px] max-h-[760px] mt-3">
+            <div class="dashboard-chart-frame dashboard-chart-frame-tall mt-3">
                 <div id="exdef" class="w-full h-full rounded-md overflow-hidden"></div>
             </div>
         </x-chart-card>
 
         <!-- LR Heatmap -->
         <x-chart-card id="lr-heatmap" title="LR Heatmap" class="chart-container hidden">
-            <div class="w-full aspect-[4/3] min-h-[420px] max-h-[760px] mt-3">
-                <p class="text-xs text-gray-500">Heat Map</p>
-                <p class="text-m font-bold mb-2">Equitable Distribution</p>
-                <div id="heatmap" class="w-full h-full"></div> <!-- ← subtract header height -->
+            @if(in_array($userLevel, [3, 4], true))
+                <x-slot:actions>
+                    @include('pages.partials.chart-school-only-toggle')
+                </x-slot:actions>
+            @endif
+
+            <p class="text-xs text-gray-500">Heat Map</p>
+            <p class="text-m font-bold mb-2">Equitable Distribution</p>
+            <div class="dashboard-chart-frame dashboard-chart-frame-tall mt-3">
+                <div id="heatmap" class="w-full h-full"></div>
             </div>
         </x-chart-card>
 

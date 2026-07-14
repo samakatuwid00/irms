@@ -222,9 +222,9 @@
             <div class="relative z-10 flex flex-col h-full w-full text-white">
                 <div class="flex flex-col flex-1 justify-center items-center text-center">
                     <img src="{{ asset('assets/images/logo.png') }}" alt="Main Logo"
-                         class="h-20 w-20 sm:h-20 sm:w-28 lg:h-28 lg:w-36 rounded-full opacity-100 drop-shadow-[0_0_20px_rgba(255,255,255,1.0)]">
+                         class="brand-logo-img h-20 w-20 sm:h-20 sm:w-28 lg:h-28 lg:w-36 rounded-full opacity-100 drop-shadow-[0_0_20px_rgba(255,255,255,1.0)]">
                     <h2 class="text-2xl sm:text-3xl lg:text-4xl font-bold tracking-wide mb-2">
-                        <span class="text-[#b5e2ff]">i</span><span class="text-[#1A3263]">RIMS-</span><span class="text-[#DA3D20]">V</span>
+                        <span class="text-[#b5e2ff]">i</span><span class="brand-main text-[#1A3263]">RIMS-</span><span class="text-[#DA3D20]">V</span>
                     </h2>
                     <h1 class="text-3xl sm:text-4xl lg:text-5xl font-bold mb-3 sm:mb-4 leading-tight drop-shadow-md">
                         Inventory System!

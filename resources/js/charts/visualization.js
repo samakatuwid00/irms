@@ -23,6 +23,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const loaded = new Set();
     const chartInstances = {};
+    const chartKeyMap = {
+        chart: 'lr-availability',
+        main: 'lr-ratio',
+        exdef: 'lr-exdef',
+        heatmap: 'lr-heatmap'
+    };
 
     function disposeChart(key) {
         if (chartInstances[key]) {
@@ -35,7 +41,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (chartInstances[key]) {
             setTimeout(() => {
                 chartInstances[key].resize();
-            }, 100);
+            }, 80);
         }
     }
 
@@ -80,7 +86,13 @@ async function showChart(value) {
 
     window.registerChart = (key, chart) => {
         chartInstances[key] = chart;
-        forceResize(key);
+        const containerKey = chartKeyMap[key];
+
+        if (containerKey) {
+            chartInstances[containerKey] = chart;
+        }
+
+        forceResize(containerKey || key);
     };
 
     showChart(filter.value);
@@ -90,6 +102,6 @@ async function showChart(value) {
     });
 
     window.addEventListener('resize', () => {
-        Object.values(chartInstances).forEach(chart => chart?.resize?.());
+        [...new Set(Object.values(chartInstances))].forEach(chart => chart?.resize?.());
     });
 });

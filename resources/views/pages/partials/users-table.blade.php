@@ -1,29 +1,29 @@
 {{-- resources/views/pages/partials/users-table.blade.php --}}
 {{-- Variables: $users (paginator), $emptyMessage (string), $activeTab (string), $allowStationEdit (bool) --}}
 
-<div class="overflow-x-auto bg-white rounded-xl shadow">
-    <table class="w-full text-sm text-left">
-        <thead class="bg-gray-100 text-gray-600 uppercase text-xs">
+<div class="users-table-shell overflow-x-auto bg-white rounded-xl shadow">
+    <table class="min-w-[860px] w-full text-sm text-left">
+        <thead class="bg-gray-100 text-gray-600 uppercase text-xs dark:bg-slate-900 dark:text-slate-300">
             <tr>
-                <th class="px-4 py-3">Name</th>
-                <th class="px-4 py-3">Username</th>
-                <th class="px-4 py-3">Email</th>
-                <th class="px-4 py-3">User Type</th>
-                <th class="px-4 py-3">Station</th>
-                <th class="px-4 py-3">Status</th>
+                <th class="px-4 py-3 font-semibold tracking-wide">Name</th>
+                <th class="px-4 py-3 font-semibold tracking-wide">Username</th>
+                <th class="px-4 py-3 font-semibold tracking-wide">Email</th>
+                <th class="px-4 py-3 font-semibold tracking-wide">User Type</th>
+                <th class="px-4 py-3 font-semibold tracking-wide">Station</th>
+                <th class="px-4 py-3 font-semibold tracking-wide">Status</th>
                 @unless($hideActions ?? false)
-                <th class="px-4 py-3 text-center">Actions</th>
+                <th class="px-4 py-3 text-center font-semibold tracking-wide">Actions</th>
                 @endunless
             </tr>
         </thead>
-        <tbody class="divide-y">
+        <tbody class="divide-y divide-gray-100 dark:divide-slate-700">
             @forelse ($users as $user)
-                <tr class="hover:bg-gray-50" id="user-row-{{ $user->id }}">
-                    <td class="px-4 py-3 font-medium text-gray-600 uppercase">{{ $user->firstname }} {{ $user->lastname }}</td>
-                    <td class="px-4 py-3 text-gray-600">{{ $user->username }}</td>
-                    <td class="px-4 py-3 text-gray-600">{{ $user->email }}</td>
-                    <td class="px-4 py-3 text-gray-600">{{ $user->usertype_name }}</td>
-                    <td class="px-4 py-3 text-gray-600">
+                <tr class="users-table-row hover:bg-gray-50 transition-colors" id="user-row-{{ $user->id }}">
+                    <td class="px-4 py-3 font-semibold text-gray-700 uppercase dark:text-slate-100">{{ $user->firstname }} {{ $user->lastname }}</td>
+                    <td class="px-4 py-3 text-gray-600 dark:text-slate-300">{{ $user->username }}</td>
+                    <td class="px-4 py-3 text-gray-600 dark:text-slate-300">{{ $user->email }}</td>
+                    <td class="px-4 py-3 text-gray-600 dark:text-slate-300">{{ $user->usertype_name }}</td>
+                    <td class="px-4 py-3 text-gray-600 dark:text-slate-300">
                         @if (($allowStationEdit ?? false) && $activeTab === 'sub')
                             {{-- Resolve the division this user's district belongs to.
                                 For a division-level admin, all sub-users are in their division,
@@ -57,7 +57,7 @@
                                 {{-- Edit mode (hidden by default) --}}
                                 <div class="station-edit-form hidden items-center gap-1" id="station-edit-{{ $user->id }}">
                                     <select
-                                        class="station-select border border-blue-400 rounded px-2 py-1 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+                                        class="station-select border border-blue-400 rounded px-2 py-1 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:border-blue-400/60 dark:bg-slate-950 dark:text-slate-100"
                                         onchange="saveStation({{ json_encode($user->id) }}, this)"
                                         onblur="cancelStationEdit({{ json_encode($user->id) }})">
                                         <option value="">— Loading… —</option>
@@ -89,7 +89,7 @@
                     </td>
                     <td class="px-4 py-3">
                         <span id="status-badge-{{ $user->id }}"
-                            class="px-2 py-1 rounded-full text-xs {{ $user->status === 'active' ? 'bg-green-100 text-green-700' : ($user->status === 'pending' ? 'bg-yellow-100 text-yellow-700' : 'bg-gray-200 text-gray-700') }}">
+                            class="inline-flex min-w-20 justify-center px-2.5 py-1 rounded-full text-xs font-semibold {{ $user->status === 'active' ? 'bg-green-100 text-green-700 dark:bg-green-950/40 dark:text-green-300' : ($user->status === 'pending' ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-950/40 dark:text-yellow-300' : 'bg-gray-200 text-gray-700 dark:bg-slate-700 dark:text-slate-200') }}">
                             {{ ucfirst($user->status) }}
                         </span>
                     </td>
@@ -103,7 +103,7 @@
                 </tr>
             @empty
                 <tr>
-                    <td colspan="{{ ($hideActions ?? false) ? 6 : 7 }}" class="px-4 py-3 text-center text-gray-500">{{ $emptyMessage }}</td>
+                    <td colspan="{{ ($hideActions ?? false) ? 6 : 7 }}" class="px-4 py-8 text-center text-gray-500 dark:text-slate-400">{{ $emptyMessage }}</td>
                 </tr>
             @endforelse
         </tbody>
