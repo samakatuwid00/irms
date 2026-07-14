@@ -1,4 +1,4 @@
-<div class="station-management-page p-4 sm:p-6 space-y-4 sm:space-y-6">
+<div class="station-management-page space-y-6">
 
     <!-- Page Header -->
     <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
